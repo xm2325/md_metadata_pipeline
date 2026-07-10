@@ -23,7 +23,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
           cache: pip
       - run: python -m pip install -e '.[dev]'
-      - run: ruff check src/mdmeta/file_backed.py scripts/run_file_backed_mddb_case.py tests/test_file_backed.py
+      - run: ruff check src/mdmeta/file_backed.py src/mdmeta/file_consistency.py scripts/run_file_backed_mddb_case.py tests/test_file_backed.py
       - run: pytest tests/test_file_backed.py
 
   live-file-backed-case:
@@ -61,9 +61,15 @@ jobs:
           import json
           from pathlib import Path
           report_path = Path('results/file_backed/report.json')
+          diagnostics_path = Path('results/file_backed/atom_identity_diagnostics.json')
           log_path = Path('results/file_backed/run.log')
           if report_path.exists():
               report = json.loads(report_path.read_text())
+              diagnostics = (
+                  json.loads(diagnostics_path.read_text())
+                  if diagnostics_path.exists()
+                  else None
+              )
               compact = {
                   'case_id': report['case_id'],
                   'project_accession': report['project_accession'],
@@ -79,6 +85,7 @@ jobs:
                   'workflow': report['workflow'],
                   'counts': report['counts'],
                   'consistency': report['consistency'],
+                  'atom_identity_diagnostics': diagnostics,
                   'residue_mapping': report['residue_mapping'],
                   'residue_mapping_rows_sha256': report['residue_mapping_rows_sha256'],
                   'scientific_boundaries': report['scientific_boundaries'],
@@ -102,6 +109,7 @@ jobs:
           path: |
             results/file_backed/report.json
             results/file_backed/residue_mapping.jsonl
+            results/file_backed/atom_identity_diagnostics.json
             results/file_backed/run.log
           retention-days: 1
       - name: Enforce live file-backed acceptance gate
