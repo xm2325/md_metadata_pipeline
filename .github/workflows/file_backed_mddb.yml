@@ -8,6 +8,7 @@ on:
 
 permissions:
   contents: read
+  pull-requests: write
 
 jobs:
   discover-public-files:
@@ -25,6 +26,29 @@ jobs:
           python scripts/discover_mddb_files.py \
             --project MCV1900193.2 \
             --output results/file_backed/discovery.json
+      - name: Post compact discovery result to the PR
+        if: github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          payload = json.loads(Path('results/file_backed/discovery.json').read_text())
+          compact = {
+              'project': payload['project'],
+              'published': payload['published'],
+              'metadata': payload['metadata'],
+              'descriptor_count': payload['descriptor_count'],
+              'files': payload['files'],
+          }
+          Path('/tmp/discovery.md').write_text(
+              '## Live MDDB file discovery\n\n```json\n'
+              + json.dumps(compact, indent=2, sort_keys=True)
+              + '\n```\n'
+          )
+          PY
+          gh pr comment "${{ github.event.pull_request.number }}" --body-file /tmp/discovery.md
       - name: Upload discovery diagnostics when storage is available
         if: always()
         continue-on-error: true
