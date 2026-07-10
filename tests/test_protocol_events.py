@@ -18,6 +18,14 @@ def test_links_conditions_to_equilibration_event() -> None:
     assert event.timestep_fs == 2
 
 
+def test_zero_kelvin_is_preserved_as_reported_protocol_metadata() -> None:
+    text = "The system was equilibrated for 5 ps at 0 K before the heating stage."
+    events = extract_protocol_events(Paragraph("PMC1", "Methods", "P0K", text))
+    assert len(events) == 1
+    assert events[0].event_type is EventType.EQUILIBRATION
+    assert events[0].temperature_k == 0
+
+
 def test_excludes_non_md_incubation_duration() -> None:
     text = "Cells were incubated for 24 h at 37 °C before imaging."
     assert extract_protocol_events(Paragraph("PMC1", "Cell culture", "P2", text)) == []
