@@ -93,6 +93,8 @@ def extract_protocol_events(paragraph: Paragraph) -> list[ProtocolEvent]:
 
     Conditions are linked only when they occur within 180 characters of the
     duration anchor. A time-step expression is never emitted as a duration event.
+    Non-positive duration expressions are ignored because the event schema requires
+    a physically positive duration.
     """
     events: list[ProtocolEvent] = []
     event_index = 0
@@ -103,6 +105,11 @@ def extract_protocol_events(paragraph: Paragraph) -> list[ProtocolEvent]:
         if re.search(r"(?:time\s*step|timestep|integration step)[^.;]{0,24}$", prefix):
             continue
         if re.match(r"\s*(?:time\s*step|timestep|integration step)", suffix):
+            continue
+
+        unit = duration.group("unit").lower()
+        duration_ps = float(duration.group("value")) * _UNIT_TO_PS[unit]
+        if duration_ps <= 0:
             continue
 
         event_type = _phase(paragraph.text, start, end)
@@ -124,8 +131,6 @@ def extract_protocol_events(paragraph: Paragraph) -> list[ProtocolEvent]:
         replicates = nearest(_REPLICATES)
         ensemble_match = re.search(r"\b(NVE|NVT|NPT|NPAT|NPH)\b", local, re.I)
 
-        unit = duration.group("unit").lower()
-        duration_ps = float(duration.group("value")) * _UNIT_TO_PS[unit]
         pressure_bar = None
         if pressure:
             pressure_bar = float(pressure.group("value"))
