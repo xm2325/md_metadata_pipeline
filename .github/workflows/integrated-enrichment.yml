@@ -48,11 +48,14 @@ jobs:
             --cache-dir results/golden/cache \
             --expect-pdb 6VSB --expect-pdb 6VXX \
             --expect-uniprot P0DTC2
-      - uses: actions/upload-artifact@v4
+      - name: Upload golden result when artifact storage is available
+        continue-on-error: true
+        uses: actions/upload-artifact@v4
         with:
           name: golden-live-integration
           path: results/golden
           if-no-files-found: error
+          retention-days: 1
 
   integrate-frozen-60:
     if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
@@ -73,8 +76,11 @@ jobs:
             --output-dir results/integrated_60 \
             --database results/integrated_60/records.sqlite \
             --cache-dir results/integrated_60/cache
-      - uses: actions/upload-artifact@v4
+      - name: Upload 60-article records when artifact storage is available
+        continue-on-error: true
+        uses: actions/upload-artifact@v4
         with:
           name: integrated-60-records
           path: results/integrated_60
           if-no-files-found: error
+          retention-days: 1
