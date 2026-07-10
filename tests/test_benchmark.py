@@ -11,6 +11,7 @@ def _candidates(n: int = 80) -> list[CandidateArticle]:
             title=f"Article {i}",
             source_uri=f"https://example.org/PMC{i:06d}",
             software_family=families[i % len(families)],
+            year=2018 + (i % 3),
         )
         for i in range(n)
     ]
@@ -35,3 +36,40 @@ def test_plan_is_deterministic_disjoint_and_excludes_prior_articles() -> None:
 def test_plan_requires_enough_eligible_articles() -> None:
     with pytest.raises(ValueError, match="need at least 60"):
         create_benchmark_plan(_candidates(59))
+
+
+def test_temporal_isolation_filters_years_and_labels_plan_provisional() -> None:
+    candidates = _candidates(100)
+    candidates.append(
+        CandidateArticle(
+            document_id="PMC999998",
+            title="Recent article",
+            source_uri="https://example.org/recent",
+            software_family="gromacs",
+            year=2025,
+        )
+    )
+    candidates.append(
+        CandidateArticle(
+            document_id="PMC999999",
+            title="Unknown-year article",
+            source_uri="https://example.org/unknown",
+            software_family="amber",
+            year=None,
+        )
+    )
+    plan = create_benchmark_plan(
+        candidates,
+        excluded_document_ids={"PMC000000"},
+        publication_year_max=2020,
+        require_known_year=True,
+        study_status="provisional_temporal_isolation",
+    )
+    selected = plan.development + plan.validation + plan.locked_test
+    assert plan.study_status == "provisional_temporal_isolation"
+    assert plan.study_id == "mdmeta-provisional-temporal-60-v1"
+    assert all(article.year is not None and article.year <= 2020 for article in selected)
+    reasons = {item["document_id"]: item["reason"] for item in plan.exclusions}
+    assert reasons["PMC999998"] == "publication_year_above_window"
+    assert reasons["PMC999999"] == "missing_publication_year"
+    assert plan.eligibility_rules["publication_year_max"] == 2020

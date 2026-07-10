@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "md-metadata-pipeline"
-version = "0.6.0"
+version = "0.7.0"
 description = "Evidence-linked molecular-dynamics literature metadata extraction and validation"
 requires-python = ">=3.11"
 dependencies = ["pydantic>=2.7,<3", "httpx>=0.27,<1"]

@@ -27,8 +27,10 @@ class BenchmarkPlan(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     study_id: str
+    study_status: str
     seed: int
     selection_method: str
+    eligibility_rules: dict[str, Any]
     development: list[CandidateArticle]
     validation: list[CandidateArticle]
     locked_test: list[CandidateArticle]
@@ -59,6 +61,10 @@ def create_benchmark_plan(
     development_size: int = 30,
     validation_size: int = 10,
     locked_test_size: int = 20,
+    publication_year_min: int | None = None,
+    publication_year_max: int | None = None,
+    require_known_year: bool = False,
+    study_status: str = "locked_confirmatory",
 ) -> BenchmarkPlan:
     target_size = development_size + validation_size + locked_test_size
     excluded_document_ids = {item.upper() for item in (excluded_document_ids or set())}
@@ -77,6 +83,20 @@ def create_benchmark_plan(
             reason = "full_text_unavailable"
         elif not identifier.startswith("PMC"):
             reason = "missing_pmc_identifier"
+        elif require_known_year and candidate.year is None:
+            reason = "missing_publication_year"
+        elif (
+            publication_year_min is not None
+            and candidate.year is not None
+            and candidate.year < publication_year_min
+        ):
+            reason = "publication_year_below_window"
+        elif (
+            publication_year_max is not None
+            and candidate.year is not None
+            and candidate.year > publication_year_max
+        ):
+            reason = "publication_year_above_window"
         if reason is not None:
             exclusions.append({"document_id": candidate.document_id, "reason": reason})
             continue
@@ -111,9 +131,22 @@ def create_benchmark_plan(
 
     candidate_manifest = [article.model_dump(mode="json") for article in candidates]
     manifest_sha = canonical_sha256(candidate_manifest)
+    eligibility_rules = {
+        "publication_year_min": publication_year_min,
+        "publication_year_max": publication_year_max,
+        "require_known_year": require_known_year,
+        "excluded_document_id_count": len(excluded_document_ids),
+    }
+    study_id = (
+        "mdmeta-confirmatory-60-v1"
+        if study_status == "locked_confirmatory"
+        else "mdmeta-provisional-temporal-60-v1"
+    )
     plan_core = {
-        "study_id": "mdmeta-confirmatory-60-v1",
+        "study_id": study_id,
+        "study_status": study_status,
         "seed": seed,
+        "eligibility_rules": eligibility_rules,
         "development": [article.document_id for article in development],
         "validation": [article.document_id for article in validation],
         "locked_test": [article.document_id for article in locked_test],
@@ -121,9 +154,11 @@ def create_benchmark_plan(
         "candidate_manifest_sha256": manifest_sha,
     }
     return BenchmarkPlan(
-        study_id="mdmeta-confirmatory-60-v1",
+        study_id=study_id,
+        study_status=study_status,
         seed=seed,
         selection_method="round_robin_software_strata_then_sha256_rank",
+        eligibility_rules=eligibility_rules,
         development=development,
         validation=validation,
         locked_test=locked_test,
