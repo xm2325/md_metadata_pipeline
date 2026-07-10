@@ -10,6 +10,7 @@ from mdmeta.file_backed import (
     fitting_alignment,
     sha256_file,
 )
+from mdmeta.file_consistency import normalize_atom_name
 
 
 def test_fitting_alignment_places_short_pdb_chain_inside_full_md_chain() -> None:
@@ -19,6 +20,18 @@ def test_fitting_alignment_places_short_pdb_chain_inside_full_md_chain() -> None
     assert result.matches == 5
     assert result.mismatches == 0
     assert result.score == 10
+
+
+def test_documented_atom_name_aliases_are_normalized() -> None:
+    assert normalize_atom_name("HN") == normalize_atom_name("H")
+    assert normalize_atom_name("OT1") == normalize_atom_name("O")
+    assert normalize_atom_name("OT2") == normalize_atom_name("OXT")
+    assert normalize_atom_name("1HB") == normalize_atom_name("HB1")
+
+
+def test_unlisted_atom_names_are_not_collapsed() -> None:
+    assert normalize_atom_name("CA") != normalize_atom_name("CB")
+    assert normalize_atom_name("C1") != normalize_atom_name("C2")
 
 
 def test_composes_md_pdb_and_length_consistent_sifts_segment() -> None:
