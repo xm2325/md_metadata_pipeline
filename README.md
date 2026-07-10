@@ -36,6 +36,19 @@ Version 0.8 adds a six-stage integration path for a real MD case and the frozen 
 
 The golden Woo et al. case requires `6VSB` and `6VXX` to validate and map to `P0DTC2`. It deliberately reports only PDB-to-UniProt residue mapping because no prepared topology/trajectory correspondence is supplied. The 60-article run is a coverage and integration audit, not an accuracy result. See [`docs/JD_END_TO_END_INTEGRATION.md`](docs/JD_END_TO_END_INTEGRATION.md).
 
+Version 0.9 adds a real file-backed MDDB/MDposit case for public project `MCV1900193.2`:
+
+- streamed and SHA-256-verified `topology.psf`, `structure.pdb`, and authentic XTC frames;
+- PSF/PDB/trajectory atom, residue, frame, residue-partition, and per-residue atom-count checks;
+- independent XTC loading with both topology formats;
+- exact and normalized atom-identity diagnostics that distinguish protein identity from glycan numbering conventions;
+- sequence-aligned MD-residue to PDB-residue correspondence;
+- composition with length-consistent SIFTS segments to UniProt `P0DTC2`;
+- software, version, force field, conditions, retrieval commands, audit command, and file hashes;
+- explicit reporting that the original NAMD `.conf` and execution command are not public.
+
+The verified run mapped 3,741 prepared-system residues to PDB `6VXX` and 3,573 residues through to UniProt, while retaining construct variants and trimer-chain ambiguity. See [`study/file_backed_mddb/RUN_2026-07-10.md`](study/file_backed_mddb/RUN_2026-07-10.md).
+
 Current `main` extends the provisional workflow with deterministic oversampling before the 30/10/20 split. It screens a larger full-text pool, selects only machine-eligible records, keeps rejected and reserve records, and creates a metadata-only dual-review workpack. The executed 2026-07-10 run screened 90 JATS articles with no download or parse failure, found 78 machine-eligible records, and produced a 60-record provisional review queue. See [`study/confirmatory_60/RUN_2026-07-10.md`](study/confirmatory_60/RUN_2026-07-10.md).
 
 The same workflow now freezes deterministic protocol-event predictions before human annotation. Screening and prediction use the same ephemeral JATS snapshots; the snapshots are deleted before artifact upload. The verified run completed 60/60 articles with zero failure and produced 281 machine-generated event candidates in an artifact that is separate from the human workpack. These counts are not accuracy results. See [`study/confirmatory_60/PREDICTION_FREEZE_2026-07-10.md`](study/confirmatory_60/PREDICTION_FREEZE_2026-07-10.md).
@@ -74,6 +87,21 @@ python scripts/run_integrated_60.py \
 ```
 
 The integration workflow uploads compact records, the SQLite database and hashed public-service response caches. It does not upload full JATS XML.
+
+## Run the file-backed MDDB case
+
+```bash
+python -m pip install -e '.[dev,files]'
+
+python scripts/run_file_backed_mddb_case.py \
+  --manifest examples/mddb_mcv1900193_2/project_manifest.json \
+  --work-dir results/file_backed/assets \
+  --output results/file_backed/report.json \
+  --mapping-output results/file_backed/residue_mapping.jsonl \
+  --cache-dir results/file_backed/cache
+```
+
+The workflow downloads public MDDB runtime assets but does not commit the large files. It produces a compact report, a residue-level JSONL mapping, atom-identity diagnostics, and an execution log. The acceptance gate requires topology–trajectory consistency and variant-aware MD→PDB→UniProt mapping coverage.
 
 ## Locked confirmatory workflow
 
@@ -158,6 +186,6 @@ python scripts/summarize_validation.py \
   --output results/validation_summary.json
 ```
 
-Offline validation tests use mocked service responses. Live PDBe, UniProt and mapping results are produced only by the separate integrated-enrichment workflow and remain dated run artifacts rather than timeless repository claims.
+Offline validation tests use mocked service responses. Live PDBe, UniProt and mapping results are produced only by the separate integrated-enrichment and file-backed workflows and remain dated run artifacts rather than timeless repository claims.
 
-See `docs/CONFIRMATORY_BENCHMARK.md`, `docs/ANNOTATION_GUIDE.md`, `docs/VALIDATION_SEMANTICS.md`, `docs/LLM_ADAPTER.md`, `docs/TEMPORAL_ISOLATION.md`, and `docs/JD_END_TO_END_INTEGRATION.md`.
+See `docs/CONFIRMATORY_BENCHMARK.md`, `docs/ANNOTATION_GUIDE.md`, `docs/VALIDATION_SEMANTICS.md`, `docs/LLM_ADAPTER.md`, `docs/TEMPORAL_ISOLATION.md`, `docs/JD_END_TO_END_INTEGRATION.md`, and `docs/FILE_BACKED_MDDB_PLAN.md`.
