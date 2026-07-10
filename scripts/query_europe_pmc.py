@@ -4,8 +4,9 @@ import argparse
 import hashlib
 import json
 import re
+import time
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 import httpx
 
@@ -22,6 +23,7 @@ SOFTWARE_PATTERNS = {
     "charmm": re.compile(r"\bcharmm\b", re.I),
     "desmond": re.compile(r"\bdesmond\b", re.I),
 }
+RETRYABLE_STATUS_CODES = {429, 500, 502, 503, 504}
 
 
 def software_family(text: str) -> str:
@@ -54,21 +56,68 @@ def _article(row: dict[str, Any]) -> dict[str, Any] | None:
     }
 
 
+def _bounded_retry_after(response: httpx.Response | None, fallback: float) -> float:
+    if response is None:
+        return fallback
+    raw = response.headers.get("Retry-After")
+    if raw is None:
+        return fallback
+    try:
+        return min(max(float(raw), 0.0), 30.0)
+    except ValueError:
+        return fallback
+
+
+def _get_page_with_retry(
+    client: httpx.Client,
+    *,
+    params: dict[str, Any],
+    retries: int = 5,
+    sleep: Callable[[float], None] = time.sleep,
+) -> httpx.Response:
+    last_error: Exception | None = None
+    for attempt in range(retries + 1):
+        response: httpx.Response | None = None
+        try:
+            response = client.get(BASE_URL, params=params)
+            if response.status_code not in RETRYABLE_STATUS_CODES:
+                response.raise_for_status()
+                return response
+            last_error = httpx.HTTPStatusError(
+                f"retryable Europe PMC status {response.status_code}",
+                request=response.request,
+                response=response,
+            )
+        except httpx.TransportError as exc:
+            last_error = exc
+        except httpx.HTTPStatusError:
+            raise
+        if attempt == retries:
+            break
+        fallback = min(2.0**attempt, 20.0)
+        sleep(_bounded_retry_after(response, fallback))
+    raise RuntimeError(
+        f"Europe PMC page request failed after {retries + 1} attempts; "
+        f"cursor={params.get('cursorMark')!r}"
+    ) from last_error
+
+
 def query_articles(
     query: str,
     *,
     max_candidates: int = 500,
     page_size: int = 100,
     timeout: float = 30.0,
+    retries: int = 5,
 ) -> dict[str, Any]:
     articles: list[dict[str, Any]] = []
     pages: list[dict[str, Any]] = []
     cursor = "*"
-    headers = {"User-Agent": "md-metadata-pipeline/0.4 confirmatory-corpus"}
-    with httpx.Client(timeout=timeout, headers=headers) as client:
+    headers = {"User-Agent": "md-metadata-pipeline/0.7 confirmatory-corpus"}
+    with httpx.Client(timeout=timeout, headers=headers, follow_redirects=True) as client:
         while len(articles) < max_candidates:
-            response = client.get(
-                BASE_URL,
+            response = _get_page_with_retry(
+                client,
                 params={
                     "query": query,
                     "format": "json",
@@ -76,8 +125,8 @@ def query_articles(
                     "pageSize": page_size,
                     "cursorMark": cursor,
                 },
+                retries=retries,
             )
-            response.raise_for_status()
             payload = response.json()
             pages.append(
                 {
@@ -113,12 +162,14 @@ def main() -> None:
     parser.add_argument("--query", default=DEFAULT_QUERY)
     parser.add_argument("--max-candidates", type=int, default=500)
     parser.add_argument("--page-size", type=int, default=100)
+    parser.add_argument("--retries", type=int, default=5)
     args = parser.parse_args()
 
     result = query_articles(
         args.query,
         max_candidates=args.max_candidates,
         page_size=args.page_size,
+        retries=args.retries,
     )
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(result, indent=2), encoding="utf-8")
@@ -126,6 +177,7 @@ def main() -> None:
         json.dumps(
             {
                 "articles": len(result["articles"]),
+                "pages": len(result["pages"]),
                 "manifest_sha256": result["manifest_sha256"],
             },
             indent=2,
