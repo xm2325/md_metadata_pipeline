@@ -1,0 +1,43 @@
+{
+  "assets": [
+    {
+      "role": "starting_structure",
+      "identifier": "6VSB",
+      "availability": "externally_referenced",
+      "source_uri": "https://www.ebi.ac.uk/pdbe/entry/pdb/6vsb",
+      "media_type": "chemical/x-mmcif",
+      "reason": "The PDB entry is externally referenced; the coordinate file is not copied into the repository."
+    },
+    {
+      "role": "starting_structure",
+      "identifier": "6VXX",
+      "availability": "externally_referenced",
+      "source_uri": "https://www.ebi.ac.uk/pdbe/entry/pdb/6vxx",
+      "media_type": "chemical/x-mmcif",
+      "reason": "The PDB entry is externally referenced; the coordinate file is not copied into the repository."
+    },
+    {
+      "role": "topology",
+      "availability": "declared_unavailable",
+      "reason": "No topology file is bundled with this reproducible metadata demonstration."
+    },
+    {
+      "role": "trajectory",
+      "availability": "declared_unavailable",
+      "reason": "No trajectory file is bundled with this reproducible metadata demonstration."
+    }
+  ],
+  "workflow_steps": [
+    {"name": "add_missing_residues", "origin": "literature"},
+    {"name": "add_glycans", "origin": "literature"},
+    {"name": "embed_in_membrane", "origin": "literature"},
+    {"name": "solvate_and_add_ions", "origin": "literature"},
+    {"name": "energy_minimisation", "origin": "literature"},
+    {"name": "equilibration", "origin": "literature"},
+    {"name": "production_simulation", "origin": "literature"}
+  ],
+  "md_to_pdb_mapping": {
+    "status": "not_computable",
+    "reason": "PDB-to-UniProt mapping can be computed from SIFTS, but MD-to-PDB residue mapping requires the prepared coordinates/topology or an explicit residue correspondence file."
+  }
+}

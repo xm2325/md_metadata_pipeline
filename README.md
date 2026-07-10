@@ -25,6 +25,17 @@ Version 0.7 added a provisional temporal-isolation path:
 - machine triage requires an MD protocol signal and a biomolecular-domain signal;
 - machine eligibility is not treated as human eligibility or reference annotation.
 
+Version 0.8 adds a six-stage integration path for a real MD case and the frozen 60-article set:
+
+- exact-span article/system metadata extraction;
+- live PDBe identifier validation;
+- UniProt discovery and validation through PDBe mappings;
+- SIFTS-derived PDB-chain to UniProt residue segments;
+- explicit MD-asset and workflow provenance, including unavailable-file states;
+- transactional SQLite storage and a FastAPI query layer.
+
+The golden Woo et al. case requires `6VSB` and `6VXX` to validate and map to `P0DTC2`. It deliberately reports only PDB-to-UniProt residue mapping because no prepared topology/trajectory correspondence is supplied. The 60-article run is a coverage and integration audit, not an accuracy result. See [`docs/JD_END_TO_END_INTEGRATION.md`](docs/JD_END_TO_END_INTEGRATION.md).
+
 Current `main` extends the provisional workflow with deterministic oversampling before the 30/10/20 split. It screens a larger full-text pool, selects only machine-eligible records, keeps rejected and reserve records, and creates a metadata-only dual-review workpack. The executed 2026-07-10 run screened 90 JATS articles with no download or parse failure, found 78 machine-eligible records, and produced a 60-record provisional review queue. See [`study/confirmatory_60/RUN_2026-07-10.md`](study/confirmatory_60/RUN_2026-07-10.md).
 
 The same workflow now freezes deterministic protocol-event predictions before human annotation. Screening and prediction use the same ephemeral JATS snapshots; the snapshots are deleted before artifact upload. The verified run completed 60/60 articles with zero failure and produced 281 machine-generated event candidates in an artifact that is separate from the human workpack. These counts are not accuracy results. See [`study/confirmatory_60/PREDICTION_FREEZE_2026-07-10.md`](study/confirmatory_60/PREDICTION_FREEZE_2026-07-10.md).
@@ -40,6 +51,29 @@ pytest --cov=mdmeta --cov-branch --cov-report=term-missing --cov-fail-under=75
 ```
 
 GitHub Actions runs Python 3.11 and 3.12 independently. The corpus workflow also executes a live Europe PMC metadata query, in-memory JATS screening, deterministic finalization, checksum generation, workpack construction, and blinded prediction freezing.
+
+## Run the end-to-end integration
+
+```bash
+python scripts/run_integrated_case.py \
+  --xml examples/woo_2020/article_fixture.xml \
+  --document-id WOO2020 \
+  --source-uri https://doi.org/10.1021/acs.jpcb.0c04553 \
+  --manifest examples/woo_2020/provenance_manifest.json \
+  --output results/golden/woo_2020.json \
+  --database results/golden/records.sqlite \
+  --cache-dir results/golden/cache \
+  --expect-pdb 6VSB --expect-pdb 6VXX \
+  --expect-uniprot P0DTC2
+
+python scripts/run_integrated_60.py \
+  --source-manifest study/integration_60/source_manifest.json \
+  --output-dir results/integrated_60 \
+  --database results/integrated_60/records.sqlite \
+  --cache-dir results/integrated_60/cache
+```
+
+The integration workflow uploads compact records, the SQLite database and hashed public-service response caches. It does not upload full JATS XML.
 
 ## Locked confirmatory workflow
 
@@ -124,6 +158,6 @@ python scripts/summarize_validation.py \
   --output results/validation_summary.json
 ```
 
-Offline validation tests use mocked service responses. No current live PDBe, UniProt, or SIFTS batch result is claimed by those tests.
+Offline validation tests use mocked service responses. Live PDBe, UniProt and mapping results are produced only by the separate integrated-enrichment workflow and remain dated run artifacts rather than timeless repository claims.
 
-See `docs/CONFIRMATORY_BENCHMARK.md`, `docs/ANNOTATION_GUIDE.md`, `docs/VALIDATION_SEMANTICS.md`, `docs/LLM_ADAPTER.md`, and `docs/TEMPORAL_ISOLATION.md`.
+See `docs/CONFIRMATORY_BENCHMARK.md`, `docs/ANNOTATION_GUIDE.md`, `docs/VALIDATION_SEMANTICS.md`, `docs/LLM_ADAPTER.md`, `docs/TEMPORAL_ISOLATION.md`, and `docs/JD_END_TO_END_INTEGRATION.md`.

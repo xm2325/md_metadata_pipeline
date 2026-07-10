@@ -1,0 +1,86 @@
+name: Integrated MD metadata enrichment
+
+on:
+  push:
+    branches: [main, "feature/**"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  offline-integration-tests:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+      - run: python -m pip install -e '.[dev]'
+      - run: ruff check src/mdmeta/integration.py src/mdmeta/storage.py src/mdmeta/api.py scripts/run_integrated_case.py scripts/run_integrated_60.py tests/test_integration.py
+      - run: pytest tests/test_integration.py
+
+  golden-live-validation:
+    needs: offline-integration-tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: python -m pip install -e '.[dev]'
+      - name: Run Woo 2020 integration case against live services
+        run: |
+          python scripts/run_integrated_case.py \
+            --xml examples/woo_2020/article_fixture.xml \
+            --document-id WOO2020 \
+            --source-uri https://doi.org/10.1021/acs.jpcb.0c04553 \
+            --manifest examples/woo_2020/provenance_manifest.json \
+            --output results/golden/woo_2020.json \
+            --database results/golden/records.sqlite \
+            --cache-dir results/golden/cache \
+            --expect-pdb 6VSB --expect-pdb 6VXX \
+            --expect-uniprot P0DTC2
+      - name: Upload golden result when artifact storage is available
+        continue-on-error: true
+        uses: actions/upload-artifact@v4
+        with:
+          name: golden-live-integration
+          path: results/golden
+          if-no-files-found: error
+          retention-days: 1
+
+  integrate-frozen-60:
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
+    needs: golden-live-validation
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: python -m pip install -e '.[dev]'
+      - name: Integrate the frozen 60-article corpus
+        run: |
+          python scripts/run_integrated_60.py \
+            --source-manifest study/integration_60/source_manifest.json \
+            --output-dir results/integrated_60 \
+            --database results/integrated_60/records.sqlite \
+            --cache-dir results/integrated_60/cache
+      - name: Upload 60-article records when artifact storage is available
+        continue-on-error: true
+        uses: actions/upload-artifact@v4
+        with:
+          name: integrated-60-records
+          path: results/integrated_60
+          if-no-files-found: error
+          retention-days: 1
