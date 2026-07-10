@@ -1,0 +1,85 @@
+name: Build eligibility-first temporal pool
+
+on:
+  workflow_dispatch:
+    inputs:
+      max_candidates:
+        description: Maximum historical Europe PMC candidates
+        required: false
+        default: "500"
+      pool_size:
+        description: Ordered pool size including reserves
+        required: false
+        default: "120"
+      selection_seed:
+        description: Candidate-pool selection seed
+        required: false
+        default: "3997"
+      review_seed:
+        description: Split-blind review-order seed
+        required: false
+        default: "7041"
+  pull_request:
+    paths:
+      - study/confirmatory_60/RUN_ELIGIBILITY_POOL
+
+permissions:
+  contents: read
+
+jobs:
+  prepare-screen-and-template:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install -e .
+      - name: Query historical Europe PMC metadata
+        env:
+          MAX_CANDIDATES: ${{ inputs.max_candidates || '500' }}
+        run: |
+          mkdir -p study/confirmatory_60/generated/eligibility_pool
+          python scripts/query_europe_pmc.py \
+            --output study/confirmatory_60/generated/eligibility_pool/historical_candidates.json \
+            --max-candidates "$MAX_CANDIDATES" \
+            --query 'OPEN_ACCESS:Y AND HAS_FT:Y AND FIRST_PDATE:[2016-01-01 TO 2020-12-31] AND (TITLE_ABS:"molecular dynamics" OR TITLE_ABS:"MD simulation")'
+      - name: Create ordered candidate pool with reserves
+        env:
+          POOL_SIZE: ${{ inputs.pool_size || '120' }}
+          SELECTION_SEED: ${{ inputs.selection_seed || '3997' }}
+        run: |
+          python scripts/prepare_eligibility_pool.py \
+            --candidates study/confirmatory_60/generated/eligibility_pool/historical_candidates.json \
+            --excluded-ids study/confirmatory_60/prior_article_ids.txt \
+            --pool-size "$POOL_SIZE" \
+            --publication-year-min 2016 \
+            --publication-year-max 2020 \
+            --require-known-year \
+            --seed "$SELECTION_SEED" \
+            --output study/confirmatory_60/generated/eligibility_pool/screening_pool.json
+      - name: Screen full text without storing XML
+        run: |
+          python scripts/screen_eligibility_pool.py \
+            --pool study/confirmatory_60/generated/eligibility_pool/screening_pool.json \
+            --output study/confirmatory_60/generated/eligibility_pool/fulltext_machine_screen.json
+      - name: Create split-blind human review template
+        env:
+          REVIEW_SEED: ${{ inputs.review_seed || '7041' }}
+        run: |
+          python scripts/create_eligibility_review_template.py \
+            --pool study/confirmatory_60/generated/eligibility_pool/screening_pool.json \
+            --screen study/confirmatory_60/generated/eligibility_pool/fulltext_machine_screen.json \
+            --review-seed "$REVIEW_SEED" \
+            --output study/confirmatory_60/generated/eligibility_pool/blind_eligibility_review_template.json
+      - name: Write artifact checksums
+        if: always()
+        run: |
+          cd study/confirmatory_60/generated/eligibility_pool
+          sha256sum *.json > SHA256SUMS.txt || true
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: eligibility-first-temporal-pool
+          path: study/confirmatory_60/generated/eligibility_pool/
+          retention-days: 90
