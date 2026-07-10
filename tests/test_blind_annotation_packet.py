@@ -4,7 +4,7 @@ from pathlib import Path
 from mdmeta.benchmark import canonical_sha256
 from scripts.build_blind_annotation_packet import build_packet
 
-XML = b'''<article article-type="research-article"><front><article-meta><title-group><article-title>Protein MD study</article-title></title-group><abstract><p>We simulated a protein.</p></abstract></article-meta></front><body><sec><title>Introduction</title><p>Background only.</p></sec><sec><title>Molecular dynamics methods</title><p id="m1">The system was equilibrated for 2 ns at 300 K.</p></sec></body></article>'''
+XML = b'''<article article-type="research-article"><front><article-meta><title-group><article-title>Protein MD study</article-title></title-group><abstract><p>We simulated a protein.</p></abstract></article-meta></front><body><sec><title>Introduction</title><p>Background only.</p></sec><sec><title>Molecular dynamics methods</title><p id="m1">The system was equilibrated for 2 ns at 300 K.</p></sec><sec><title>Technical details</title><p id="m2">Molecular dynamics simulations used GROMACS with a force field for 100 ns in the NPT ensemble.</p></sec></body></article>'''
 
 
 def test_packet_is_blinded_and_hash_locked(tmp_path: Path) -> None:
@@ -37,8 +37,11 @@ def test_packet_is_blinded_and_hash_locked(tmp_path: Path) -> None:
     assert packet["contains_full_article_xml"] is False
     article = packet["articles"][0]
     assert article["abstract"] == "We simulated a protein."
-    assert article["method_paragraph_count"] == 1
-    assert article["method_sections"][0]["paragraphs"][0]["paragraph_id"] == "m1"
+    assert article["method_paragraph_count"] == 2
+    by_section = {section["section"]: section for section in article["method_sections"]}
+    assert by_section["Molecular dynamics methods"]["selection_reason"] == "method_like_title"
+    assert by_section["Technical details"]["selection_reason"] == "protocol_rich_section_text"
+    assert by_section["Technical details"]["paragraphs"][0]["paragraph_id"] == "m2"
     assert "Background only" not in str(packet)
     assert "prediction" not in str(article).lower()
     assert len(packet["packet_sha256"]) == 64
