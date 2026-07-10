@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - provisional-temporal-corpus
+  pull_request:
+    branches:
+      - main
   workflow_dispatch:
 
 permissions:
