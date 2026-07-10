@@ -58,7 +58,7 @@ jobs:
           retention-days: 1
 
   integrate-frozen-60:
-    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'pull_request' && github.head_ref == 'run/integrated-60-audit')
     needs: golden-live-validation
     runs-on: ubuntu-latest
     timeout-minutes: 45
