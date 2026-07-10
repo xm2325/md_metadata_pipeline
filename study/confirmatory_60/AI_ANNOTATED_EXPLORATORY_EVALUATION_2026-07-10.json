@@ -1,0 +1,68 @@
+{
+  "run_date_utc": "2026-07-10",
+  "evaluation_status": "ai_annotated_exploratory_not_human_gold",
+  "article_count": 60,
+  "ai_eligible_article_count": 58,
+  "ai_ineligible_article_count": 2,
+  "ai_ineligible_document_ids": [
+    "PMC6316748",
+    "PMC7345908"
+  ],
+  "reference_event_count": 215,
+  "prediction_event_count": 281,
+  "reference_method": "blind_three_pass_ai_consensus_with_manual_ai_adjudication",
+  "semantic_reference_frozen_before_predictions_unsealed": true,
+  "evidence_reanchored_after_jats_spacing_fix": true,
+  "reference_sha256": "66ff6f6031bbd899c7e4d33daec2ec8fe8bbead4f6cfe790aad1cbb462a2ffc8",
+  "prediction_sha256": "ab3c3f1e9c34a29055dc91871c632b96fd28df4c15e8dcf1c0ce2cdfdfc77e8c",
+  "blind_packet_sha256": "330fb8685574c7e56672424604ded3804e63b8a1718cf4919320be41170ce305",
+  "all_60_articles": {
+    "strict_complete_event": {
+      "tp": 105,
+      "fp": 176,
+      "fn": 110,
+      "precision": 0.3736654804,
+      "recall": 0.4883720930,
+      "f1": 0.4233870968
+    },
+    "phase_aware_attribute": {
+      "tp": 247,
+      "fp": 286,
+      "fn": 98,
+      "precision": 0.4634146341,
+      "recall": 0.7159420290,
+      "f1": 0.5626423690,
+      "article_bootstrap_95_ci_f1": [0.4969549330, 0.6205305652],
+      "bootstrap_iterations": 2000,
+      "bootstrap_seed": 3997
+    },
+    "duration_plus_phase": {
+      "tp": 162,
+      "fp": 119,
+      "fn": 53,
+      "precision": 0.5765124555,
+      "recall": 0.7534883721,
+      "f1": 0.6532258065
+    }
+  },
+  "eligible_only_58_articles": {
+    "phase_aware_attribute_f1": 0.5710982659,
+    "article_bootstrap_95_ci_f1": [0.5019108280, 0.6285714286]
+  },
+  "field_f1": {
+    "duration_ps": 0.6532258065,
+    "temperature_k": 0.5352112676,
+    "pressure_bar": 0.5217391304,
+    "ensemble": 0.4897959184,
+    "replicates": 0.2608695652,
+    "timestep_fs": 0.08,
+    "restraints": 0.0
+  },
+  "interpretation": {
+    "primary_exploratory_metric": "phase_aware_attribute_f1",
+    "independent_locked_test": false,
+    "human_gold_standard": false,
+    "accuracy_claim_allowed": false,
+    "reason": "All articles were used to construct an AI consensus reference. Human dual annotation and domain-expert adjudication remain incomplete."
+  }
+}
