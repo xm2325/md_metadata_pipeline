@@ -36,6 +36,13 @@ PROTOCOL_PATTERNS = {
 METHOD_TITLE = re.compile(
     r"method|simulation|computational|molecular dynamics|system preparation", re.I
 )
+BIOMOLECULAR_PATTERNS = {
+    "protein": re.compile(r"\bproteins?\b|\benzymes?\b|\breceptors?\b", re.I),
+    "ligand": re.compile(r"\bligands?\b|\bdrug[- ]like\b|\bbinding pocket\b", re.I),
+    "peptide": re.compile(r"\bpeptides?\b|\bamino acids?\b", re.I),
+    "membrane": re.compile(r"\bmembranes?\b|\blipid bilayer\b", re.I),
+    "nucleic_acid": re.compile(r"\bDNA\b|\bRNA\b|\bnucleic acids?\b", re.I),
+}
 
 
 def _text(node: ET.Element | None) -> str:
@@ -57,24 +64,45 @@ def screen_xml(document_id: str, xml_bytes: bytes, split: str) -> dict:
             method_sections.append(section_title)
     engines = sorted(name for name, pattern in ENGINE_PATTERNS.items() if pattern.search(body_text))
     hits = {name: len(pattern.findall(body_text)) for name, pattern in PROTOCOL_PATTERNS.items()}
+    biomolecular_hits = {
+        name: len(pattern.findall(body_text)) for name, pattern in BIOMOLECULAR_PATTERNS.items()
+    }
     positive_fields = sum(hits[name] > 0 for name in hits if name != "molecular_dynamics")
-    if engines and positive_fields >= 2 and hits["molecular_dynamics"] > 0:
-        status = "strong_protocol_signal"
-    elif hits["molecular_dynamics"] > 0 and positive_fields >= 2:
-        status = "generic_protocol_signal"
+    has_biomolecular_signal = any(value > 0 for value in biomolecular_hits.values())
+    article_type = root.attrib.get("article-type")
+    if (
+        engines
+        and positive_fields >= 2
+        and hits["molecular_dynamics"] > 0
+        and has_biomolecular_signal
+    ):
+        status = "strong_biomolecular_protocol_signal"
+    elif hits["molecular_dynamics"] > 0 and positive_fields >= 2 and has_biomolecular_signal:
+        status = "generic_biomolecular_protocol_signal"
     else:
-        status = "weak_or_no_protocol_signal"
+        status = "non_biomolecular_or_weak_signal"
+    machine_eligible = (
+        status
+        in {
+            "strong_biomolecular_protocol_signal",
+            "generic_biomolecular_protocol_signal",
+        }
+        and article_type != "review-article"
+    )
     return {
         "document_id": document_id,
         "split": split,
         "title": title,
-        "article_type": root.attrib.get("article-type"),
+        "article_type": article_type,
         "full_text_sha256": digest,
         "xml_size_bytes": len(xml_bytes),
         "engine_mentions": engines,
         "protocol_term_hits": hits,
+        "biomolecular_term_hits": biomolecular_hits,
+        "biomolecular_domain_signal": has_biomolecular_signal,
         "method_section_titles": method_sections,
         "machine_screen_status": status,
+        "machine_eligible_for_annotation": machine_eligible,
         "screening_scope": "machine_triage_not_human_eligibility",
     }
 
@@ -103,7 +131,10 @@ def screen_plan(plan: dict, fetcher: Callable[[str], bytes]) -> dict:
                     }
                 )
     status_counts = Counter(record["machine_screen_status"] for record in records)
-    engine_counts = Counter(engine for record in records for engine in record["engine_mentions"])
+    engine_counts = Counter(
+        engine for record in records for engine in record["engine_mentions"]
+    )
+    eligible_count = sum(record["machine_eligible_for_annotation"] for record in records)
     return {
         "study_id": plan.get("study_id"),
         "study_status": plan.get("study_status"),
@@ -116,6 +147,7 @@ def screen_plan(plan: dict, fetcher: Callable[[str], bytes]) -> dict:
         "failure_count": len(failures),
         "status_counts": dict(sorted(status_counts.items())),
         "engine_mention_counts": dict(sorted(engine_counts.items())),
+        "machine_eligible_count": eligible_count,
         "records": records,
         "failures": failures,
     }
@@ -152,6 +184,7 @@ def main() -> None:
                     "failure_count",
                     "status_counts",
                     "engine_mention_counts",
+                    "machine_eligible_count",
                 )
             },
             indent=2,
