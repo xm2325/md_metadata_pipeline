@@ -38,49 +38,62 @@ jobs:
           cache: pip
       - run: python -m pip install -e '.[dev,files]'
       - name: Run public PSF PDB XTC and residue mapping audit
+        id: audit
         run: |
+          mkdir -p results/file_backed
+          set +e
           python scripts/run_file_backed_mddb_case.py \
             --manifest examples/mddb_mcv1900193_2/project_manifest.json \
             --work-dir results/file_backed/assets \
             --output results/file_backed/report.json \
             --mapping-output results/file_backed/residue_mapping.jsonl \
-            --cache-dir results/file_backed/cache
-      - name: Post compact file-backed result to the PR
-        if: github.event_name == 'pull_request'
+            --cache-dir results/file_backed/cache \
+            2>&1 | tee results/file_backed/run.log
+          status=${PIPESTATUS[0]}
+          echo "status=${status}" >> "$GITHUB_OUTPUT"
+          exit 0
+      - name: Post file-backed result or diagnostics to the PR
+        if: github.event_name == 'pull_request' && always()
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           python - <<'PY'
           import json
           from pathlib import Path
-          report = json.loads(Path('results/file_backed/report.json').read_text())
-          compact = {
-              'case_id': report['case_id'],
-              'project_accession': report['project_accession'],
-              'assets': [
-                  {
-                      'role': item['role'],
-                      'filename': item['filename'],
-                      'byte_size': item['byte_size'],
-                      'sha256': item['sha256'],
-                  }
-                  for item in report['assets']
-              ],
-              'workflow': report['workflow'],
-              'counts': report['counts'],
-              'consistency': report['consistency'],
-              'residue_mapping': report['residue_mapping'],
-              'residue_mapping_rows_sha256': report['residue_mapping_rows_sha256'],
-              'scientific_boundaries': report['scientific_boundaries'],
-          }
-          Path('/tmp/file-backed.md').write_text(
-              '## Verified file-backed MDDB audit\n\n```json\n'
-              + json.dumps(compact, indent=2, sort_keys=True)
-              + '\n```\n'
-          )
+          report_path = Path('results/file_backed/report.json')
+          log_path = Path('results/file_backed/run.log')
+          if report_path.exists():
+              report = json.loads(report_path.read_text())
+              compact = {
+                  'case_id': report['case_id'],
+                  'project_accession': report['project_accession'],
+                  'assets': [
+                      {
+                          'role': item['role'],
+                          'filename': item['filename'],
+                          'byte_size': item['byte_size'],
+                          'sha256': item['sha256'],
+                      }
+                      for item in report['assets']
+                  ],
+                  'workflow': report['workflow'],
+                  'counts': report['counts'],
+                  'consistency': report['consistency'],
+                  'residue_mapping': report['residue_mapping'],
+                  'residue_mapping_rows_sha256': report['residue_mapping_rows_sha256'],
+                  'scientific_boundaries': report['scientific_boundaries'],
+              }
+              body = '## File-backed MDDB audit\n\n```json\n' + json.dumps(
+                  compact, indent=2, sort_keys=True
+              ) + '\n```\n'
+          else:
+              lines = log_path.read_text(errors='replace').splitlines()[-120:]
+              body = '## File-backed MDDB audit failed before report creation\n\n```text\n'
+              body += '\n'.join(lines) + '\n```\n'
+          Path('/tmp/file-backed.md').write_text(body)
           PY
           gh pr comment "${{ github.event.pull_request.number }}" --body-file /tmp/file-backed.md
-      - name: Upload compact report and mapping when storage is available
+      - name: Upload compact report mapping and diagnostics when storage is available
         if: always()
         continue-on-error: true
         uses: actions/upload-artifact@v4
@@ -89,4 +102,8 @@ jobs:
           path: |
             results/file_backed/report.json
             results/file_backed/residue_mapping.jsonl
+            results/file_backed/run.log
           retention-days: 1
+      - name: Enforce live file-backed acceptance gate
+        if: always()
+        run: test "${{ steps.audit.outputs.status }}" = "0"
