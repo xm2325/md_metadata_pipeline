@@ -39,7 +39,7 @@ class ProtocolEvent(BaseModel):
     event_id: str
     event_type: EventType
     duration_ps: float | None = Field(default=None, gt=0)
-    temperature_k: float | None = Field(default=None, gt=0)
+    temperature_k: float | None = Field(default=None, ge=0)
     pressure_bar: float | None = Field(default=None, gt=0)
     timestep_fs: float | None = Field(default=None, gt=0)
     ensemble: Literal["NVE", "NVT", "NPT", "NPAT", "NPH"] | None = None
