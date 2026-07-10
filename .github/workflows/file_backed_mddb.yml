@@ -26,6 +26,11 @@ jobs:
           python scripts/discover_mddb_files.py \
             --project MCV1900193.2 \
             --output results/file_backed/discovery.json
+      - name: Query PDBe residue listing and SIFTS mapping schemas
+        run: |
+          python scripts/discover_pdbe_residue_schema.py \
+            --pdb-id 6VXX \
+            --output results/file_backed/pdbe_residue_schema.json
       - name: Post compact discovery result to the PR
         if: github.event_name == 'pull_request'
         env:
@@ -34,16 +39,24 @@ jobs:
           python - <<'PY'
           import json
           from pathlib import Path
-          payload = json.loads(Path('results/file_backed/discovery.json').read_text())
+          mddb = json.loads(Path('results/file_backed/discovery.json').read_text())
+          pdbe = json.loads(Path('results/file_backed/pdbe_residue_schema.json').read_text())
           compact = {
-              'project': payload['project'],
-              'published': payload['published'],
-              'metadata': payload['metadata'],
-              'descriptor_count': payload['descriptor_count'],
-              'files': payload['files'],
+              'project': mddb['project'],
+              'published': mddb['published'],
+              'metadata': mddb['metadata'],
+              'descriptor_count': mddb['descriptor_count'],
+              'files': mddb['files'],
+              'pdbe': {
+                  'pdb_id': pdbe['pdb_id'],
+                  'root_keys': pdbe['root_keys'],
+                  'chains': pdbe['chains'],
+                  'mapping_segment_count': pdbe['mapping_segment_count'],
+                  'mapping_segments': pdbe['mapping_segments'],
+              },
           }
           Path('/tmp/discovery.md').write_text(
-              '## Live MDDB file discovery\n\n```json\n'
+              '## Live MDDB and PDBe mapping discovery\n\n```json\n'
               + json.dumps(compact, indent=2, sort_keys=True)
               + '\n```\n'
           )
