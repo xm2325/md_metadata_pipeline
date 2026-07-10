@@ -31,6 +31,13 @@ def _text(node: ET.Element | None) -> str:
     return " ".join("".join(node.itertext()).split())
 
 
+def read_cached_xml(cache_dir: Path, document_id: str) -> bytes:
+    path = cache_dir / f"{document_id.upper()}.xml"
+    if not path.is_file():
+        raise FileNotFoundError(f"missing cached JATS snapshot: {path}")
+    return path.read_bytes()
+
+
 def method_paragraphs(document_id: str, xml_bytes: bytes) -> list[Paragraph]:
     root = ET.fromstring(xml_bytes)
     paragraphs: list[Paragraph] = []
@@ -121,8 +128,13 @@ def freeze_predictions(
                         )
                         if source[evidence.start_char : evidence.end_char] != evidence.quote:
                             raise ValueError("event evidence offsets do not reproduce the quote")
-                        if hashlib.sha256(source.encode("utf-8")).hexdigest() != evidence.context_sha256:
-                            raise ValueError("event evidence context hash does not match the paragraph")
+                        if (
+                            hashlib.sha256(source.encode("utf-8")).hexdigest()
+                            != evidence.context_sha256
+                        ):
+                            raise ValueError(
+                                "event evidence context hash does not match the paragraph"
+                            )
                 articles.append(
                     {
                         "document_id": document_id,
@@ -152,6 +164,7 @@ def freeze_predictions(
         "accuracy_evaluated": False,
         "human_reference_used": False,
         "blinding_status": "separate_artifact_not_in_human_workpack",
+        "source_snapshot_policy": "same_runner_ephemeral_jats_cache",
         "article_count_requested": sum(
             len(plan[split]) for split in ("development", "validation", "locked_test")
         ),
@@ -183,21 +196,35 @@ def main() -> None:
     parser.add_argument("--plan", type=Path, required=True)
     parser.add_argument("--screen", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--xml-cache-dir", type=Path)
     parser.add_argument("--timeout", type=float, default=30.0)
     parser.add_argument("--delay", type=float, default=0.05)
     args = parser.parse_args()
     plan = json.loads(args.plan.read_text(encoding="utf-8"))
     screen = json.loads(args.screen.read_text(encoding="utf-8"))
-    headers = {"User-Agent": "md-metadata-pipeline/0.7 prediction-freeze"}
-    with httpx.Client(timeout=args.timeout, headers=headers, follow_redirects=True) as client:
 
-        def fetcher(pmcid: str) -> bytes:
-            payload = fetch_xml(pmcid, client)
-            if args.delay > 0:
-                time.sleep(args.delay)
-            return payload
+    if args.xml_cache_dir is not None:
+        result = freeze_predictions(
+            plan,
+            screen,
+            lambda pmcid: read_cached_xml(args.xml_cache_dir, pmcid),
+        )
+    else:
+        headers = {"User-Agent": "md-metadata-pipeline/0.7 prediction-freeze"}
+        with httpx.Client(
+            timeout=args.timeout,
+            headers=headers,
+            follow_redirects=True,
+        ) as client:
 
-        result = freeze_predictions(plan, screen, fetcher)
+            def fetcher(pmcid: str) -> bytes:
+                payload = fetch_xml(pmcid, client)
+                if args.delay > 0:
+                    time.sleep(args.delay)
+                return payload
+
+            result = freeze_predictions(plan, screen, fetcher)
+
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(result, indent=2), encoding="utf-8")
     print(
