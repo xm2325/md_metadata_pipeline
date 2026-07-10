@@ -23,12 +23,14 @@ on:
       - scripts/screen_selected_fulltext.py
       - scripts/finalize_screened_plan.py
       - scripts/build_annotation_workpack.py
+      - scripts/build_blind_annotation_packet.py
       - scripts/freeze_machine_predictions.py
       - src/mdmeta/benchmark.py
       - src/mdmeta/protocol_events.py
       - tests/test_query_europe_pmc.py
       - tests/test_fulltext_screen.py
       - tests/test_screened_plan_workpack.py
+      - tests/test_blind_annotation_packet.py
       - tests/test_prediction_freeze.py
 
 permissions:
@@ -89,6 +91,14 @@ jobs:
             --plan study/confirmatory_60/generated/temporal/provisional_temporal_plan.json \
             --screen study/confirmatory_60/generated/temporal/fulltext_machine_screen.json \
             --output-dir study/confirmatory_60/generated/temporal/workpack
+      - name: Build blinded AI reading packet without machine predictions
+        run: |
+          mkdir -p study/confirmatory_60/generated/temporal/blind_ai_packet
+          python scripts/build_blind_annotation_packet.py \
+            --plan study/confirmatory_60/generated/temporal/provisional_temporal_plan.json \
+            --screen study/confirmatory_60/generated/temporal/fulltext_machine_screen.json \
+            --xml-cache-dir "$RUNNER_TEMP/mdmeta-jats-cache" \
+            --output study/confirmatory_60/generated/temporal/blind_ai_packet/articles.json
       - name: Freeze deterministic predictions from the same source snapshots
         run: |
           mkdir -p study/confirmatory_60/generated/temporal/predictions
@@ -112,6 +122,7 @@ jobs:
           cd study/confirmatory_60/generated/temporal
           sha256sum historical_candidates.json provisional_screening_pool.json fulltext_machine_screen.json provisional_temporal_plan.json > CORPUS_SHA256SUMS.txt || true
           find workpack -type f -print0 | sort -z | xargs -0 sha256sum > workpack/SHA256SUMS.txt || true
+          find blind_ai_packet -type f -print0 | sort -z | xargs -0 sha256sum > blind_ai_packet/SHA256SUMS.txt || true
           find predictions -type f -print0 | sort -z | xargs -0 sha256sum > predictions/SHA256SUMS.txt || true
       - uses: actions/upload-artifact@v4
         if: always()
@@ -129,6 +140,12 @@ jobs:
         with:
           name: provisional-temporal-human-workpack
           path: study/confirmatory_60/generated/temporal/workpack/
+          retention-days: 90
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: provisional-temporal-blind-ai-packet
+          path: study/confirmatory_60/generated/temporal/blind_ai_packet/
           retention-days: 90
       - uses: actions/upload-artifact@v4
         if: always()
