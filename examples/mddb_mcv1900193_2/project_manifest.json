@@ -1,0 +1,18 @@
+{
+  "case_id": "mddb-mcv1900193-2",
+  "repository": "MDDB/MDposit",
+  "project_accession": "MCV1900193.2",
+  "api_base_url": "https://irb.mddbr.eu/api/rest/current",
+  "starting_pdb_ids": ["6VXX"],
+  "expected_uniprot_accessions": ["P0DTC2"],
+  "trajectory_request": {
+    "frames": "1:10:1",
+    "format": "xtc"
+  },
+  "scientific_boundary": {
+    "coordinate_topology_required": true,
+    "force_field_topology_required_for_claim": true,
+    "workflow_files_required_for_claim": true,
+    "do_not_infer_missing_files": true
+  }
+}
