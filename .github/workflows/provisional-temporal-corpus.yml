@@ -37,6 +37,11 @@ jobs:
             --publication-year-max 2020 \
             --require-known-year \
             --output study/confirmatory_60/generated/provisional_temporal_plan.json
+      - name: Screen selected full text without storing XML
+        run: |
+          python scripts/screen_selected_fulltext.py \
+            --plan study/confirmatory_60/generated/provisional_temporal_plan.json \
+            --output study/confirmatory_60/generated/fulltext_screen.json
       - uses: actions/upload-artifact@v4
         if: always()
         with:
