@@ -22,8 +22,11 @@ on:
       - scripts/screen_selected_fulltext.py
       - scripts/finalize_screened_plan.py
       - scripts/build_annotation_workpack.py
+      - scripts/freeze_machine_predictions.py
       - src/mdmeta/benchmark.py
+      - src/mdmeta/protocol_events.py
       - tests/test_screened_plan_workpack.py
+      - tests/test_prediction_freeze.py
 
 permissions:
   contents: read
@@ -81,14 +84,40 @@ jobs:
             --plan study/confirmatory_60/generated/temporal/provisional_temporal_plan.json \
             --screen study/confirmatory_60/generated/temporal/fulltext_machine_screen.json \
             --output-dir study/confirmatory_60/generated/temporal/workpack
-      - name: Write artifact checksums
+      - name: Freeze deterministic predictions in a separate directory
+        run: |
+          mkdir -p study/confirmatory_60/generated/temporal/predictions
+          python scripts/freeze_machine_predictions.py \
+            --plan study/confirmatory_60/generated/temporal/provisional_temporal_plan.json \
+            --screen study/confirmatory_60/generated/temporal/fulltext_machine_screen.json \
+            --output study/confirmatory_60/generated/temporal/predictions/machine_predictions.json
+      - name: Write separate checksums
         if: always()
         run: |
           cd study/confirmatory_60/generated/temporal
-          find . -type f -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS.txt || true
+          sha256sum historical_candidates.json provisional_screening_pool.json fulltext_machine_screen.json provisional_temporal_plan.json > CORPUS_SHA256SUMS.txt || true
+          find workpack -type f -print0 | sort -z | xargs -0 sha256sum > workpack/SHA256SUMS.txt || true
+          find predictions -type f -print0 | sort -z | xargs -0 sha256sum > predictions/SHA256SUMS.txt || true
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: provisional-temporal-corpus
-          path: study/confirmatory_60/generated/temporal/
+          path: |
+            study/confirmatory_60/generated/temporal/historical_candidates.json
+            study/confirmatory_60/generated/temporal/provisional_screening_pool.json
+            study/confirmatory_60/generated/temporal/fulltext_machine_screen.json
+            study/confirmatory_60/generated/temporal/provisional_temporal_plan.json
+            study/confirmatory_60/generated/temporal/CORPUS_SHA256SUMS.txt
+          retention-days: 90
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: provisional-temporal-human-workpack
+          path: study/confirmatory_60/generated/temporal/workpack/
+          retention-days: 90
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: provisional-temporal-machine-predictions
+          path: study/confirmatory_60/generated/temporal/predictions/
           retention-days: 90
