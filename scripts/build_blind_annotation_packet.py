@@ -13,6 +13,15 @@ METHOD_TITLE = re.compile(
     r"method|simulation|computational|molecular dynamics|system preparation|model(?:ing|ling)|docking",
     re.IGNORECASE,
 )
+MD_SIGNAL = re.compile(r"\bmolecular dynamics\b|\bMD simulations?\b", re.IGNORECASE)
+PROTOCOL_SIGNALS = (
+    re.compile(r"\bGROMACS\b|\bAMBER(?:TOOLS)?\b|\bNAMD\b|\bOpenMM\b|\bCHARMM\b|\bDesmond\b", re.IGNORECASE),
+    re.compile(r"\bforce field\b|\bCHARMM\d|\bff\d{2}SB\b|\bOPLS\b|\bAMBER\d+SB\b", re.IGNORECASE),
+    re.compile(r"\bTIP[345]P\b|\bSPC(?:/E)?\b|\bwater model\b", re.IGNORECASE),
+    re.compile(r"\bNPT\b|\bNVT\b|\bNVE\b|\bNPAT\b|\bNPH\b", re.IGNORECASE),
+    re.compile(r"\b\d+(?:\.\d+)?\s*(?:fs|ps|ns|us|µs|μs|ms|K|bar|atm)\b", re.IGNORECASE),
+    re.compile(r"\bequilibrat|\bproduction\s+(?:MD|simulation|run)|\bminimi[sz]|\bheating\b", re.IGNORECASE),
+)
 
 
 def _text(node: ET.Element | None) -> str:
@@ -41,6 +50,12 @@ def _paragraphs(section: ET.Element, section_index: int) -> list[dict]:
     return rows
 
 
+def _protocol_rich(section_text: str) -> bool:
+    if MD_SIGNAL.search(section_text) is None:
+        return False
+    return sum(pattern.search(section_text) is not None for pattern in PROTOCOL_SIGNALS) >= 2
+
+
 def build_packet(plan: dict, screen: dict, xml_cache_dir: Path) -> dict:
     if plan["screen_sha256"] != canonical_sha256(screen):
         raise ValueError("final plan does not match the supplied full-text screen")
@@ -62,13 +77,21 @@ def build_packet(plan: dict, screen: dict, xml_cache_dir: Path) -> dict:
             method_sections: list[dict] = []
             for section_index, section in enumerate(root.findall(".//body//sec"), start=1):
                 section_title = _text(section.find("./title"))
-                if not METHOD_TITLE.search(section_title):
+                section_text = _text(section)
+                selected_by_title = METHOD_TITLE.search(section_title) is not None
+                selected_by_protocol = _protocol_rich(section_text)
+                if not selected_by_title and not selected_by_protocol:
                     continue
                 paragraphs = _paragraphs(section, section_index)
                 if paragraphs:
                     method_sections.append(
                         {
                             "section": section_title or f"section-{section_index}",
+                            "selection_reason": (
+                                "method_like_title"
+                                if selected_by_title
+                                else "protocol_rich_section_text"
+                            ),
                             "paragraphs": paragraphs,
                         }
                     )
