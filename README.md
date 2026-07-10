@@ -16,7 +16,7 @@ Version 0.5 added hashed response caching, retry provenance, bounded `Retry-Afte
 
 Version 0.6 added a provider-independent schema-constrained model adapter. Model outputs remain candidates until exact source offsets, raw numeric expressions, and deterministic unit conversions pass code checks.
 
-Version 0.7 adds a provisional temporal-isolation path:
+Version 0.7 added a provisional temporal-isolation path:
 
 - candidate articles can be restricted to an explicit publication-year window;
 - plans are labelled `provisional_temporal_isolation`, never `locked_confirmatory`;
@@ -24,6 +24,8 @@ Version 0.7 adds a provisional temporal-isolation path:
 - selected Europe PMC full text is screened in memory and only hashes, aggregate signals, and limited metadata are stored;
 - machine triage requires an MD protocol signal and a biomolecular-domain signal;
 - machine eligibility is not treated as human eligibility or reference annotation.
+
+Current `main` extends the provisional workflow with deterministic oversampling before the 30/10/20 split. It screens a larger full-text pool, selects only machine-eligible records, keeps rejected and reserve records, and creates a metadata-only dual-review workpack. The executed 2026-07-10 run screened 90 JATS articles with no download or parse failure, found 78 machine-eligible records, and produced a 60-record provisional review queue. See [`study/confirmatory_60/RUN_2026-07-10.md`](study/confirmatory_60/RUN_2026-07-10.md).
 
 External databases do not fill reference labels and never overwrite extracted literature values. Network failure is not treated as biological conflict. Model output is not a final record until evidence checks pass.
 
@@ -35,7 +37,7 @@ ruff check .
 pytest --cov=mdmeta --cov-branch --cov-report=term-missing --cov-fail-under=75
 ```
 
-The combined v0.7 code was locally checked with 32 tests and 86.48% branch-aware coverage before opening the pull request. GitHub Actions runs Python 3.11 and 3.12 independently.
+GitHub Actions runs Python 3.11 and 3.12 independently. The corpus workflow also executes a live Europe PMC metadata query, in-memory JATS screening, deterministic finalization, checksum generation, and workpack construction.
 
 ## Locked confirmatory workflow
 
@@ -53,7 +55,7 @@ Only 15 original development IDs are currently recorded; the 15 previous held-ou
 
 ## Provisional temporal isolation
 
-The temporal path is a separate research status, intended to create a working annotation queue while the prior held-out IDs remain unavailable:
+The provisional path creates a working annotation queue while the prior held-out IDs remain unavailable. A larger deterministic pool is screened before the final 60 records are assigned to development, validation, and locked-test placeholders.
 
 ```bash
 python scripts/prepare_confirmatory_benchmark.py \
@@ -64,14 +66,27 @@ python scripts/prepare_confirmatory_benchmark.py \
   --publication-year-max 2020 \
   --require-known-year \
   --study-status provisional_temporal_isolation \
-  --output study/confirmatory_60/generated/temporal/provisional_temporal_plan.json
+  --development-size 90 \
+  --validation-size 0 \
+  --locked-test-size 0 \
+  --output study/confirmatory_60/generated/temporal/provisional_screening_pool.json
 
 python scripts/screen_selected_fulltext.py \
-  --plan study/confirmatory_60/generated/temporal/provisional_temporal_plan.json \
+  --plan study/confirmatory_60/generated/temporal/provisional_screening_pool.json \
   --output study/confirmatory_60/generated/temporal/fulltext_machine_screen.json
+
+python scripts/finalize_screened_plan.py \
+  --pool-plan study/confirmatory_60/generated/temporal/provisional_screening_pool.json \
+  --screen study/confirmatory_60/generated/temporal/fulltext_machine_screen.json \
+  --output study/confirmatory_60/generated/temporal/provisional_temporal_plan.json
+
+python scripts/build_annotation_workpack.py \
+  --plan study/confirmatory_60/generated/temporal/provisional_temporal_plan.json \
+  --screen study/confirmatory_60/generated/temporal/fulltext_machine_screen.json \
+  --output-dir study/confirmatory_60/generated/temporal/workpack
 ```
 
-The screening output contains no full article text. It stores article and split identifiers, source hashes, term counts, method-section titles, engine mentions, biomolecular signals, machine status, and failures. Human review remains required before annotation.
+The generated artifact contains no full article text. It stores source hashes, limited article metadata, protocol and biomolecular signal counts, the final plan commitment, a 60-row eligibility-review CSV, an annotation JSON schema, and separate empty JSONL files for two annotators. Human eligibility review remains required before reference annotation.
 
 ## Dual annotation and event evaluation
 
