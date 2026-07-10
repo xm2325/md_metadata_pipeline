@@ -1,0 +1,45 @@
+name: Prepare confirmatory corpus manifest
+
+on:
+  workflow_dispatch:
+    inputs:
+      max_candidates:
+        description: Maximum Europe PMC metadata candidates
+        required: false
+        default: "500"
+      seed:
+        description: Deterministic split seed
+        required: false
+        default: "3997"
+
+permissions:
+  contents: read
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install -e .
+      - name: Query Europe PMC metadata
+        run: |
+          python scripts/query_europe_pmc.py \
+            --output study/confirmatory_60/generated/candidates.json \
+            --max-candidates "${{ inputs.max_candidates }}"
+      - name: Lock deterministic 30/10/20 split
+        run: |
+          python scripts/prepare_confirmatory_benchmark.py \
+            --candidates study/confirmatory_60/generated/candidates.json \
+            --excluded-ids study/confirmatory_60/prior_article_ids.txt \
+            --minimum-excluded 30 \
+            --seed "${{ inputs.seed }}" \
+            --output study/confirmatory_60/generated/locked_plan.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: confirmatory-corpus-metadata
+          path: study/confirmatory_60/generated/
+          retention-days: 30
