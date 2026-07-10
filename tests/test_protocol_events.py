@@ -57,3 +57,10 @@ def test_microsecond_unicode_variants_have_identical_conversion() -> None:
         Paragraph("PMC1", "MD", "P9", "Production MD simulations ran for 2 us.")
     )[0]
     assert micro_sign.duration_ps == greek_mu.duration_ps == ascii_u.duration_ps == 2_000_000
+
+
+def test_non_positive_duration_is_not_an_event() -> None:
+    text = "The production trajectory starts at 0.0 ns and continues for 100 ns."
+    events = extract_protocol_events(Paragraph("PMC1", "MD", "P10", text))
+    assert len(events) == 1
+    assert events[0].duration_ps == 100_000
