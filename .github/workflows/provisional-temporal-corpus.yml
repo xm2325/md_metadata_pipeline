@@ -19,12 +19,15 @@ on:
     paths:
       - .github/workflows/provisional-temporal-corpus.yml
       - scripts/prepare_confirmatory_benchmark.py
+      - scripts/query_europe_pmc.py
       - scripts/screen_selected_fulltext.py
       - scripts/finalize_screened_plan.py
       - scripts/build_annotation_workpack.py
       - scripts/freeze_machine_predictions.py
       - src/mdmeta/benchmark.py
       - src/mdmeta/protocol_events.py
+      - tests/test_query_europe_pmc.py
+      - tests/test_fulltext_screen.py
       - tests/test_screened_plan_workpack.py
       - tests/test_prediction_freeze.py
 
@@ -67,11 +70,13 @@ jobs:
             --validation-size 0 \
             --locked-test-size 0 \
             --output study/confirmatory_60/generated/temporal/provisional_screening_pool.json
-      - name: Machine-screen selected full text without storing XML
+      - name: Machine-screen selected full text and retain an ephemeral runner snapshot
         run: |
+          mkdir -p "$RUNNER_TEMP/mdmeta-jats-cache"
           python scripts/screen_selected_fulltext.py \
             --plan study/confirmatory_60/generated/temporal/provisional_screening_pool.json \
-            --output study/confirmatory_60/generated/temporal/fulltext_machine_screen.json
+            --output study/confirmatory_60/generated/temporal/fulltext_machine_screen.json \
+            --xml-cache-dir "$RUNNER_TEMP/mdmeta-jats-cache"
       - name: Finalize the first 60 machine-eligible articles
         run: |
           python scripts/finalize_screened_plan.py \
@@ -84,13 +89,23 @@ jobs:
             --plan study/confirmatory_60/generated/temporal/provisional_temporal_plan.json \
             --screen study/confirmatory_60/generated/temporal/fulltext_machine_screen.json \
             --output-dir study/confirmatory_60/generated/temporal/workpack
-      - name: Freeze deterministic predictions in a separate directory
+      - name: Freeze deterministic predictions from the same source snapshots
         run: |
           mkdir -p study/confirmatory_60/generated/temporal/predictions
+          set +e
           python scripts/freeze_machine_predictions.py \
             --plan study/confirmatory_60/generated/temporal/provisional_temporal_plan.json \
             --screen study/confirmatory_60/generated/temporal/fulltext_machine_screen.json \
-            --output study/confirmatory_60/generated/temporal/predictions/machine_predictions.json
+            --xml-cache-dir "$RUNNER_TEMP/mdmeta-jats-cache" \
+            --output study/confirmatory_60/generated/temporal/predictions/machine_predictions.json \
+            > study/confirmatory_60/generated/temporal/predictions/run.log 2>&1
+          status=$?
+          echo "$status" > study/confirmatory_60/generated/temporal/predictions/exit_code.txt
+          cat study/confirmatory_60/generated/temporal/predictions/run.log
+          exit "$status"
+      - name: Delete ephemeral full-text snapshots
+        if: always()
+        run: rm -rf "$RUNNER_TEMP/mdmeta-jats-cache"
       - name: Write separate checksums
         if: always()
         run: |
