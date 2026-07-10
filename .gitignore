@@ -8,3 +8,4 @@ htmlcov/
 build/
 dist/
 study/confirmatory_60/generated/
+.cache/validation/
