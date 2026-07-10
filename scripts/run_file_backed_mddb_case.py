@@ -13,7 +13,6 @@ import httpx
 from mdmeta.file_backed import (
     FileBackedMDReport,
     WorkflowEvidence,
-    audit_molecular_files,
     canonical_sha256,
     compose_residue_mapping,
     download_public_file,
@@ -21,6 +20,7 @@ from mdmeta.file_backed import (
     pdbe_protein_chains,
     write_mapping_rows,
 )
+from mdmeta.file_consistency import audit_molecular_files
 from mdmeta.models import ValidationState
 from mdmeta.validation import IdentifierValidator
 
@@ -129,7 +129,7 @@ def main() -> None:
         metadata = project_payload.get("metadata", {})
         if not isinstance(metadata, dict):
             raise TypeError("project metadata is not a JSON object")
-        counts, consistency, pdb_universe = audit_molecular_files(
+        counts, consistency, pdb_universe, identity_diagnostics = audit_molecular_files(
             psf_path=args.work_dir / "topology.psf",
             pdb_path=args.work_dir / "structure.pdb",
             trajectory_path=args.work_dir / "trajectory_10_frames.xtc",
@@ -139,6 +139,11 @@ def main() -> None:
                 else None
             ),
             expected_frames=10,
+        )
+        identity_diagnostics_path = args.output.parent / "atom_identity_diagnostics.json"
+        identity_diagnostics_path.write_text(
+            json.dumps(identity_diagnostics, indent=2, sort_keys=True),
+            encoding="utf-8",
         )
 
         residue_url = (
@@ -157,6 +162,14 @@ def main() -> None:
             pdb_id=pdb_id,
             expected_uniprot_accessions=expected_uniprot,
         )
+        if (
+            mapping_audit.status == "review"
+            and mapping_audit.chain_alignments
+            and min(item.identity for item in mapping_audit.chain_alignments) >= 0.95
+            and mapping_audit.pdb_mapping_coverage >= 0.95
+            and mapping_audit.uniprot_mapping_coverage >= 0.90
+        ):
+            mapping_audit.status = "verified_with_construct_variants"
         mapping_digest = write_mapping_rows(mapping_rows, args.mapping_output)
 
         validator = IdentifierValidator(cache_dir=args.cache_dir)
@@ -229,12 +242,20 @@ def main() -> None:
                     "the original NAMD execution command or .conf file is not public"
                 ),
                 (
+                    "PSF and PDB atom names are compared both exactly and after only documented "
+                    "CHARMM/PDB hydrogen and terminal-atom normalisation"
+                ),
+                (
                     "MD-to-PDB correspondence is sequence-aligned and never inferred from "
                     "matching residue numbers alone"
                 ),
                 (
                     "PDB-to-UniProt residue positions are composed only from length-consistent "
                     "SIFTS segments for the expected accession"
+                ),
+                (
+                    "construct substitutions and unresolved PDB residues remain explicit; "
+                    "only sequence-matching aligned residues receive UniProt coordinates"
                 ),
                 (
                     "the trajectory audit downloads only the public first ten frames, not the "
@@ -252,8 +273,8 @@ def main() -> None:
             failures.append("project_not_published")
         if not consistency.passed:
             failures.extend(consistency.failures)
-        if mapping_audit.status == "failed":
-            failures.append("no_verified_md_to_pdb_to_uniprot_mapping")
+        if not mapping_audit.status.startswith("verified"):
+            failures.append(f"residue_mapping_not_verified:{mapping_audit.status}")
         if mapping_audit.pdb_mapping_coverage < 0.95:
             failures.append(
                 "pdb_mapping_coverage_below_0.95:"
@@ -278,6 +299,7 @@ def main() -> None:
                     },
                     "counts": report.counts.model_dump(mode="json"),
                     "consistency": report.consistency.model_dump(mode="json"),
+                    "atom_identity_diagnostics": identity_diagnostics,
                     "workflow": report.workflow.model_dump(mode="json"),
                     "residue_mapping": report.residue_mapping.model_dump(mode="json"),
                     "report_sha256": canonical_sha256(report.model_dump(mode="json")),
