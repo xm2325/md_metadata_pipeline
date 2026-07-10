@@ -1,0 +1,84 @@
+{
+  "run_date_utc": "2026-07-10",
+  "repository": "xm2325/md_metadata_pipeline",
+  "source_pull_request": 17,
+  "merge_commit": "595945b2c9081db4ac79fbc7389add1bcbdec8dc",
+  "workflow_run_id": 29089209351,
+  "workflow_head_commit": "f8c3c17e6621f4384960f015b14e6db0d9208ce0",
+  "study_status": "provisional_temporal_isolation_machine_screened",
+  "extractor": "protocol_events_v1",
+  "source_snapshot_policy": "same_runner_ephemeral_jats_cache",
+  "accuracy_evaluated": false,
+  "human_reference_used": false,
+  "blinding_status": "separate_artifact_not_in_human_workpack",
+  "prediction": {
+    "article_count_requested": 60,
+    "article_count_succeeded": 60,
+    "failure_count": 0,
+    "event_count": 281,
+    "prediction_sha256": "ab3c3f1e9c34a29055dc91871c632b96fd28df4c15e8dcf1c0ce2cdfdfc77e8c",
+    "split_counts": {
+      "development": 30,
+      "validation": 10,
+      "locked_test": 20
+    },
+    "phase_counts": {
+      "analysis_window": 11,
+      "equilibration": 67,
+      "heating": 21,
+      "minimisation": 8,
+      "production": 48,
+      "sampling_interval": 31,
+      "unknown": 95
+    },
+    "attribute_counts": {
+      "duration_ps": 281,
+      "ensemble": 65,
+      "pressure_bar": 47,
+      "replicates": 13,
+      "temperature_k": 88,
+      "timestep_fs": 39
+    }
+  },
+  "artifacts": {
+    "corpus": {
+      "artifact_id": 8226050594,
+      "digest": "sha256:1ba94af7f18c4d4e95eb2393f872ff845956aed2403e7c58165314a935dbef46"
+    },
+    "human_workpack": {
+      "artifact_id": 8226050921,
+      "digest": "sha256:2650d9f0a4b7720f69ca395348f29e34e7f56217e610eda96a6a4439dbfa57f6"
+    },
+    "machine_predictions": {
+      "artifact_id": 8226051312,
+      "digest": "sha256:bf5ecc7139755f91d2aaa7f8b8ef04e0859c3716bb8ffe643dc79427d97d4e0e"
+    }
+  },
+  "independent_audit": {
+    "internal_checksums_pass": true,
+    "prediction_commitment_recomputed": true,
+    "prediction_source_hashes_match_screen": true,
+    "plan_screen_commitment_recomputed": true,
+    "selected_ids_match_prediction_ids": true,
+    "unique_prediction_articles": 60,
+    "human_workpack_rows": 60,
+    "human_review_fields_blank": true,
+    "human_workpack_contains_machine_predictions": false,
+    "full_xml_files_in_artifacts": 0,
+    "prediction_exit_code": 0
+  },
+  "implemented_failure_fixes": [
+    "bounded Europe PMC retries with transport recovery and capped Retry-After",
+    "same-run ephemeral JATS snapshots instead of a second source download",
+    "ASCII us, micro sign µs, and Greek mu μs normalization",
+    "non-positive duration candidates are skipped rather than failing an article",
+    "prediction logs and exit status are retained in the machine-only artifact"
+  ],
+  "scientific_boundary": [
+    "The 281 events are machine-generated candidates, not reference facts.",
+    "No precision, recall, F1, or event accuracy is reported from this run.",
+    "The human workpack contains no machine predictions.",
+    "Human dual eligibility review, exact-span annotation, and adjudication remain incomplete.",
+    "The corpus remains provisional because 15 prior held-out identifiers have not been recovered."
+  ]
+}
