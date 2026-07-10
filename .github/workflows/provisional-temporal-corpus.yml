@@ -8,12 +8,22 @@ on:
         required: false
         default: "500"
       seed:
-        description: Deterministic split seed
+        description: Deterministic pool seed
         required: false
         default: "3997"
+      screening_pool_size:
+        description: Number of articles to full-text screen before selecting 60
+        required: false
+        default: "90"
   pull_request:
     paths:
-      - study/confirmatory_60/RUN_PROVISIONAL_TEMPORAL
+      - .github/workflows/provisional-temporal-corpus.yml
+      - scripts/prepare_confirmatory_benchmark.py
+      - scripts/screen_selected_fulltext.py
+      - scripts/finalize_screened_plan.py
+      - scripts/build_annotation_workpack.py
+      - src/mdmeta/benchmark.py
+      - tests/test_screened_plan_workpack.py
 
 permissions:
   contents: read
@@ -27,7 +37,7 @@ jobs:
         with:
           python-version: "3.12"
       - run: python -m pip install -e .
-      - name: Query historical Europe PMC metadata
+      - name: Query historical biomolecular Europe PMC metadata
         env:
           MAX_CANDIDATES: ${{ inputs.max_candidates || '500' }}
         run: |
@@ -35,10 +45,11 @@ jobs:
           python scripts/query_europe_pmc.py \
             --output study/confirmatory_60/generated/temporal/historical_candidates.json \
             --max-candidates "$MAX_CANDIDATES" \
-            --query 'OPEN_ACCESS:Y AND HAS_FT:Y AND FIRST_PDATE:[2016-01-01 TO 2020-12-31] AND (TITLE_ABS:"molecular dynamics" OR TITLE_ABS:"MD simulation")'
-      - name: Create provisional temporal 30/10/20 plan
+            --query 'OPEN_ACCESS:Y AND HAS_FT:Y AND FIRST_PDATE:[2016-01-01 TO 2020-12-31] AND (TITLE_ABS:"molecular dynamics" OR TITLE_ABS:"MD simulation") AND (TITLE_ABS:protein OR TITLE_ABS:enzyme OR TITLE_ABS:receptor OR TITLE_ABS:ligand OR TITLE_ABS:peptide OR TITLE_ABS:membrane OR TITLE_ABS:DNA OR TITLE_ABS:RNA OR TITLE_ABS:biomolecular)'
+      - name: Create deterministic oversampled screening pool
         env:
           SEED: ${{ inputs.seed || '3997' }}
+          SCREENING_POOL_SIZE: ${{ inputs.screening_pool_size || '90' }}
         run: |
           python scripts/prepare_confirmatory_benchmark.py \
             --candidates study/confirmatory_60/generated/temporal/historical_candidates.json \
@@ -49,17 +60,32 @@ jobs:
             --require-known-year \
             --study-status provisional_temporal_isolation \
             --seed "$SEED" \
-            --output study/confirmatory_60/generated/temporal/provisional_temporal_plan.json
+            --development-size "$SCREENING_POOL_SIZE" \
+            --validation-size 0 \
+            --locked-test-size 0 \
+            --output study/confirmatory_60/generated/temporal/provisional_screening_pool.json
       - name: Machine-screen selected full text without storing XML
         run: |
           python scripts/screen_selected_fulltext.py \
-            --plan study/confirmatory_60/generated/temporal/provisional_temporal_plan.json \
+            --plan study/confirmatory_60/generated/temporal/provisional_screening_pool.json \
             --output study/confirmatory_60/generated/temporal/fulltext_machine_screen.json
+      - name: Finalize the first 60 machine-eligible articles
+        run: |
+          python scripts/finalize_screened_plan.py \
+            --pool-plan study/confirmatory_60/generated/temporal/provisional_screening_pool.json \
+            --screen study/confirmatory_60/generated/temporal/fulltext_machine_screen.json \
+            --output study/confirmatory_60/generated/temporal/provisional_temporal_plan.json
+      - name: Build independent eligibility-review and annotation workpack
+        run: |
+          python scripts/build_annotation_workpack.py \
+            --plan study/confirmatory_60/generated/temporal/provisional_temporal_plan.json \
+            --screen study/confirmatory_60/generated/temporal/fulltext_machine_screen.json \
+            --output-dir study/confirmatory_60/generated/temporal/workpack
       - name: Write artifact checksums
         if: always()
         run: |
           cd study/confirmatory_60/generated/temporal
-          sha256sum *.json > SHA256SUMS.txt || true
+          find . -type f -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS.txt || true
       - uses: actions/upload-artifact@v4
         if: always()
         with:
