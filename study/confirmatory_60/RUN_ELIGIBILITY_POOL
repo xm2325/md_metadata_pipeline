@@ -1,0 +1,6 @@
+Trigger the v0.8 eligibility-first temporal pool workflow.
+
+Run date: 2026-07-10
+Study status: provisional_temporal_isolation
+Pool size: 120
+This marker generates no human eligibility decisions and must not be merged into main.
