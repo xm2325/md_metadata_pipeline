@@ -1,0 +1,128 @@
+name: Build eligibility-first temporal pool report
+
+on:
+  pull_request:
+    paths:
+      - study/confirmatory_60/RUN_ELIGIBILITY_POOL
+      - .github/workflows/eligibility-pool-report.yml
+
+permissions:
+  contents: write
+
+jobs:
+  execute-and-record-summary:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install -e .
+      - name: Query historical Europe PMC metadata
+        run: |
+          mkdir -p study/confirmatory_60/generated/eligibility_pool
+          python scripts/query_europe_pmc.py \
+            --output study/confirmatory_60/generated/eligibility_pool/historical_candidates.json \
+            --max-candidates 500 \
+            --query 'OPEN_ACCESS:Y AND HAS_FT:Y AND FIRST_PDATE:[2016-01-01 TO 2020-12-31] AND (TITLE_ABS:"molecular dynamics" OR TITLE_ABS:"MD simulation")'
+      - name: Create ordered 120-article pool
+        run: |
+          python scripts/prepare_eligibility_pool.py \
+            --candidates study/confirmatory_60/generated/eligibility_pool/historical_candidates.json \
+            --excluded-ids study/confirmatory_60/prior_article_ids.txt \
+            --pool-size 120 \
+            --publication-year-min 2016 \
+            --publication-year-max 2020 \
+            --require-known-year \
+            --seed 3997 \
+            --output study/confirmatory_60/generated/eligibility_pool/screening_pool.json
+      - name: Screen full text without storing XML
+        run: |
+          python scripts/screen_eligibility_pool.py \
+            --pool study/confirmatory_60/generated/eligibility_pool/screening_pool.json \
+            --output study/confirmatory_60/generated/eligibility_pool/fulltext_machine_screen.json
+      - name: Create split-blind review template
+        run: |
+          python scripts/create_eligibility_review_template.py \
+            --pool study/confirmatory_60/generated/eligibility_pool/screening_pool.json \
+            --screen study/confirmatory_60/generated/eligibility_pool/fulltext_machine_screen.json \
+            --review-seed 7041 \
+            --output study/confirmatory_60/generated/eligibility_pool/blind_eligibility_review_template.json
+      - name: Build non-text execution summary
+        env:
+          RUN_ID: ${{ github.run_id }}
+          HEAD_SHA: ${{ github.sha }}
+        run: |
+          python - <<'PY'
+          import hashlib
+          import json
+          import os
+          from collections import Counter
+          from pathlib import Path
+
+          root = Path('study/confirmatory_60/generated/eligibility_pool')
+          candidates = json.loads((root / 'historical_candidates.json').read_text())
+          pool = json.loads((root / 'screening_pool.json').read_text())
+          screen = json.loads((root / 'fulltext_machine_screen.json').read_text())
+          template = json.loads((root / 'blind_eligibility_review_template.json').read_text())
+          years = Counter(article.get('year') for article in pool['screening_pool'])
+          families = Counter(article.get('software_family') for article in pool['screening_pool'])
+          omitted_fields = {
+              'split', 'pool_position', 'machine_screen_status',
+              'machine_eligible_for_annotation', 'engine_mentions',
+              'protocol_term_hits', 'biomolecular_term_hits'
+          }
+          template_field_union = set().union(*(row.keys() for row in template['articles']))
+          ids_pool = [row['document_id'] for row in pool['screening_pool']]
+          ids_screen = [row['document_id'] for row in screen['records']]
+          ids_template = [row['document_id'] for row in template['articles']]
+          screen_hashes = {row['document_id']: row['full_text_sha256'] for row in screen['records']}
+          template_hashes = {row['document_id']: row['full_text_sha256'] for row in template['articles']}
+          summary = {
+              'study_status': pool['study_status'],
+              'run_id': os.environ['RUN_ID'],
+              'head_sha': os.environ['HEAD_SHA'],
+              'query_hit_count': candidates['pages'][0].get('hit_count'),
+              'candidate_count': len(candidates['articles']),
+              'retrieval_manifest_sha256': candidates['manifest_sha256'],
+              'candidate_manifest_sha256': pool['candidate_manifest_sha256'],
+              'pool_sha256': pool['pool_sha256'],
+              'pool_size': len(pool['screening_pool']),
+              'pool_unique_ids': len(set(ids_pool)),
+              'publication_year_counts': dict(sorted((str(k), v) for k, v in years.items())),
+              'metadata_software_family_counts': dict(sorted(families.items())),
+              'screen_requested': screen['requested_articles'],
+              'screened_articles': screen['screened_articles'],
+              'screen_failure_count': screen['failure_count'],
+              'machine_status_counts': screen['status_counts'],
+              'fulltext_engine_mention_counts': screen['engine_mention_counts'],
+              'machine_eligible_count': screen['machine_eligible_count'],
+              'review_template_count': len(template['articles']),
+              'review_template_sha256': template['template_sha256'],
+              'review_template_screen_sha256': template['screen_sha256'],
+              'pool_screen_id_match': ids_pool == ids_screen,
+              'pool_template_id_set_match': set(ids_pool) == set(ids_template),
+              'screen_template_hash_match': screen_hashes == template_hashes,
+              'template_omits_machine_and_split_fields': not bool(omitted_fields & template_field_union),
+              'article_full_text_stored': False,
+              'human_eligibility_completed': False,
+              'final_split_locked': False,
+              'scope': 'machine_triage_and_split_blind_review_template_only',
+          }
+          payload = json.dumps(summary, indent=2, sort_keys=True)
+          output = Path('study/confirmatory_60/ELIGIBILITY_POOL_EXECUTION_SUMMARY.json')
+          output.write_text(payload + '\n')
+          digest = hashlib.sha256(output.read_bytes()).hexdigest()
+          print(payload)
+          print(f'summary_sha256={digest}')
+          PY
+      - name: Commit summary to execution branch
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add -f study/confirmatory_60/ELIGIBILITY_POOL_EXECUTION_SUMMARY.json
+          git commit -m 'Record eligibility-first pool execution summary'
+          git push origin HEAD:${{ github.head_ref }}
