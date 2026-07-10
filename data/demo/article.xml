@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<article article-type="research-article">
+  <front>
+    <article-meta>
+      <article-id pub-id-type="pmc">SYNTHETIC-JR3997</article-id>
+      <article-id pub-id-type="doi">10.0000/synthetic.jr3997</article-id>
+      <title-group><article-title>Synthetic MD protocol article for software regression testing</article-title></title-group>
+    </article-meta>
+  </front>
+  <body>
+    <sec id="methods">
+      <title>Molecular dynamics methods</title>
+      <p id="methods-p1">The initial coordinates were taken from PDB ID 1UBQ, corresponding to UniProt accession P0CG47.</p>
+      <p id="methods-p2">Simulations were performed with GROMACS 2022.3 using the CHARMM36m force field and TIP3P water at 310 K and 1 bar in the NPT ensemble.</p>
+      <p id="methods-p3">A time step of 2 fs was used. Three independent replicas were generated, with each production simulation for 500 ns.</p>
+    </sec>
+  </body>
+</article>

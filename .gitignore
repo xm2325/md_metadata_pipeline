@@ -1,0 +1,16 @@
+.cache/
+.venv/
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+*.egg-info/
+artifacts/*
+!artifacts/demo/
+!artifacts/demo/**
+data/raw/*.xml
+study/confirmatory_60/generated/
+.DS_Store
+dist/
+build/

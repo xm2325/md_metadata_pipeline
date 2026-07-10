@@ -1,0 +1,36 @@
+{
+  "study_scope": "development_set_phase_aware_diagnostic",
+  "article_count": 15,
+  "annotation_status": "single_reviewer_existing_reference_set",
+  "independent_test": false,
+  "public_snapshot_note": "Article-level predictions, quotes, and annotations are omitted. Aggregate metrics are retained.",
+  "v1": {
+    "micro": {"tp": 42, "fp": 66, "fn": 122, "precision": 0.3888888888888889, "recall": 0.25609756097560976, "f1": 0.3088235294117647},
+    "duration_phase_aware": {"tp": 0, "fp": 3, "fn": 32, "precision": 0.0, "recall": 0.0, "f1": 0.0},
+    "by_phase": {
+      "equilibration": {"tp": 0, "fp": 0, "fn": 38, "precision": 0.0, "recall": 0.0, "f1": 0.0},
+      "heating": {"tp": 0, "fp": 0, "fn": 7, "precision": 0.0, "recall": 0.0, "f1": 0.0},
+      "initialization": {"tp": 0, "fp": 0, "fn": 1, "precision": 0.0, "recall": 0.0, "f1": 0.0},
+      "production": {"tp": 0, "fp": 0, "fn": 42, "precision": 0.0, "recall": 0.0, "f1": 0.0},
+      "reported_result": {"tp": 0, "fp": 0, "fn": 1, "precision": 0.0, "recall": 0.0, "f1": 0.0},
+      "unspecified": {"tp": 42, "fp": 66, "fn": 33, "precision": 0.3888888888888889, "recall": 0.56, "f1": 0.45901639344262296}
+    },
+    "event_summary": {"events": 33, "events_with_phase": 0, "complete_events": 0}
+  },
+  "v2": {
+    "micro": {"tp": 109, "fp": 55, "fn": 55, "precision": 0.6646341463414634, "recall": 0.6646341463414634, "f1": 0.6646341463414634},
+    "duration_phase_aware": {"tp": 17, "fp": 25, "fn": 15, "precision": 0.40476190476190477, "recall": 0.53125, "f1": 0.4594594594594595},
+    "by_phase": {
+      "analysis_window": {"tp": 0, "fp": 3, "fn": 0, "precision": 0.0, "recall": 0.0, "f1": 0.0},
+      "equilibration": {"tp": 27, "fp": 15, "fn": 11, "precision": 0.6428571428571429, "recall": 0.7105263157894737, "f1": 0.6749999999999999},
+      "heating": {"tp": 5, "fp": 7, "fn": 2, "precision": 0.4166666666666667, "recall": 0.7142857142857143, "f1": 0.5263157894736842},
+      "initialization": {"tp": 0, "fp": 0, "fn": 1, "precision": 0.0, "recall": 0.0, "f1": 0.0},
+      "minimisation": {"tp": 0, "fp": 2, "fn": 0, "precision": 0.0, "recall": 0.0, "f1": 0.0},
+      "production": {"tp": 23, "fp": 5, "fn": 19, "precision": 0.8214285714285714, "recall": 0.5476190476190477, "f1": 0.6571428571428571},
+      "reported_result": {"tp": 1, "fp": 4, "fn": 0, "precision": 0.2, "recall": 1.0, "f1": 0.33333333333333337},
+      "sampling_interval": {"tp": 0, "fp": 2, "fn": 0, "precision": 0.0, "recall": 0.0, "f1": 0.0},
+      "unspecified": {"tp": 53, "fp": 17, "fn": 22, "precision": 0.7571428571428571, "recall": 0.7066666666666667, "f1": 0.7310344827586207}
+    },
+    "event_summary": {"events": 54, "events_with_phase": 50, "complete_events": 3}
+  }
+}

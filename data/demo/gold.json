@@ -1,0 +1,18 @@
+{
+  "synthetic": true,
+  "document_id": "PMC-SYNTHETIC-JR3997",
+  "facts": [
+    {"field_name": "pdb_id", "normalized_value": "1UBQ", "unit": null},
+    {"field_name": "uniprot_accession", "normalized_value": "P0CG47", "unit": null},
+    {"field_name": "program", "normalized_value": "GROMACS", "unit": null},
+    {"field_name": "program_version", "normalized_value": "2022.3", "unit": null},
+    {"field_name": "force_field", "normalized_value": "CHARMM36m", "unit": null},
+    {"field_name": "water_model", "normalized_value": "TIP3P", "unit": null},
+    {"field_name": "temperature", "normalized_value": 310, "unit": "K"},
+    {"field_name": "pressure", "normalized_value": 1, "unit": "bar"},
+    {"field_name": "ensemble", "normalized_value": "NPT", "unit": null},
+    {"field_name": "time_step", "normalized_value": 0.002, "unit": "ps"},
+    {"field_name": "replicates", "normalized_value": 3, "unit": null},
+    {"field_name": "simulation_duration", "normalized_value": 500, "unit": "ns"}
+  ]
+}

@@ -1,0 +1,29 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+      - run: python -m pip install -e '.[dev,api]'
+      - run: ruff check src tests real_study
+      - run: pytest --cov=mdlit --cov-report=term-missing --cov-report=xml
+      - run: make demo
+      - uses: actions/upload-artifact@v4
+        with:
+          name: demo-audit-python-${{ matrix.python-version }}
+          path: artifacts/demo/

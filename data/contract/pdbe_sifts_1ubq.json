@@ -1,0 +1,18 @@
+{
+  "1ubq": {
+    "UniProt": {
+      "P0CG47": {
+        "identifier": "UBB_HUMAN",
+        "mappings": [
+          {
+            "chain_id": "A",
+            "start": {"residue_number": 1},
+            "end": {"residue_number": 76},
+            "unp_start": 1,
+            "unp_end": 76
+          }
+        ]
+      }
+    }
+  }
+}

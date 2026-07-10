@@ -1,0 +1,36 @@
+name: Prepare confirmatory corpus
+
+on:
+  workflow_dispatch:
+    inputs:
+      query:
+        description: Europe PMC query
+        required: false
+        default: 'OPEN_ACCESS:Y AND HAS_FT:Y AND (TITLE_ABS:"molecular dynamics" OR TITLE_ABS:"MD simulation")'
+
+permissions:
+  contents: read
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - run: python -m pip install -e .
+      - name: Query metadata and lock split
+        env:
+          QUERY: ${{ inputs.query }}
+        run: |
+          PYTHONPATH=src python real_study/prepare_confirmatory_60.py \
+            --output-dir study/confirmatory_60/generated \
+            --excluded-ids study/confirmatory_60/excluded_development_ids.txt \
+            --query "$QUERY"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: confirmatory-60-manifest
+          path: study/confirmatory_60/generated/
+          retention-days: 30
