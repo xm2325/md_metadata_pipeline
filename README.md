@@ -27,6 +27,8 @@ Version 0.7 added a provisional temporal-isolation path:
 
 Current `main` extends the provisional workflow with deterministic oversampling before the 30/10/20 split. It screens a larger full-text pool, selects only machine-eligible records, keeps rejected and reserve records, and creates a metadata-only dual-review workpack. The executed 2026-07-10 run screened 90 JATS articles with no download or parse failure, found 78 machine-eligible records, and produced a 60-record provisional review queue. See [`study/confirmatory_60/RUN_2026-07-10.md`](study/confirmatory_60/RUN_2026-07-10.md).
 
+The same workflow now freezes deterministic protocol-event predictions before human annotation. Screening and prediction use the same ephemeral JATS snapshots; the snapshots are deleted before artifact upload. The verified run completed 60/60 articles with zero failure and produced 281 machine-generated event candidates in an artifact that is separate from the human workpack. These counts are not accuracy results. See [`study/confirmatory_60/PREDICTION_FREEZE_2026-07-10.md`](study/confirmatory_60/PREDICTION_FREEZE_2026-07-10.md).
+
 External databases do not fill reference labels and never overwrite extracted literature values. Network failure is not treated as biological conflict. Model output is not a final record until evidence checks pass.
 
 ## Run tests
@@ -37,7 +39,7 @@ ruff check .
 pytest --cov=mdmeta --cov-branch --cov-report=term-missing --cov-fail-under=75
 ```
 
-GitHub Actions runs Python 3.11 and 3.12 independently. The corpus workflow also executes a live Europe PMC metadata query, in-memory JATS screening, deterministic finalization, checksum generation, and workpack construction.
+GitHub Actions runs Python 3.11 and 3.12 independently. The corpus workflow also executes a live Europe PMC metadata query, in-memory JATS screening, deterministic finalization, checksum generation, workpack construction, and blinded prediction freezing.
 
 ## Locked confirmatory workflow
 
@@ -58,6 +60,8 @@ Only 15 original development IDs are currently recorded; the 15 previous held-ou
 The provisional path creates a working annotation queue while the prior held-out IDs remain unavailable. A larger deterministic pool is screened before the final 60 records are assigned to development, validation, and locked-test placeholders.
 
 ```bash
+CACHE_DIR="$(mktemp -d)"
+
 python scripts/prepare_confirmatory_benchmark.py \
   --candidates study/confirmatory_60/generated/temporal/historical_candidates.json \
   --excluded-ids study/confirmatory_60/prior_article_ids.txt \
@@ -73,7 +77,8 @@ python scripts/prepare_confirmatory_benchmark.py \
 
 python scripts/screen_selected_fulltext.py \
   --plan study/confirmatory_60/generated/temporal/provisional_screening_pool.json \
-  --output study/confirmatory_60/generated/temporal/fulltext_machine_screen.json
+  --output study/confirmatory_60/generated/temporal/fulltext_machine_screen.json \
+  --xml-cache-dir "$CACHE_DIR"
 
 python scripts/finalize_screened_plan.py \
   --pool-plan study/confirmatory_60/generated/temporal/provisional_screening_pool.json \
@@ -84,9 +89,17 @@ python scripts/build_annotation_workpack.py \
   --plan study/confirmatory_60/generated/temporal/provisional_temporal_plan.json \
   --screen study/confirmatory_60/generated/temporal/fulltext_machine_screen.json \
   --output-dir study/confirmatory_60/generated/temporal/workpack
+
+python scripts/freeze_machine_predictions.py \
+  --plan study/confirmatory_60/generated/temporal/provisional_temporal_plan.json \
+  --screen study/confirmatory_60/generated/temporal/fulltext_machine_screen.json \
+  --xml-cache-dir "$CACHE_DIR" \
+  --output study/confirmatory_60/generated/temporal/predictions/machine_predictions.json
+
+rm -rf "$CACHE_DIR"
 ```
 
-The generated artifact contains no full article text. It stores source hashes, limited article metadata, protocol and biomolecular signal counts, the final plan commitment, a 60-row eligibility-review CSV, an annotation JSON schema, and separate empty JSONL files for two annotators. Human eligibility review remains required before reference annotation.
+The generated artifacts contain no full article text. The corpus artifact stores source hashes, limited article metadata, protocol and biomolecular signal counts, and the final plan commitment. The human artifact stores a 60-row eligibility-review CSV, an annotation JSON schema, and separate empty JSONL files for two annotators. The machine-prediction artifact is separate and must not be provided to annotators before independent annotation and adjudication.
 
 ## Dual annotation and event evaluation
 
