@@ -51,6 +51,12 @@ jobs:
             --pool-plan study/confirmatory_60/generated/provisional_screening_pool.json \
             --screen study/confirmatory_60/generated/fulltext_screen.json \
             --output study/confirmatory_60/generated/provisional_temporal_plan.json
+      - name: Build independent human-review and annotation workpack
+        run: |
+          python scripts/build_annotation_workpack.py \
+            --plan study/confirmatory_60/generated/provisional_temporal_plan.json \
+            --screen study/confirmatory_60/generated/fulltext_screen.json \
+            --output-dir study/confirmatory_60/generated/workpack
       - uses: actions/upload-artifact@v4
         if: always()
         with:
