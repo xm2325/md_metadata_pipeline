@@ -8,12 +8,15 @@ from mdmeta.benchmark import create_benchmark_plan, load_candidate_manifest
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Create a deterministic 30/10/20 benchmark plan.")
+    parser = argparse.ArgumentParser(description="Create a deterministic benchmark plan.")
     parser.add_argument("--candidates", type=Path, required=True)
     parser.add_argument("--excluded-ids", type=Path)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--seed", type=int, default=3997)
     parser.add_argument("--minimum-excluded", type=int, default=30)
+    parser.add_argument("--development-size", type=int, default=30)
+    parser.add_argument("--validation-size", type=int, default=10)
+    parser.add_argument("--locked-test-size", type=int, default=20)
     parser.add_argument("--publication-year-min", type=int)
     parser.add_argument("--publication-year-max", type=int)
     parser.add_argument("--require-known-year", action="store_true")
@@ -41,6 +44,7 @@ def main() -> None:
             raise SystemExit("provisional temporal isolation requires --publication-year-max")
         if not args.require_known_year:
             raise SystemExit("provisional temporal isolation requires --require-known-year")
+
     plan = create_benchmark_plan(
         load_candidate_manifest(args.candidates),
         excluded_document_ids=excluded,
@@ -49,10 +53,27 @@ def main() -> None:
         publication_year_max=args.publication_year_max,
         require_known_year=args.require_known_year,
         study_status=args.study_status,
+        development_size=args.development_size,
+        validation_size=args.validation_size,
+        locked_test_size=args.locked_test_size,
     )
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(plan.model_dump_json(indent=2), encoding="utf-8")
-    print(json.dumps({"plan_sha256": plan.plan_sha256, "output": str(args.output)}, indent=2))
+    print(
+        json.dumps(
+            {
+                "study_status": plan.study_status,
+                "plan_sha256": plan.plan_sha256,
+                "split_sizes": {
+                    "development": len(plan.development),
+                    "validation": len(plan.validation),
+                    "locked_test": len(plan.locked_test),
+                },
+                "output": str(args.output),
+            },
+            indent=2,
+        )
+    )
 
 
 if __name__ == "__main__":
