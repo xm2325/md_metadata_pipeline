@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<article article-type="research-article">
+  <front>
+    <article-meta>
+      <article-id pub-id-type="doi">10.1021/acs.jpcb.0c04553</article-id>
+      <title-group>
+        <article-title>Developing a Fully Glycosylated Full-Length SARS-CoV-2 Spike Protein Model in a Viral Membrane</article-title>
+      </title-group>
+    </article-meta>
+  </front>
+  <body>
+    <sec>
+      <title>System construction</title>
+      <p id="system-source">Starting from PDB 6VSB and 6VXX, full-length spike protein structures were constructed. The fully glycosylated spike model was placed in a viral membrane.</p>
+    </sec>
+    <sec>
+      <title>Molecular dynamics workflow</title>
+      <p id="workflow-source">The reported preparation workflow adds missing residues, glycans, membrane, water and ions before energy minimisation, equilibration and production molecular dynamics.</p>
+    </sec>
+  </body>
+</article>
