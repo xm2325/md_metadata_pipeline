@@ -1,0 +1,17 @@
+# Known articles used in the original 15-article development pilot.
+# The 15 independent held-out article IDs must be added before the corpus can be locked.
+PMC12041471
+PMC12058314
+PMC12104171
+PMC12193447
+PMC12221915
+PMC12376100
+PMC12546782
+PMC12567055
+PMC12645288
+PMC12675513
+PMC12680584
+PMC12692955
+PMC12711965
+PMC12714747
+PMC12885125
