@@ -11,27 +11,41 @@ permissions:
   pull-requests: write
 
 jobs:
-  discover-public-files:
+  offline-file-mapping-tests:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+      - run: python -m pip install -e '.[dev]'
+      - run: ruff check src/mdmeta/file_backed.py scripts/run_file_backed_mddb_case.py tests/test_file_backed.py
+      - run: pytest tests/test_file_backed.py
+
+  live-file-backed-case:
+    needs: offline-file-mapping-tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
           cache: pip
-      - run: python -m pip install -e '.[dev]'
-      - name: Query the official MDDB project and file descriptors
+      - run: python -m pip install -e '.[dev,files]'
+      - name: Run public PSF PDB XTC and residue mapping audit
         run: |
-          python scripts/discover_mddb_files.py \
-            --project MCV1900193.2 \
-            --output results/file_backed/discovery.json
-      - name: Query PDBe residue listing and SIFTS mapping schemas
-        run: |
-          python scripts/discover_pdbe_residue_schema.py \
-            --pdb-id 6VXX \
-            --output results/file_backed/pdbe_residue_schema.json
-      - name: Post compact discovery result to the PR
+          python scripts/run_file_backed_mddb_case.py \
+            --manifest examples/mddb_mcv1900193_2/project_manifest.json \
+            --work-dir results/file_backed/assets \
+            --output results/file_backed/report.json \
+            --mapping-output results/file_backed/residue_mapping.jsonl \
+            --cache-dir results/file_backed/cache
+      - name: Post compact file-backed result to the PR
         if: github.event_name == 'pull_request'
         env:
           GH_TOKEN: ${{ github.token }}
@@ -39,34 +53,40 @@ jobs:
           python - <<'PY'
           import json
           from pathlib import Path
-          mddb = json.loads(Path('results/file_backed/discovery.json').read_text())
-          pdbe = json.loads(Path('results/file_backed/pdbe_residue_schema.json').read_text())
+          report = json.loads(Path('results/file_backed/report.json').read_text())
           compact = {
-              'project': mddb['project'],
-              'published': mddb['published'],
-              'metadata': mddb['metadata'],
-              'descriptor_count': mddb['descriptor_count'],
-              'files': mddb['files'],
-              'pdbe': {
-                  'pdb_id': pdbe['pdb_id'],
-                  'root_keys': pdbe['root_keys'],
-                  'chains': pdbe['chains'],
-                  'mapping_segment_count': pdbe['mapping_segment_count'],
-                  'mapping_segments': pdbe['mapping_segments'],
-              },
+              'case_id': report['case_id'],
+              'project_accession': report['project_accession'],
+              'assets': [
+                  {
+                      'role': item['role'],
+                      'filename': item['filename'],
+                      'byte_size': item['byte_size'],
+                      'sha256': item['sha256'],
+                  }
+                  for item in report['assets']
+              ],
+              'workflow': report['workflow'],
+              'counts': report['counts'],
+              'consistency': report['consistency'],
+              'residue_mapping': report['residue_mapping'],
+              'residue_mapping_rows_sha256': report['residue_mapping_rows_sha256'],
+              'scientific_boundaries': report['scientific_boundaries'],
           }
-          Path('/tmp/discovery.md').write_text(
-              '## Live MDDB and PDBe mapping discovery\n\n```json\n'
+          Path('/tmp/file-backed.md').write_text(
+              '## Verified file-backed MDDB audit\n\n```json\n'
               + json.dumps(compact, indent=2, sort_keys=True)
               + '\n```\n'
           )
           PY
-          gh pr comment "${{ github.event.pull_request.number }}" --body-file /tmp/discovery.md
-      - name: Upload discovery diagnostics when storage is available
+          gh pr comment "${{ github.event.pull_request.number }}" --body-file /tmp/file-backed.md
+      - name: Upload compact report and mapping when storage is available
         if: always()
         continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
-          name: mddb-file-discovery
-          path: results/file_backed
+          name: file-backed-mddb-report
+          path: |
+            results/file_backed/report.json
+            results/file_backed/residue_mapping.jsonl
           retention-days: 1
