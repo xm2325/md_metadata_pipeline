@@ -8,6 +8,7 @@ on:
 
 permissions:
   contents: read
+  pull-requests: write
 
 jobs:
   offline-integration-tests:
@@ -69,14 +70,54 @@ jobs:
           python-version: "3.12"
           cache: pip
       - run: python -m pip install -e '.[dev]'
-      - name: Integrate the frozen 60-article corpus
+      - name: Integrate the frozen 60-article corpus and retain diagnostics
+        shell: bash
         run: |
+          set +e
           python scripts/run_integrated_60.py \
             --source-manifest study/integration_60/source_manifest.json \
             --output-dir results/integrated_60 \
             --database results/integrated_60/records.sqlite \
             --cache-dir results/integrated_60/cache
-      - name: Upload 60-article records when artifact storage is available
+          echo "$?" > results/integrated_60/batch_exit_code.txt
+          exit 0
+      - name: Post compact integration summary to the audit PR
+        if: github.event_name == 'pull_request' && github.head_ref == 'run/integrated-60-audit'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          path = Path("results/integrated_60/summary.json")
+          payload = json.loads(path.read_text(encoding="utf-8"))
+          summary = payload["summary"]
+          compact = {
+              "article_count_succeeded": summary["article_count_succeeded"],
+              "failure_count": summary["failure_count"],
+              "article_count_with_pdb": summary["article_count_with_pdb"],
+              "unique_pdb_id_count": summary["unique_pdb_id_count"],
+              "unique_uniprot_accession_count": summary["unique_uniprot_accession_count"],
+              "residue_mapping_segment_count": summary["residue_mapping_segment_count"],
+              "protocol_event_count": summary["protocol_event_count"],
+              "pdb_validation_state_counts": summary["pdb_validation_state_counts"],
+              "mapping_validation_state_counts": summary["mapping_validation_state_counts"],
+              "md_file_provenance_counts": summary["md_file_provenance_counts"],
+              "failures": summary["failures"],
+          }
+          body = (
+              "## Frozen 60-article integration audit\n\n"
+              "```json\n"
+              + json.dumps(compact, indent=2, ensure_ascii=False)
+              + "\n```\n"
+          )
+          Path("/tmp/integration-comment.md").write_text(body, encoding="utf-8")
+          PY
+          gh pr comment "$PR_NUMBER" --body-file /tmp/integration-comment.md
+      - name: Upload 60-article diagnostics when artifact storage is available
+        if: always()
         continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
@@ -84,3 +125,17 @@ jobs:
           path: results/integrated_60
           if-no-files-found: error
           retention-days: 1
+      - name: Enforce zero-failure 60-article gate
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          payload = json.loads(Path("results/integrated_60/summary.json").read_text(encoding="utf-8"))
+          summary = payload["summary"]
+          if summary["article_count_succeeded"] != 60 or summary["failure_count"] != 0:
+              raise SystemExit(
+                  f"60-article gate failed: succeeded={summary['article_count_succeeded']} "
+                  f"failures={summary['failure_count']}"
+              )
+          PY
