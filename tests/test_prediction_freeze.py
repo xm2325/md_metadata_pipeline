@@ -1,9 +1,14 @@
 import hashlib
+from pathlib import Path
 
 import pytest
 
 from mdmeta.benchmark import canonical_sha256
-from scripts.freeze_machine_predictions import freeze_predictions, method_paragraphs
+from scripts.freeze_machine_predictions import (
+    freeze_predictions,
+    method_paragraphs,
+    read_cached_xml,
+)
 
 XML = b'''<article article-type="research-article"><body><sec><title>Molecular dynamics methods</title><p id="p1">The protein system was equilibrated for 2 ns at 300 K. A production simulation of 100 ns used the NPT ensemble and a time step of 2 fs.</p></sec></body></article>'''
 
@@ -48,11 +53,19 @@ def test_method_paragraphs_and_prediction_freeze() -> None:
     assert result["human_reference_used"] is False
     assert result["accuracy_evaluated"] is False
     assert result["blinding_status"] == "separate_artifact_not_in_human_workpack"
+    assert result["source_snapshot_policy"] == "same_runner_ephemeral_jats_cache"
     assert len(result["prediction_sha256"]) == 64
     assert {event["event_type"] for event in result["articles"][0]["events"]} == {
         "equilibration",
         "production",
     }
+
+
+def test_cached_xml_reader(tmp_path: Path) -> None:
+    (tmp_path / "PMC1.xml").write_bytes(XML)
+    assert read_cached_xml(tmp_path, "pmc1") == XML
+    with pytest.raises(FileNotFoundError, match="missing cached JATS snapshot"):
+        read_cached_xml(tmp_path, "PMC2")
 
 
 def test_prediction_freeze_fails_closed_on_changed_full_text() -> None:
