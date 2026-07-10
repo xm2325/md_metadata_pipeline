@@ -1,0 +1,94 @@
+{
+  "run_date_utc": "2026-07-10",
+  "repository": "xm2325/md_metadata_pipeline",
+  "workflow_run_id": 29087844703,
+  "workflow_artifact_id": 8225494475,
+  "workflow_artifact_digest": "sha256:470bb9fb223703413a3e0f287ce410adcdb9e5c7ea09c1d3bd15687437ef0966",
+  "source_head_commit": "34559d122a93e2bab06bfa498b3daf3f55d731bf",
+  "merge_commit": "16b469af2421163f761a39e2cd3ba9050f158494",
+  "study_status": "provisional_temporal_isolation_machine_screened",
+  "accuracy_evaluated": false,
+  "human_eligibility_review_complete": false,
+  "dual_annotation_complete": false,
+  "query": {
+    "hit_count": 4138,
+    "metadata_candidates_saved": 500,
+    "page_count": 6,
+    "manifest_sha256": "ef639ce2b9b380bfdf9e876c112d88d09cdf65b333c211dd6a8924d472160553"
+  },
+  "screening_pool": {
+    "article_count": 90,
+    "plan_sha256": "25831629720f40bd49850da904151bb0b2d8e90039899540b72c320a3ce892fd",
+    "fulltexts_screened": 90,
+    "failure_count": 0,
+    "machine_eligible_count": 78,
+    "status_counts": {
+      "generic_biomolecular_protocol_signal": 4,
+      "non_biomolecular_or_weak_signal": 11,
+      "strong_biomolecular_protocol_signal": 75
+    },
+    "engine_mention_counts": {
+      "amber": 34,
+      "charmm": 29,
+      "desmond": 5,
+      "gromacs": 47,
+      "namd": 15,
+      "openmm": 3
+    }
+  },
+  "final_plan": {
+    "plan_sha256": "d2f7f9b648a022d91febfe1912cd79cf60f36861b38f760a19307092cb916a6e",
+    "screen_sha256": "4d247f8c33c28d67e6e14909f231be2250f1ce6e017b8078cf0bdcdd69ff1649",
+    "split_counts": {
+      "development": 30,
+      "validation": 10,
+      "locked_test": 20
+    },
+    "selected_count": 60,
+    "unique_selected_count": 60,
+    "years": {
+      "2016": 2,
+      "2017": 5,
+      "2018": 5,
+      "2019": 9,
+      "2020": 39
+    },
+    "article_types": {
+      "research-article": 60
+    },
+    "screen_statuses": {
+      "generic_biomolecular_protocol_signal": 4,
+      "strong_biomolecular_protocol_signal": 56
+    },
+    "engine_mentions": {
+      "amber": 27,
+      "charmm": 17,
+      "desmond": 2,
+      "gromacs": 32,
+      "namd": 10,
+      "openmm": 3
+    },
+    "missing_method_section_count": 0,
+    "all_machine_eligible": true,
+    "rejected_or_reserve_count": 30
+  },
+  "workpack": {
+    "row_count": 60,
+    "plan_order_matches_csv": true,
+    "independent_review_fields_blank": true,
+    "annotation_schema_present": true
+  },
+  "integrity": {
+    "artifact_sha256s_verified": true,
+    "candidate_manifest_hash_verified": true,
+    "pool_plan_hash_verified": true,
+    "screen_hash_verified": true,
+    "final_plan_hash_verified": true
+  },
+  "scientific_boundary": [
+    "Machine screening is corpus triage, not an accuracy evaluation.",
+    "The corpus remains provisional because 15 prior held-out identifiers are missing.",
+    "Human dual eligibility review and dual exact-span annotation are not complete.",
+    "No full article text is included in the artifact."
+  ]
+}
