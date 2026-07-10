@@ -1,4 +1,8 @@
-from scripts.screen_selected_fulltext import screen_plan, screen_xml
+from pathlib import Path
+
+import pytest
+
+from scripts.screen_selected_fulltext import cache_xml_snapshot, screen_plan, screen_xml
 
 STRONG_XML = b'''<article article-type="research-article"><front><article-meta><title-group><article-title>Test MD paper</article-title></title-group></article-meta></front><body><sec><title>Molecular dynamics methods</title><p>We performed molecular dynamics simulations of the protein-ligand complex with GROMACS using a force field and TIP3P water. Production simulation was 100 ns in the NPT ensemble at 300 K and 1 bar with a time step of 2 fs.</p></sec></body></article>'''
 WEAK_XML = b'''<article article-type="research-article"><front><article-meta><title-group><article-title>Review</article-title></title-group></article-meta></front><body><sec><title>Introduction</title><p>Molecular dynamics may be useful.</p></sec></body></article>'''
@@ -42,3 +46,11 @@ def test_screen_plan_keeps_failures_and_does_not_claim_human_eligibility() -> No
         record["screening_scope"] == "machine_triage_not_human_eligibility"
         for record in result["records"]
     )
+
+
+def test_ephemeral_cache_uses_a_safe_pmc_filename(tmp_path: Path) -> None:
+    path = cache_xml_snapshot(tmp_path, "pmc123", STRONG_XML)
+    assert path == tmp_path / "PMC123.xml"
+    assert path.read_bytes() == STRONG_XML
+    with pytest.raises(ValueError, match="unsafe document identifier"):
+        cache_xml_snapshot(tmp_path, "../PMC123", STRONG_XML)

@@ -44,3 +44,23 @@ def test_total_aggregate_duration_remains_unknown() -> None:
     text = "The simulations produced a total aggregate sampling time of 5 µs."
     event = extract_protocol_events(Paragraph("PMC1", "Results", "P6", text))[0]
     assert event.event_type is EventType.UNKNOWN
+
+
+def test_microsecond_unicode_variants_have_identical_conversion() -> None:
+    micro_sign = extract_protocol_events(
+        Paragraph("PMC1", "MD", "P7", "Production MD simulations ran for 2 µs.")
+    )[0]
+    greek_mu = extract_protocol_events(
+        Paragraph("PMC1", "MD", "P8", "Production MD simulations ran for 2 μs.")
+    )[0]
+    ascii_u = extract_protocol_events(
+        Paragraph("PMC1", "MD", "P9", "Production MD simulations ran for 2 us.")
+    )[0]
+    assert micro_sign.duration_ps == greek_mu.duration_ps == ascii_u.duration_ps == 2_000_000
+
+
+def test_non_positive_duration_is_not_an_event() -> None:
+    text = "The production trajectory starts at 0.0 ns and continues for 100 ns."
+    events = extract_protocol_events(Paragraph("PMC1", "MD", "P10", text))
+    assert len(events) == 1
+    assert events[0].duration_ps == 100_000

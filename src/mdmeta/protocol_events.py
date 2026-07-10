@@ -6,7 +6,7 @@ from dataclasses import dataclass
 
 from .models import EventType, Evidence, ProtocolEvent
 
-_DURATION = re.compile(r"(?P<value>\d+(?:\.\d+)?)\s*(?P<unit>fs|ps|ns|µs|us|ms)\b", re.I)
+_DURATION = re.compile(r"(?P<value>\d+(?:\.\d+)?)\s*(?P<unit>fs|ps|ns|µs|μs|us|ms)\b", re.I)
 _TEMPERATURE = re.compile(r"(?P<value>\d+(?:\.\d+)?)\s*K\b", re.I)
 _PRESSURE = re.compile(r"(?P<value>\d+(?:\.\d+)?)\s*(?P<unit>bar|atm)\b", re.I)
 _TIMESTEP = re.compile(
@@ -46,7 +46,15 @@ _PHASE_PATTERNS = [
         re.compile(r"saved|written|recorded|sampled|output", re.I),
     ),
 ]
-_UNIT_TO_PS = {"fs": 1e-3, "ps": 1.0, "ns": 1e3, "us": 1e6, "µs": 1e6, "ms": 1e9}
+_UNIT_TO_PS = {
+    "fs": 1e-3,
+    "ps": 1.0,
+    "ns": 1e3,
+    "us": 1e6,
+    "µs": 1e6,
+    "μs": 1e6,
+    "ms": 1e9,
+}
 
 
 @dataclass(frozen=True)
@@ -85,6 +93,8 @@ def extract_protocol_events(paragraph: Paragraph) -> list[ProtocolEvent]:
 
     Conditions are linked only when they occur within 180 characters of the
     duration anchor. A time-step expression is never emitted as a duration event.
+    Non-positive duration expressions are ignored because the event schema requires
+    a physically positive duration.
     """
     events: list[ProtocolEvent] = []
     event_index = 0
@@ -95,6 +105,11 @@ def extract_protocol_events(paragraph: Paragraph) -> list[ProtocolEvent]:
         if re.search(r"(?:time\s*step|timestep|integration step)[^.;]{0,24}$", prefix):
             continue
         if re.match(r"\s*(?:time\s*step|timestep|integration step)", suffix):
+            continue
+
+        unit = duration.group("unit").lower()
+        duration_ps = float(duration.group("value")) * _UNIT_TO_PS[unit]
+        if duration_ps <= 0:
             continue
 
         event_type = _phase(paragraph.text, start, end)
@@ -116,7 +131,6 @@ def extract_protocol_events(paragraph: Paragraph) -> list[ProtocolEvent]:
         replicates = nearest(_REPLICATES)
         ensemble_match = re.search(r"\b(NVE|NVT|NPT|NPAT|NPH)\b", local, re.I)
 
-        duration_ps = float(duration.group("value")) * _UNIT_TO_PS[duration.group("unit").lower()]
         pressure_bar = None
         if pressure:
             pressure_bar = float(pressure.group("value"))
