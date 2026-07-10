@@ -57,6 +57,24 @@ class ValidationState(StrEnum):
     NOT_APPLICABLE = "not_applicable"
 
 
+class RequestAttempt(BaseModel):
+    attempt: int = Field(ge=0)
+    outcome: Literal["cache", "response", "network_error"]
+    http_status: int | None = None
+    error_type: str | None = None
+    retry_after_seconds: float | None = Field(default=None, ge=0)
+
+
+class MappingSegment(BaseModel):
+    pdb_id: str
+    uniprot_accession: str
+    chain_id: str
+    pdb_start: int | None = None
+    pdb_end: int | None = None
+    uniprot_start: int | None = None
+    uniprot_end: int | None = None
+
+
 class ValidationRecord(BaseModel):
     identifier_type: Literal["pdb", "uniprot", "pdb_uniprot_mapping"]
     query: dict[str, str]
@@ -67,3 +85,7 @@ class ValidationRecord(BaseModel):
     http_status: int | None = None
     reason: str
     payload: dict[str, Any] | None = None
+    attempts: int = Field(default=1, ge=0)
+    cache_hit: bool = False
+    request_log: list[RequestAttempt] = Field(default_factory=list)
+    mapping_segments: list[MappingSegment] = Field(default_factory=list)

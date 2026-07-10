@@ -20,14 +20,23 @@ Version 0.4 added the execution layer required for a separate confirmatory study
 - machine-readable adjudication templates;
 - exact-event, event-attribute, duration-phase, and article-bootstrap metrics.
 
-Version 0.4.1 corrects event counting and error analysis:
+Version 0.4.1 corrected event counting and error analysis:
 
 - repeated identical events and attributes are evaluated as multisets rather than collapsed sets;
 - duration-matched phase confusion is reported explicitly;
 - missing and spurious duration events receive separate confusion states;
 - regression tests cover sampling intervals, aggregate simulation time, and duplicate events.
 
-External databases do not fill reference labels and never overwrite extracted literature values. Network failure is not treated as biological conflict.
+Version 0.5 adds reproducible external-validation audit support:
+
+- an optional response cache with canonical JSON hash checks and atomic writes;
+- retry and exponential-backoff logic for network errors, rate limits, and transient server responses;
+- bounded support for numeric `Retry-After` values;
+- request-attempt provenance attached to every validation decision;
+- PDB-chain and UniProt residue ranges parsed from SIFTS-derived mappings;
+- aggregate validation summaries that do not modify source records.
+
+External databases do not fill reference labels and never overwrite extracted literature values. Network failure is not treated as biological conflict. Cached responses are validation evidence, not literature evidence.
 
 ## Run tests
 
@@ -37,7 +46,7 @@ ruff check .
 pytest --cov=mdmeta --cov-branch --cov-report=term-missing --cov-fail-under=75
 ```
 
-The combined v0.4.1 code was locally checked with 17 tests and 87.22% branch-aware coverage before opening the pull request. GitHub Actions runs Python 3.11 and 3.12 independently.
+The combined v0.5 code was locally checked with 21 tests and 88.65% branch-aware coverage before opening the pull request. GitHub Actions runs Python 3.11 and 3.12 independently.
 
 ## Confirmatory corpus workflow
 
@@ -57,7 +66,7 @@ python scripts/prepare_confirmatory_benchmark.py \
   --output study/confirmatory_60/generated/locked_plan.json
 ```
 
-## Dual annotation and evaluation
+## Dual annotation and event evaluation
 
 ```bash
 python scripts/compare_annotations.py \
@@ -72,4 +81,14 @@ python scripts/evaluate_protocol_events.py \
   --output results/event_metrics.json
 ```
 
-See `docs/CONFIRMATORY_BENCHMARK.md`, `docs/ANNOTATION_GUIDE.md`, and `docs/VALIDATION_SEMANTICS.md` for the study design and validation rules.
+## Validation audit
+
+```bash
+python scripts/summarize_validation.py \
+  --records results/validation_records.json \
+  --output results/validation_summary.json
+```
+
+Offline validation tests use mocked service responses. No current live PDBe, UniProt, or SIFTS batch result is claimed by those tests.
+
+See `docs/CONFIRMATORY_BENCHMARK.md`, `docs/ANNOTATION_GUIDE.md`, and `docs/VALIDATION_SEMANTICS.md` for study and validation rules.
