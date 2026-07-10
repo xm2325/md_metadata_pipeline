@@ -44,12 +44,23 @@ BIOMOLECULAR_PATTERNS = {
     "membrane": re.compile(r"\bmembranes?\b|\blipid bilayer\b", re.I),
     "nucleic_acid": re.compile(r"\bDNA\b|\bRNA\b|\bnucleic acids?\b", re.I),
 }
+_DOCUMENT_ID = re.compile(r"^PMC\d+$", re.I)
 
 
 def _text(node: ET.Element | None) -> str:
     if node is None:
         return ""
     return " ".join("".join(node.itertext()).split())
+
+
+def cache_xml_snapshot(cache_dir: Path, document_id: str, payload: bytes) -> Path:
+    """Store an ephemeral source snapshot for later steps in the same runner."""
+    if _DOCUMENT_ID.fullmatch(document_id) is None:
+        raise ValueError(f"unsafe document identifier for cache path: {document_id!r}")
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    path = cache_dir / f"{document_id.upper()}.xml"
+    path.write_bytes(payload)
+    return path
 
 
 def screen_xml(document_id: str, xml_bytes: bytes, split: str) -> dict:
@@ -166,10 +177,11 @@ def screen_plan(plan: dict, fetcher: Callable[[str], bytes]) -> dict:
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Screen selected Europe PMC full text without storing XML."
+        description="Screen selected Europe PMC full text without storing XML in artifacts."
     )
     parser.add_argument("--plan", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--xml-cache-dir", type=Path)
     parser.add_argument("--timeout", type=float, default=30.0)
     parser.add_argument("--delay", type=float, default=0.05)
     args = parser.parse_args()
@@ -183,6 +195,8 @@ def main() -> None:
 
         def fetcher(pmcid: str) -> bytes:
             payload = fetch_xml(pmcid, client)
+            if args.xml_cache_dir is not None:
+                cache_xml_snapshot(args.xml_cache_dir, pmcid, payload)
             if args.delay > 0:
                 time.sleep(args.delay)
             return payload
