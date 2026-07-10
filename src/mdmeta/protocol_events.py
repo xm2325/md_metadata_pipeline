@@ -6,7 +6,7 @@ from dataclasses import dataclass
 
 from .models import EventType, Evidence, ProtocolEvent
 
-_DURATION = re.compile(r"(?P<value>\d+(?:\.\d+)?)\s*(?P<unit>fs|ps|ns|µs|us|ms)\b", re.I)
+_DURATION = re.compile(r"(?P<value>\d+(?:\.\d+)?)\s*(?P<unit>fs|ps|ns|µs|μs|us|ms)\b", re.I)
 _TEMPERATURE = re.compile(r"(?P<value>\d+(?:\.\d+)?)\s*K\b", re.I)
 _PRESSURE = re.compile(r"(?P<value>\d+(?:\.\d+)?)\s*(?P<unit>bar|atm)\b", re.I)
 _TIMESTEP = re.compile(
@@ -46,7 +46,15 @@ _PHASE_PATTERNS = [
         re.compile(r"saved|written|recorded|sampled|output", re.I),
     ),
 ]
-_UNIT_TO_PS = {"fs": 1e-3, "ps": 1.0, "ns": 1e3, "us": 1e6, "µs": 1e6, "ms": 1e9}
+_UNIT_TO_PS = {
+    "fs": 1e-3,
+    "ps": 1.0,
+    "ns": 1e3,
+    "us": 1e6,
+    "µs": 1e6,
+    "μs": 1e6,
+    "ms": 1e9,
+}
 
 
 @dataclass(frozen=True)
@@ -116,7 +124,8 @@ def extract_protocol_events(paragraph: Paragraph) -> list[ProtocolEvent]:
         replicates = nearest(_REPLICATES)
         ensemble_match = re.search(r"\b(NVE|NVT|NPT|NPAT|NPH)\b", local, re.I)
 
-        duration_ps = float(duration.group("value")) * _UNIT_TO_PS[duration.group("unit").lower()]
+        unit = duration.group("unit").lower()
+        duration_ps = float(duration.group("value")) * _UNIT_TO_PS[unit]
         pressure_bar = None
         if pressure:
             pressure_bar = float(pressure.group("value"))
