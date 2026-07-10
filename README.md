@@ -11,7 +11,7 @@ Version 0.3 added two components without changing the frozen-v2 result:
 1. a phase-aware protocol-event schema linking duration, temperature, pressure, ensemble, timestep, restraint text, and replicate count within a local evidence unit;
 2. a PDBe, UniProt, and SIFTS-derived validation client with explicit `validated`, `conflict`, `unresolved`, and `not_applicable` states.
 
-Version 0.4 adds the execution layer required for a separate confirmatory study:
+Version 0.4 added the execution layer required for a separate confirmatory study:
 
 - Europe PMC metadata retrieval with response hashes;
 - deterministic engine-stratified 30/10/20 corpus selection;
@@ -19,6 +19,13 @@ Version 0.4 adds the execution layer required for a separate confirmatory study:
 - dual-annotation comparison at semantic and exact-span levels;
 - machine-readable adjudication templates;
 - exact-event, event-attribute, duration-phase, and article-bootstrap metrics.
+
+Version 0.4.1 corrects event counting and error analysis:
+
+- repeated identical events and attributes are evaluated as multisets rather than collapsed sets;
+- duration-matched phase confusion is reported explicitly;
+- missing and spurious duration events receive separate confusion states;
+- regression tests cover sampling intervals, aggregate simulation time, and duplicate events.
 
 External databases do not fill reference labels and never overwrite extracted literature values. Network failure is not treated as biological conflict.
 
@@ -30,7 +37,7 @@ ruff check .
 pytest --cov=mdmeta --cov-branch --cov-report=term-missing --cov-fail-under=75
 ```
 
-The combined v0.4 code was locally checked with 13 tests and 85.91% branch-aware coverage before opening the pull request. GitHub Actions runs Python 3.11 and 3.12 independently.
+The combined v0.4.1 code was locally checked with 17 tests and 87.22% branch-aware coverage before opening the pull request. GitHub Actions runs Python 3.11 and 3.12 independently.
 
 ## Confirmatory corpus workflow
 

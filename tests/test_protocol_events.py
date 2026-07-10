@@ -31,3 +31,16 @@ def test_phase_aware_production_and_analysis_window() -> None:
     assert production_event.event_type is EventType.PRODUCTION
     assert production_event.replicates == 3
     assert analysis_event.event_type is EventType.ANALYSIS_WINDOW
+
+
+def test_sampling_interval_is_not_labelled_production_duration() -> None:
+    text = "Coordinates were saved every 10 ps during the production simulation."
+    event = extract_protocol_events(Paragraph("PMC1", "MD", "P5", text))[0]
+    assert event.event_type is EventType.SAMPLING_INTERVAL
+    assert event.duration_ps == 10
+
+
+def test_total_aggregate_duration_remains_unknown() -> None:
+    text = "The simulations produced a total aggregate sampling time of 5 µs."
+    event = extract_protocol_events(Paragraph("PMC1", "Results", "P6", text))[0]
+    assert event.event_type is EventType.UNKNOWN

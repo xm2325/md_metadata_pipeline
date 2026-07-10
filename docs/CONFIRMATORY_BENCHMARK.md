@@ -48,12 +48,15 @@ Secondary endpoints:
 
 - exact event F1;
 - duration-plus-phase F1;
+- duration-matched phase confusion;
 - field-level precision, recall, and F1;
 - article exact match;
 - exact evidence-span accuracy;
 - calibration and abstention;
 - validation-state counts;
 - article-bootstrap 95% confidence intervals.
+
+Exact events, event attributes, and duration-phase pairs are counted as multisets. Repeated identical events are retained. The confusion matrix uses reference phase as rows and predicted phase as columns; `__missed__` and `__spurious__` represent unmatched duration events.
 
 Pipeline failure is scored as zero recall for that article. Articles cannot be removed because they are difficult. Replacement is allowed only for a documented eligibility failure. Any system changed after test release is labelled post-hoc and cannot replace the frozen result.
 

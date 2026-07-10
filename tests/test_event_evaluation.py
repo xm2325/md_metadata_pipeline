@@ -48,3 +48,22 @@ def test_wrong_phase_is_counted_as_error() -> None:
     assert result["duration_phase"]["tp"] == 0
     assert result["duration_phase"]["fp"] == 1
     assert result["duration_phase"]["fn"] == 1
+
+
+def test_repeated_identical_reference_events_are_not_collapsed() -> None:
+    reference_event = _event("r1", EventType.PRODUCTION, 100_000)
+    duplicate_reference = _event("r2", EventType.PRODUCTION, 100_000)
+    prediction = {"PMC1": [_event("p", EventType.PRODUCTION, 100_000)]}
+    reference = {"PMC1": [reference_event, duplicate_reference]}
+    result = evaluate_events(prediction, reference, bootstrap_iterations=10)
+    assert result["event_exact"]["tp"] == 1
+    assert result["event_exact"]["fn"] == 1
+    assert result["duration_phase"]["fn"] == 1
+    assert result["counting_semantics"].startswith("multiset")
+
+
+def test_phase_confusion_matrix_aligns_equal_duration_events() -> None:
+    reference = {"PMC1": [_event("r", EventType.PRODUCTION, 100_000)]}
+    prediction = {"PMC1": [_event("p", EventType.EQUILIBRATION, 100_000)]}
+    result = evaluate_events(prediction, reference, bootstrap_iterations=10)
+    assert result["duration_phase_confusion"] == {"production": {"equilibration": 1}}
