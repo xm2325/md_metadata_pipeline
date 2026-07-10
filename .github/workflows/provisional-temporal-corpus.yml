@@ -21,10 +21,10 @@ jobs:
         with:
           python-version: "3.12"
       - run: python -m pip install -e .
-      - name: Query historical Europe PMC metadata
+      - name: Query historical biomolecular MD metadata
         run: |
           python scripts/query_europe_pmc.py \
-            --query 'OPEN_ACCESS:Y AND HAS_FT:Y AND PUB_YEAR:[2016 TO 2020] AND (TITLE_ABS:"molecular dynamics" OR TITLE_ABS:"MD simulation")' \
+            --query 'OPEN_ACCESS:Y AND HAS_FT:Y AND PUB_YEAR:[2016 TO 2020] AND (TITLE_ABS:"molecular dynamics" OR TITLE_ABS:"MD simulation") AND (TITLE_ABS:protein OR TITLE_ABS:enzyme OR TITLE_ABS:receptor OR TITLE_ABS:ligand OR TITLE_ABS:peptide OR TITLE_ABS:membrane OR TITLE_ABS:DNA OR TITLE_ABS:RNA OR TITLE_ABS:biomolecular)' \
             --output study/confirmatory_60/generated/historical_candidates.json \
             --max-candidates 500
       - name: Create provisional 30/10/20 plan
@@ -37,7 +37,7 @@ jobs:
             --publication-year-max 2020 \
             --require-known-year \
             --output study/confirmatory_60/generated/provisional_temporal_plan.json
-      - name: Screen selected full text without storing XML
+      - name: Screen selected biomolecular full text without storing XML
         run: |
           python scripts/screen_selected_fulltext.py \
             --plan study/confirmatory_60/generated/provisional_temporal_plan.json \
