@@ -14,7 +14,7 @@
     "hit_count": 4138,
     "metadata_candidates_saved": 500,
     "page_count": 6,
-    "manifest_sha256": "ef639ce2b9b380bfdf9e876c112d88d09cdf65b333c211dd6a8924d472160553"
+    "manifest_sha256": "1814ae630ad2de6615b1c62c901c9a9cf6ef504d93f2974700965f68f7ffe046"
   },
   "screening_pool": {
     "article_count": 90,
@@ -37,8 +37,8 @@
     }
   },
   "final_plan": {
-    "plan_sha256": "d2f7f9b648a022d91febfe1912cd79cf60f36861b38f760a19307092cb916a6e",
-    "screen_sha256": "4d247f8c33c28d67e6e14909f231be2250f1ce6e017b8078cf0bdcdd69ff1649",
+    "plan_sha256": "1dcbab03ddb447a6aad2a7be2f54277912f3cad05d1f426b13d226de695e012b",
+    "screen_sha256": "e0ee9603978d511bed049abea027ac039f478a0bf6ea8e47bc92bee38eb49e1a",
     "split_counts": {
       "development": 30,
       "validation": 10,
