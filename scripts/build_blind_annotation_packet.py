@@ -27,7 +27,7 @@ PROTOCOL_SIGNALS = (
 def _text(node: ET.Element | None) -> str:
     if node is None:
         return ""
-    return " ".join("".join(node.itertext()).split())
+    return " ".join(part.strip() for part in node.itertext() if part.strip())
 
 
 def _paragraphs(section: ET.Element, section_index: int) -> list[dict]:
