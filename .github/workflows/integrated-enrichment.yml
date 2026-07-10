@@ -76,7 +76,8 @@ jobs:
             --output-dir results/integrated_60 \
             --database results/integrated_60/records.sqlite \
             --cache-dir results/integrated_60/cache
-      - name: Upload 60-article records when artifact storage is available
+      - name: Upload 60-article records or failure diagnostics when artifact storage is available
+        if: always()
         continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
