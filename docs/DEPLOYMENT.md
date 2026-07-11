@@ -31,7 +31,8 @@ A future whole-bundle digest should use a separate field rather than overloading
 
 `.github/workflows/server-readiness.yml` is configured to run entirely on GitHub-hosted Ubuntu
 runners. [PR run 29152448584](https://github.com/xm2325/md_metadata_pipeline/actions/runs/29152448584)
-passed on 2026-07-11. The workflow:
+passed its compute gates on 2026-07-11. Optional evidence uploads were rejected by the existing
+account-level artifact quota, and the workflow reported that outcome explicitly. The workflow:
 
 1. run Ruff, pytest, branch coverage, wheel construction and `pip check`;
 2. emit JUnit, coverage and dependency-audit reports;

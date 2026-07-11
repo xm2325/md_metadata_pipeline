@@ -57,9 +57,12 @@ Version 0.10 adds the first server-readiness layer:
 - the FastAPI service has environment configuration, bounded search, liveness, readiness and build/dataset metadata endpoints, and redacts server-local asset paths;
 - a pinned Python 3.12, non-root Docker image and hardened Compose configuration serve a read-only SQLite snapshot;
 - the GitHub-hosted server-readiness workflow tests Python, wheel and container paths, uses
-  pip/Docker caches, uploads short-lived evidence, and reports artifact/cache consumption without
-  hiding quota failures. Its first complete PR run passed on 2026-07-11
-  ([Actions run 29152448584](https://github.com/xm2325/md_metadata_pipeline/actions/runs/29152448584)).
+  pip/Docker caches, attempts to upload short-lived evidence, and reports artifact/cache
+  consumption without hiding quota failures. Its first complete PR compute run passed on
+  2026-07-11
+  ([Actions run 29152448584](https://github.com/xm2325/md_metadata_pipeline/actions/runs/29152448584));
+  GitHub rejected the optional evidence artifacts because the account storage quota remained full,
+  and the job summary recorded that failure.
 
 See [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md), [`docs/OPERATIONS.md`](docs/OPERATIONS.md), and [`docs/JR3997_ALIGNMENT_AND_ROADMAP.md`](docs/JR3997_ALIGNMENT_AND_ROADMAP.md).
 
@@ -103,10 +106,11 @@ curl --fail http://127.0.0.1:8000/metadata
 GitHub Actions is the authoritative test/build environment for this repository. The
 `Server readiness` workflow runs lint, tests, coverage, wheel construction and a hardened
 container smoke test on GitHub-hosted Ubuntu runners. Python quality, installed-wheel tests,
-dependency audit, short-lived evidence upload, storage inventory and the non-root/read-only
-container smoke test passed in its first complete PR run on 2026-07-11. Actions artifacts are
-short-lived evidence; durable scientific bundles must be promoted to a release or institutional
-repository.
+dependency audit, storage inventory and the non-root/read-only container smoke test passed in its
+first complete PR run on 2026-07-11. Optional artifact persistence was attempted but rejected by
+the current account quota, and was reported as a warning rather than silently described as stored.
+Actions artifacts are short-lived evidence; durable scientific bundles must be promoted to a
+release or institutional repository.
 
 ## Run the end-to-end integration
 
