@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 import sqlite3
+from contextlib import closing
 from pathlib import Path
 
 import httpx
@@ -307,7 +308,7 @@ def test_rewriting_record_cascade_replaces_all_child_rows(tmp_path: Path) -> Non
     store.write(record)
 
     tables = ("literature_facts", "validations", "residue_mappings", "md_assets")
-    with sqlite3.connect(database) as connection:
+    with closing(sqlite3.connect(database)) as connection:
         before = {
             table: connection.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]
             for table in tables
@@ -315,7 +316,7 @@ def test_rewriting_record_cascade_replaces_all_child_rows(tmp_path: Path) -> Non
 
     store.write(record)
 
-    with sqlite3.connect(database) as connection:
+    with closing(sqlite3.connect(database)) as connection:
         after = {
             table: connection.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]
             for table in tables
