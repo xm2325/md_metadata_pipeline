@@ -2,12 +2,14 @@ from __future__ import annotations
 
 import hashlib
 import json
+import sqlite3
 from pathlib import Path
 
 import httpx
 import pytest
 from fastapi.testclient import TestClient
 
+from mdmeta import __version__
 from mdmeta.api import create_app
 from mdmeta.integration import (
     AssetAvailability,
@@ -23,6 +25,7 @@ from mdmeta.integration import (
 from mdmeta.models import ValidationState
 from mdmeta.storage import SQLiteRecordStore
 from mdmeta.validation import IdentifierValidator
+from mdmeta.verify import verify_database
 
 ROOT = Path(__file__).parents[1]
 XML_PATH = ROOT / "examples" / "woo_2020" / "article_fixture.xml"
@@ -168,6 +171,19 @@ def test_empty_successful_mapping_response_is_conflict() -> None:
     assert discovery.reason == "no_uniprot_mapping_in_successful_response"
 
 
+def test_malformed_successful_mapping_response_is_unresolved() -> None:
+    validator = IdentifierValidator(
+        httpx.Client(
+            transport=httpx.MockTransport(
+                lambda request: httpx.Response(200, json={"6vsb": {"UniProt": []}})
+            )
+        )
+    )
+    discovery = discover_uniprot_mappings(validator, "6VSB")
+    assert discovery.state is ValidationState.UNRESOLVED
+    assert discovery.reason == "malformed_mapping_payload"
+
+
 def test_verified_local_asset_hash_and_failure_modes(tmp_path: Path) -> None:
     asset = tmp_path / "prepared.gro"
     asset.write_text("coordinates", encoding="utf-8")
@@ -203,6 +219,34 @@ def test_verified_local_asset_hash_and_failure_modes(tmp_path: Path) -> None:
 
 def test_sqlite_storage_and_rest_api(tmp_path: Path) -> None:
     record = _record(tmp_path)
+    first_asset = record.provenance.assets[0].model_copy(
+        update={
+            "local_path": "/srv/mdmeta/private/source.cif",
+            "source_uri": "file:///srv/mdmeta/private/source.cif",
+        }
+    )
+    first_step = record.provenance.workflow_steps[0].model_copy(
+        update={
+            "inputs": ["/srv/mdmeta/private/input.pdb"],
+            "outputs": ["C:\\mdmeta\\private\\output.pdb"],
+        }
+    )
+    record = record.model_copy(
+        update={
+            "article": record.article.model_copy(
+                update={"source_uri": "file:///srv/mdmeta/private/article.xml"}
+            ),
+            "provenance": record.provenance.model_copy(
+                update={
+                    "assets": [first_asset, *record.provenance.assets[1:]],
+                    "workflow_steps": [
+                        first_step,
+                        *record.provenance.workflow_steps[1:],
+                    ],
+                }
+            )
+        }
+    )
     database = tmp_path / "records.sqlite"
     store = SQLiteRecordStore(database)
     store.write(record)
@@ -214,11 +258,119 @@ def test_sqlite_storage_and_rest_api(tmp_path: Path) -> None:
 
     client = TestClient(create_app(database))
     assert client.get("/health").json() == {"status": "ok", "article_count": 1}
-    assert client.get("/records/WOO2020").status_code == 200
+    assert client.get("/livez").json() == {"status": "ok", "version": __version__}
+    assert client.get("/readyz").json() == {
+        "status": "ready",
+        "version": __version__,
+        "database_schema_version": 1,
+        "article_count": 1,
+    }
+    assert client.get("/metadata").json() == {
+        "service": "md-metadata-pipeline",
+        "version": __version__,
+        "record_schema": "integrated-md-record-v1",
+        "database_schema_version": 1,
+        "article_count": 1,
+        "database_mode": "read_write",
+        "dataset_sha256": "unversioned",
+        "build_sha": "unknown",
+    }
+    response = client.get("/records/WOO2020")
+    assert response.status_code == 200
+    public_record = response.json()
+    assert public_record["article"]["source_uri"] is None
+    assert public_record["provenance"]["assets"][0]["local_path"] is None
+    assert public_record["provenance"]["assets"][0]["source_uri"] is None
+    assert public_record["provenance"]["workflow_steps"][0]["inputs"] == [
+        "<redacted-local-path>"
+    ]
+    assert public_record["provenance"]["workflow_steps"][0]["outputs"] == [
+        "<redacted-local-path>"
+    ]
+    assert store.get("WOO2020")["provenance"]["assets"][0]["local_path"].startswith(
+        "/srv/"
+    )
     assert client.get("/records/MISSING").status_code == 404
-    assert client.get("/search", params={"pdb_id": "6VSB"}).json()["count"] == 1
+    search_response = client.get("/search", params={"pdb_id": "6VSB"}).json()
+    assert search_response["count"] == 1
+    assert search_response["records"][0]["article"]["source_uri"] is None
+    assert search_response["records"][0]["provenance"]["assets"][0]["local_path"] is None
     assert client.get("/search", params={"uniprot_accession": "P0DTC2"}).json()["count"] == 1
     assert client.get("/search").status_code == 400
+    assert client.get("/search", params={"pdb_id": "6VSB", "limit": 0}).status_code == 422
+
+
+def test_rewriting_record_cascade_replaces_all_child_rows(tmp_path: Path) -> None:
+    record = _record(tmp_path)
+    database = tmp_path / "records.sqlite"
+    store = SQLiteRecordStore(database)
+    store.write(record)
+
+    tables = ("literature_facts", "validations", "residue_mappings", "md_assets")
+    with sqlite3.connect(database) as connection:
+        before = {
+            table: connection.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]
+            for table in tables
+        }
+
+    store.write(record)
+
+    with sqlite3.connect(database) as connection:
+        after = {
+            table: connection.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]
+            for table in tables
+        }
+        integrity = connection.execute("PRAGMA integrity_check").fetchone()[0]
+        foreign_key_violations = connection.execute("PRAGMA foreign_key_check").fetchall()
+
+    assert after == before
+    assert integrity == "ok"
+    assert foreign_key_violations == []
+    assert store.integrity_report() == {
+        "integrity": ["ok"],
+        "foreign_key_violations": [],
+        "schema_version": 1,
+        "journal_mode": "wal",
+    }
+    assert len(store.checkpoint()) == 3
+    verification = verify_database(database, checkpoint=True, expected_articles=1)
+    assert verification["valid"] is True
+    assert verification["checkpoint_complete"] is True
+    assert verification["article_count"] == 1
+    assert verification["expected_article_count"] == 1
+    assert len(verification["sha256"]) == 64
+    assert verification["integrity"]["journal_mode"] == "delete"
+    assert verification["wal_byte_size"] == 0
+
+    read_only_store = SQLiteRecordStore(database, read_only=True)
+    assert read_only_store.count_articles() == 1
+    assert read_only_store.integrity_report()["integrity"] == ["ok"]
+    assert read_only_store.schema_version() == 1
+    with pytest.raises(RuntimeError, match="read-only"):
+        read_only_store.write(record)
+
+    with pytest.raises(FileNotFoundError):
+        verify_database(tmp_path / "misspelled.sqlite", checkpoint=True)
+    assert not (tmp_path / "misspelled.sqlite").exists()
+    assert verify_database(database, expected_articles=2)["valid"] is False
+
+
+def test_store_rejects_future_and_incomplete_schema(tmp_path: Path) -> None:
+    future = tmp_path / "future.sqlite"
+    with sqlite3.connect(future) as connection:
+        connection.execute("PRAGMA user_version = 2")
+        connection.execute("CREATE TABLE future_only(id INTEGER PRIMARY KEY)")
+    with pytest.raises(RuntimeError, match="unsupported database schema version 2"):
+        SQLiteRecordStore(future)
+    with sqlite3.connect(future) as connection:
+        assert connection.execute("PRAGMA user_version").fetchone()[0] == 2
+
+    incomplete = tmp_path / "incomplete.sqlite"
+    with sqlite3.connect(incomplete) as connection:
+        connection.execute("PRAGMA user_version = 1")
+        connection.execute("CREATE TABLE articles(document_id TEXT PRIMARY KEY)")
+    with pytest.raises(RuntimeError, match="missing tables"):
+        SQLiteRecordStore(incomplete, read_only=True)
 
 
 def test_summary_reports_coverage(tmp_path: Path) -> None:

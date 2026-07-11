@@ -7,6 +7,8 @@ from typing import Any
 
 import httpx
 
+from mdmeta import user_agent
+
 
 TOPOLOGY_EXTENSIONS = {".psf", ".prmtop", ".parm7", ".top", ".tpr", ".gro", ".pdb", ".cif"}
 TRAJECTORY_EXTENSIONS = {".xtc", ".trr", ".dcd", ".nc", ".netcdf"}
@@ -51,7 +53,11 @@ def main() -> None:
     args = parser.parse_args()
 
     project_url = f"{args.base_url.rstrip('/')}/projects/{args.project}"
-    with httpx.Client(timeout=60, follow_redirects=True, headers={"User-Agent": "md-metadata-pipeline/0.9"}) as client:
+    with httpx.Client(
+        timeout=60,
+        follow_redirects=True,
+        headers={"User-Agent": user_agent("mddb-discovery")},
+    ) as client:
         project_response = client.get(project_url)
         project_response.raise_for_status()
         project = project_response.json()

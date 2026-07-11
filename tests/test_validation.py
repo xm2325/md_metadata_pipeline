@@ -23,6 +23,56 @@ def test_pdb_404_is_conflict_not_network_failure() -> None:
     assert validator.validate_pdb("2GMX").state is ValidationState.CONFLICT
 
 
+def test_success_with_invalid_json_is_unresolved_not_biological_conflict() -> None:
+    validator = IdentifierValidator(
+        mock_client(
+            lambda request: httpx.Response(
+                200,
+                content=b"upstream proxy returned HTML",
+                headers={"Content-Type": "text/html"},
+            )
+        )
+    )
+    record = validator.validate_pdb("7ZK3")
+    assert record.state is ValidationState.UNRESOLVED
+    assert record.reason == "invalid_json_response"
+    assert record.response_sha256
+
+
+def test_success_with_wrong_json_shape_is_unresolved() -> None:
+    validator = IdentifierValidator(
+        mock_client(lambda request: httpx.Response(200, json=[{"id": "7zk3"}]))
+    )
+    record = validator.validate_pdb("7ZK3")
+    assert record.state is ValidationState.UNRESOLVED
+    assert record.reason == "unexpected_json_type:list"
+
+
+def test_success_with_malformed_endpoint_payload_is_unresolved() -> None:
+    pdb = IdentifierValidator(
+        mock_client(lambda request: httpx.Response(200, json={"7zk3": None}))
+    ).validate_pdb("7ZK3")
+    assert pdb.state is ValidationState.UNRESOLVED
+    assert pdb.reason == "malformed_pdb_summary_payload"
+
+    uniprot = IdentifierValidator(
+        mock_client(lambda request: httpx.Response(200, json={"primaryAccession": None}))
+    ).validate_uniprot("Q5XXA6")
+    assert uniprot.state is ValidationState.UNRESOLVED
+    assert uniprot.reason == "malformed_uniprot_payload"
+
+
+def test_malformed_mapping_payload_is_unresolved() -> None:
+    validator = IdentifierValidator(
+        mock_client(
+            lambda request: httpx.Response(200, json={"7zk3": {"UniProt": []}})
+        )
+    )
+    record = validator.validate_mapping("7ZK3", "Q5XXA6")
+    assert record.state is ValidationState.UNRESOLVED
+    assert record.reason == "malformed_mapping_payload"
+
+
 def test_timeout_is_unresolved_not_conflict() -> None:
     def handler(request):
         raise httpx.ReadTimeout("timeout", request=request)
@@ -116,6 +166,22 @@ def test_successful_response_cache_avoids_second_network_call(tmp_path) -> None:
     assert second.cache_hit is True
     assert second.attempts == 0
     assert second.response_sha256 == first.response_sha256
+
+
+def test_corrupt_cache_is_ignored_and_replaced(tmp_path) -> None:
+    calls = 0
+
+    def handler(request):
+        nonlocal calls
+        calls += 1
+        return httpx.Response(200, json={"7zk3": [{"title": "entry"}]})
+
+    validator = IdentifierValidator(mock_client(handler), cache_dir=tmp_path)
+    endpoint = "https://www.ebi.ac.uk/pdbe/api/pdb/entry/summary/7zk3"
+    validator.cache._path(endpoint).write_text("{truncated", encoding="utf-8")
+    record = validator.validate_pdb("7ZK3")
+    assert record.state is ValidationState.VALIDATED
+    assert calls == 1
 
 
 def test_validation_summary_preserves_states_and_attempts(tmp_path) -> None:

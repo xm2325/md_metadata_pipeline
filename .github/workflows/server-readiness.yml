@@ -1,0 +1,268 @@
+name: Server readiness
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    paths:
+      - .github/workflows/server-readiness.yml
+      - Dockerfile
+      - .dockerignore
+      - compose.yaml
+      - pyproject.toml
+      - src/**
+      - tests/**
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
+
+jobs:
+  python-quality:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: pyproject.toml
+      - name: Install quality, API, and packaging dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e '.[dev,api]' build pip-audit
+      - name: Build and inspect the wheel
+        run: |
+          mkdir -p reports
+          python -m build
+          python -m pip install --force-reinstall dist/*.whl
+          python -m pip check
+          python - <<'PY'
+          import json
+          from importlib.metadata import version
+          from mdmeta.server import ServerSettings
+
+          assert version("md-metadata-pipeline") == "0.10.0"
+          settings = ServerSettings.from_env()
+          print(json.dumps({"version": version("md-metadata-pipeline"), "settings": str(settings)}))
+          PY
+      - name: Test installed wheel server and integrity paths
+        run: |
+          pytest \
+            tests/test_server.py \
+            tests/test_integration.py \
+            tests/test_validation.py \
+            --junitxml=reports/pytest-wheel.xml
+      - name: Dependency vulnerability report
+        id: dependency_audit
+        continue-on-error: true
+        run: python -m pip_audit --format json --output reports/pip-audit.json
+      - name: Upload test, audit, and package evidence
+        id: quality_artifact
+        if: always()
+        continue-on-error: true
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: server-readiness-python-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            reports/
+            dist/
+          if-no-files-found: error
+          retention-days: 7
+          compression-level: 9
+      - name: Report evidence persistence state
+        if: always()
+        env:
+          AUDIT_OUTCOME: ${{ steps.dependency_audit.outcome }}
+          ARTIFACT_OUTCOME: ${{ steps.quality_artifact.outcome }}
+        run: |
+          {
+            echo "## Python readiness evidence"
+            echo "- dependency audit: ${AUDIT_OUTCOME}"
+            echo "- artifact upload: ${ARTIFACT_OUTCOME}"
+            if [ "${ARTIFACT_OUTCOME}" != "success" ]; then
+              echo "- WARNING: tests ran, but their persistent artifact was not stored."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  container-smoke:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+        with:
+          persist-credentials: false
+      - uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4
+      - name: Build API image with GitHub Actions layer cache
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7
+        with:
+          context: .
+          load: true
+          push: false
+          tags: mdmeta:ci
+          cache-from: type=gha,scope=mdmeta-api
+          cache-to: type=gha,mode=max,scope=mdmeta-api
+      - name: Run hardened container smoke test
+        run: |
+          mkdir -p reports
+          docker volume create mdmeta-ci-data
+          docker run --name mdmeta-snapshot \
+            --volume mdmeta-ci-data:/data \
+            --env MDMETA_DATABASE_READ_ONLY=false \
+            mdmeta:ci \
+            python -c 'from mdmeta.storage import SQLiteRecordStore; store = SQLiteRecordStore("/data/records.sqlite"); report = store.integrity_report(); assert report["integrity"] == ["ok"] and report["foreign_key_violations"] == [] and report["schema_version"] == 1; store.checkpoint()'
+          docker cp mdmeta-snapshot:/data/records.sqlite reports/records.sqlite
+          docker rm mdmeta-snapshot
+          docker volume rm mdmeta-ci-data
+          test ! -s reports/records.sqlite-wal
+          dataset_sha=$(sha256sum reports/records.sqlite | cut -d ' ' -f 1)
+          docker run --detach --name mdmeta-api \
+            --read-only \
+            --tmpfs /tmp:rw,noexec,nosuid,size=64m \
+            --volume "$PWD/reports/records.sqlite:/data/records.sqlite:ro" \
+            --env MDMETA_DATABASE_READ_ONLY=true \
+            --env MDMETA_DATASET_SHA256="$dataset_sha" \
+            --env MDMETA_BUILD_SHA=${{ github.sha }} \
+            --cap-drop ALL \
+            --security-opt no-new-privileges \
+            --pids-limit 128 \
+            --publish 127.0.0.1:8000:8000 \
+            mdmeta:ci
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:8000/readyz > reports/readyz.json; then
+              break
+            fi
+            if [ "$attempt" = "30" ]; then
+              docker logs mdmeta-api
+              exit 1
+            fi
+            sleep 1
+          done
+          curl --fail --silent http://127.0.0.1:8000/metadata > reports/metadata.json
+          curl --fail --silent http://127.0.0.1:8000/openapi.json > reports/openapi.json
+          curl --fail --silent 'http://127.0.0.1:8000/search?pdb_id=6VSB' > reports/search.json
+          docker exec mdmeta-api python -c 'import os; assert os.getuid() == 10001'
+          if docker exec mdmeta-api sh -c 'touch /app/write-probe'; then
+            echo "container root filesystem is writable" >&2
+            exit 1
+          fi
+          if docker exec mdmeta-api sh -c 'touch /data/write-probe'; then
+            echo "dataset mount is writable" >&2
+            exit 1
+          fi
+          EXPECTED_DATASET_SHA="$dataset_sha" EXPECTED_BUILD_SHA="${{ github.sha }}" python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          metadata = json.loads(Path("reports/metadata.json").read_text())
+          readiness = json.loads(Path("reports/readyz.json").read_text())
+          search = json.loads(Path("reports/search.json").read_text())
+          assert metadata["database_mode"] == "read_only"
+          assert metadata["database_schema_version"] == 1
+          assert metadata["dataset_sha256"] == os.environ["EXPECTED_DATASET_SHA"]
+          assert metadata["build_sha"] == os.environ["EXPECTED_BUILD_SHA"]
+          assert readiness["status"] == "ready"
+          assert readiness["database_schema_version"] == 1
+          assert search == {"count": 0, "records": []}
+          PY
+          docker image inspect mdmeta:ci > reports/image-inspect.json
+      - name: Capture and stop container
+        if: always()
+        run: |
+          mkdir -p reports
+          docker logs mdmeta-api > reports/container.log 2>&1 || true
+          docker rm --force mdmeta-api || true
+          docker rm --force mdmeta-snapshot || true
+          docker volume rm mdmeta-ci-data || true
+      - name: Upload container evidence
+        id: container_artifact
+        if: always()
+        continue-on-error: true
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: server-readiness-container-${{ github.run_id }}-${{ github.run_attempt }}
+          path: reports/
+          if-no-files-found: error
+          retention-days: 7
+          compression-level: 9
+      - name: Report container evidence persistence state
+        if: always()
+        env:
+          ARTIFACT_OUTCOME: ${{ steps.container_artifact.outcome }}
+        run: |
+          {
+            echo "## Container readiness evidence"
+            echo "- artifact upload: ${ARTIFACT_OUTCOME}"
+            if [ "${ARTIFACT_OUTCOME}" != "success" ]; then
+              echo "- WARNING: the smoke test ran, but its persistent artifact was not stored."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  actions-storage-inventory:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Summarize repository artifact and cache use without creating an artifact
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9
+        with:
+          script: |
+            const {owner, repo} = context.repo;
+            const artifacts = await github.paginate(
+              github.rest.actions.listArtifactsForRepo,
+              {owner, repo, per_page: 100},
+            );
+            let caches = null;
+            try {
+              caches = await github.paginate(
+                "GET /repos/{owner}/{repo}/actions/caches",
+                {owner, repo, per_page: 100},
+              );
+            } catch (error) {
+              core.warning(`Cache inventory unavailable: ${error.message}`);
+            }
+            const bytes = (rows) => rows.reduce(
+              (total, row) => total + Number(row.size_in_bytes || 0),
+              0,
+            );
+            const mib = (value) => (value / 1024 / 1024).toFixed(2);
+            const liveArtifacts = artifacts.filter((item) => !item.expired);
+            const largest = [...liveArtifacts]
+              .sort((a, b) => b.size_in_bytes - a.size_in_bytes)
+              .slice(0, 10)
+              .map((item) => [
+                item.name,
+                `${mib(item.size_in_bytes)} MiB`,
+                item.expires_at || "unknown",
+              ]);
+            core.summary
+              .addHeading("GitHub Actions storage inventory")
+              .addTable([
+                [{data: "Category", header: true}, {data: "Count", header: true}, {data: "Size", header: true}],
+                ["Live artifacts", String(liveArtifacts.length), `${mib(bytes(liveArtifacts))} MiB`],
+                [
+                  "Caches",
+                  caches === null ? "N/A" : String(caches.length),
+                  caches === null ? "N/A" : `${mib(bytes(caches))} MiB`,
+                ],
+              ]);
+            if (largest.length) {
+              core.summary.addHeading("Largest live artifacts", 3).addTable([
+                [{data: "Name", header: true}, {data: "Size", header: true}, {data: "Expires", header: true}],
+                ...largest,
+              ]);
+            }
+            core.summary.addRaw(
+              "This inventory covers only this repository. Account-level artifact/Packages usage, " +
+              "other repositories and logs are not included. Artifacts are evidence bundles; caches " +
+              "are reserved for dependencies and Docker layers. This report intentionally creates no artifact."
+            );
+            await core.summary.write();

@@ -9,8 +9,17 @@ from typing import Iterator
 from .integration import IntegratedMDRecord
 
 
+SCHEMA_VERSION = 1
+_REQUIRED_TABLES = {
+    "articles",
+    "literature_facts",
+    "validations",
+    "residue_mappings",
+    "md_assets",
+}
 _SCHEMA = """
 PRAGMA foreign_keys = ON;
+PRAGMA journal_mode = WAL;
 CREATE TABLE IF NOT EXISTS articles (
     document_id TEXT PRIMARY KEY,
     title TEXT NOT NULL,
@@ -69,16 +78,63 @@ CREATE TABLE IF NOT EXISTS md_assets (
 
 
 class SQLiteRecordStore:
-    def __init__(self, path: str | Path) -> None:
+    def __init__(self, path: str | Path, *, read_only: bool = False) -> None:
         self.path = Path(path)
-        self.path.parent.mkdir(parents=True, exist_ok=True)
-        with self._connect() as connection:
-            connection.executescript(_SCHEMA)
+        self.read_only = read_only
+        if self.read_only:
+            if not self.path.is_file():
+                raise FileNotFoundError(self.path)
+            with self._connect() as connection:
+                self._validate_schema(connection)
+        else:
+            self.path.parent.mkdir(parents=True, exist_ok=True)
+            with self._connect() as connection:
+                version = self._schema_version(connection)
+                if version == 0:
+                    connection.executescript(_SCHEMA)
+                    connection.execute(f"PRAGMA user_version = {SCHEMA_VERSION}")
+                elif version != SCHEMA_VERSION:
+                    raise RuntimeError(
+                        f"unsupported database schema version {version}; "
+                        f"expected {SCHEMA_VERSION}"
+                    )
+                self._validate_schema(connection)
+
+    @staticmethod
+    def _schema_version(connection: sqlite3.Connection) -> int:
+        return int(connection.execute("PRAGMA user_version").fetchone()[0])
+
+    @classmethod
+    def _validate_schema(cls, connection: sqlite3.Connection) -> None:
+        version = cls._schema_version(connection)
+        if version != SCHEMA_VERSION:
+            raise RuntimeError(
+                f"unsupported database schema version {version}; expected {SCHEMA_VERSION}"
+            )
+        rows = connection.execute(
+            "SELECT name FROM sqlite_master WHERE type = 'table'"
+        ).fetchall()
+        tables = {str(row[0]) for row in rows}
+        missing = sorted(_REQUIRED_TABLES - tables)
+        if missing:
+            raise RuntimeError(f"database schema is incomplete; missing tables: {missing}")
 
     @contextmanager
     def _connect(self) -> Iterator[sqlite3.Connection]:
-        connection = sqlite3.connect(self.path)
+        if self.read_only:
+            # Deployment serves a checkpointed snapshot that is never replaced
+            # under a running process.  immutable=1 avoids WAL shared-memory
+            # writes when the dataset mount itself is read-only.
+            uri = f"{self.path.resolve().as_uri()}?mode=ro&immutable=1"
+            connection = sqlite3.connect(uri, uri=True)
+        else:
+            connection = sqlite3.connect(self.path)
         connection.row_factory = sqlite3.Row
+        # SQLite applies foreign-key enforcement per connection.  Enabling it
+        # only in the schema bootstrap connection leaves later upserts unable
+        # to cascade-delete the previous child rows.
+        connection.execute("PRAGMA foreign_keys = ON")
+        connection.execute("PRAGMA busy_timeout = 5000")
         try:
             yield connection
         except Exception:
@@ -90,6 +146,8 @@ class SQLiteRecordStore:
             connection.close()
 
     def write(self, record: IntegratedMDRecord) -> None:
+        if self.read_only:
+            raise RuntimeError("cannot write through a read-only record store")
         document_id = record.article.document_id
         payload = json.dumps(record.model_dump(mode="json"), sort_keys=True)
         with self._connect() as connection:
@@ -210,7 +268,10 @@ class SQLiteRecordStore:
         *,
         pdb_id: str | None = None,
         uniprot_accession: str | None = None,
+        limit: int | None = None,
     ) -> list[dict]:
+        if limit is not None and limit < 1:
+            raise ValueError("limit must be positive")
         document_ids: set[str] = set()
         with self._connect() as connection:
             if pdb_id is not None:
@@ -235,13 +296,16 @@ class SQLiteRecordStore:
                 document_ids.update(row["document_id"] for row in rows)
             if not document_ids:
                 return []
-            placeholders = ",".join("?" for _ in document_ids)
+            selected_ids = sorted(document_ids)
+            if limit is not None:
+                selected_ids = selected_ids[:limit]
+            placeholders = ",".join("?" for _ in selected_ids)
             rows = connection.execute(
                 (
                     "SELECT record_json FROM articles "
                     f"WHERE document_id IN ({placeholders}) ORDER BY document_id"
                 ),
-                tuple(sorted(document_ids)),
+                tuple(selected_ids),
             ).fetchall()
         return [json.loads(row["record_json"]) for row in rows]
 
@@ -249,3 +313,40 @@ class SQLiteRecordStore:
         with self._connect() as connection:
             row = connection.execute("SELECT COUNT(*) AS n FROM articles").fetchone()
         return int(row["n"])
+
+    def schema_version(self) -> int:
+        with self._connect() as connection:
+            return self._schema_version(connection)
+
+    def checkpoint(self) -> tuple[int, int, int]:
+        """Checkpoint WAL and finalize a portable single-file snapshot."""
+
+        if self.read_only:
+            raise RuntimeError("cannot checkpoint a read-only record store")
+        with self._connect() as connection:
+            row = connection.execute("PRAGMA wal_checkpoint(TRUNCATE)").fetchone()
+            result = int(row[0]), int(row[1]), int(row[2])
+            if result[0] == 0 and result[1] == result[2]:
+                journal_mode = str(
+                    connection.execute("PRAGMA journal_mode = DELETE").fetchone()[0]
+                ).casefold()
+                if journal_mode != "delete":
+                    raise RuntimeError(
+                        f"failed to finalize snapshot journal mode: {journal_mode}"
+                    )
+        return result
+
+    def integrity_report(self) -> dict[str, object]:
+        """Return SQLite structural and foreign-key integrity results."""
+
+        with self._connect() as connection:
+            integrity_rows = connection.execute("PRAGMA integrity_check").fetchall()
+            foreign_key_rows = connection.execute("PRAGMA foreign_key_check").fetchall()
+            schema_version = self._schema_version(connection)
+            journal_mode = str(connection.execute("PRAGMA journal_mode").fetchone()[0])
+        return {
+            "integrity": [str(row[0]) for row in integrity_rows],
+            "foreign_key_violations": [list(row) for row in foreign_key_rows],
+            "schema_version": schema_version,
+            "journal_mode": journal_mode,
+        }

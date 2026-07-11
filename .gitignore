@@ -9,3 +9,12 @@ build/
 dist/
 study/confirmatory_60/generated/
 .cache/validation/
+results/
+data/
+*.sqlite
+*.sqlite-*
+*.db
+*.log
+.env
+.env.*
+!.env.example

@@ -1,0 +1,49 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: ${MDMETA_IMAGE:-md-metadata-pipeline:0.10.0}
+    init: true
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8000:8000"
+    environment:
+      MDMETA_DATABASE_PATH: /data/records.sqlite
+      MDMETA_DATABASE_READ_ONLY: "true"
+      MDMETA_HOST: 0.0.0.0
+      MDMETA_PORT: "8000"
+      MDMETA_WORKERS: "1"
+      MDMETA_LOG_LEVEL: info
+      MDMETA_DATASET_SHA256: ${MDMETA_DATASET_SHA256:-unversioned}
+      MDMETA_BUILD_SHA: ${MDMETA_BUILD_SHA:-unknown}
+    volumes:
+      - type: bind
+        source: ${MDMETA_DATA_DIR:-./data}
+        target: /data
+        read_only: true
+        bind:
+          create_host_path: false
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,nodev,size=64m,mode=1777
+    pids_limit: 128
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/readyz', timeout=3)"
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s

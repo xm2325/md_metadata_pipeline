@@ -324,7 +324,11 @@ def discover_uniprot_mappings(
     normalized = pdb_id.lower()
     endpoint = PDBE_UNIPROT.format(pdb_id=normalized)
     retrieved = validator._retrieve(endpoint)  # deliberate reuse of audited retry/cache logic
-    if not retrieved.response_received or retrieved.http_status != 200:
+    if (
+        not retrieved.response_received
+        or not retrieved.payload_valid
+        or retrieved.http_status != 200
+    ):
         return MappingDiscovery(
             pdb_id=pdb_id.upper(),
             state=ValidationState.UNRESOLVED,
@@ -336,10 +340,58 @@ def discover_uniprot_mappings(
             cache_hit=retrieved.cache_hit,
         )
 
-    uniprot = (retrieved.payload or {}).get(normalized, {}).get("UniProt", {})
+    payload = retrieved.payload or {}
+    pdb_payload = payload.get(normalized)
+    if pdb_payload is not None and not isinstance(pdb_payload, dict):
+        return MappingDiscovery(
+            pdb_id=pdb_id.upper(),
+            state=ValidationState.UNRESOLVED,
+            endpoint=endpoint,
+            reason="malformed_mapping_payload",
+            http_status=retrieved.http_status,
+            response_sha256=retrieved.response_sha256,
+            attempts=retrieved.attempts,
+            cache_hit=retrieved.cache_hit,
+        )
+    uniprot = (pdb_payload or {}).get("UniProt", {})
+    if not isinstance(uniprot, dict):
+        return MappingDiscovery(
+            pdb_id=pdb_id.upper(),
+            state=ValidationState.UNRESOLVED,
+            endpoint=endpoint,
+            reason="malformed_mapping_payload",
+            http_status=retrieved.http_status,
+            response_sha256=retrieved.response_sha256,
+            attempts=retrieved.attempts,
+            cache_hit=retrieved.cache_hit,
+        )
     segments: list[MappingSegment] = []
-    for accession, payload in sorted(uniprot.items()):
-        mappings = payload.get("mappings", []) if isinstance(payload, dict) else []
+    for accession, accession_payload in sorted(uniprot.items()):
+        if not isinstance(accession, str) or not isinstance(accession_payload, dict):
+            return MappingDiscovery(
+                pdb_id=pdb_id.upper(),
+                state=ValidationState.UNRESOLVED,
+                endpoint=endpoint,
+                reason="malformed_mapping_payload",
+                http_status=retrieved.http_status,
+                response_sha256=retrieved.response_sha256,
+                attempts=retrieved.attempts,
+                cache_hit=retrieved.cache_hit,
+            )
+        mappings = accession_payload.get("mappings", [])
+        if not isinstance(mappings, list) or not all(
+            isinstance(item, dict) for item in mappings
+        ):
+            return MappingDiscovery(
+                pdb_id=pdb_id.upper(),
+                state=ValidationState.UNRESOLVED,
+                endpoint=endpoint,
+                reason="malformed_mapping_payload",
+                http_status=retrieved.http_status,
+                response_sha256=retrieved.response_sha256,
+                attempts=retrieved.attempts,
+                cache_hit=retrieved.cache_hit,
+            )
         segments.extend(validator._mapping_segments(normalized, accession, mappings))
     accessions = sorted({segment.uniprot_accession for segment in segments})
     state = ValidationState.VALIDATED if segments else ValidationState.CONFLICT

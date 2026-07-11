@@ -10,6 +10,7 @@ from typing import Any
 
 import httpx
 
+from mdmeta import user_agent
 from mdmeta.file_backed import (
     FileBackedMDReport,
     WorkflowEvidence,
@@ -75,7 +76,7 @@ def main() -> None:
     client = httpx.Client(
         timeout=120,
         follow_redirects=True,
-        headers={"User-Agent": "md-metadata-pipeline/0.9"},
+        headers={"User-Agent": user_agent("file-backed-mddb")},
     )
     try:
         project_bytes, project_payload = get_json_bytes(client, project_url)

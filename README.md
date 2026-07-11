@@ -4,7 +4,7 @@ Evidence-linked extraction and validation for molecular-dynamics literature, des
 
 ## Current research evidence
 
-The frozen-v2 independent held-out result remains the primary model result: 15 articles, 165 reference facts, precision 0.844, recall 0.695, and F1 0.763. The 120-article unlabelled audit produced 1,204 evidence-linked facts with no execution failure; it does not provide an accuracy estimate.
+The frozen-v2 independent held-out result is an externally reported baseline: 15 articles, 165 reference facts, precision 0.844, recall 0.695, and F1 0.763. Its original report/artifact is not committed in this repository, so it is not reproducible from the current tree. The same limitation applies to the externally reported 120-article unlabelled audit (1,204 evidence-linked facts and no reported execution failure); it does not provide an accuracy estimate.
 
 Version 0.3 added a phase-aware protocol-event schema and PDBe, UniProt, and SIFTS-derived validation states.
 
@@ -49,6 +49,17 @@ Version 0.9 adds a real file-backed MDDB/MDposit case for public project `MCV190
 
 The verified run mapped 3,741 prepared-system residues to PDB `6VXX` and 3,573 residues through to UniProt, while retaining construct variants and trimer-chain ambiguity. See [`study/file_backed_mddb/RUN_2026-07-10.md`](study/file_backed_mddb/RUN_2026-07-10.md).
 
+Version 0.10 adds the first server-readiness layer:
+
+- SQLite foreign keys are enforced on every connection, repeated record writes are regression-tested, and snapshots can be checkpointed, integrity-checked and hashed with `mdmeta-verify-database`;
+- malformed successful upstream responses remain `unresolved` rather than being misreported as biological conflicts;
+- package, API and external-service user-agent versions share one source of truth;
+- the FastAPI service has environment configuration, bounded search, liveness, readiness and build/dataset metadata endpoints, and redacts server-local asset paths;
+- a pinned Python 3.12, non-root Docker image and hardened Compose configuration serve a read-only SQLite snapshot;
+- a GitHub-hosted server-readiness workflow is configured to test Python, wheel and container paths, use pip/Docker caches, upload short-lived evidence, and report artifact/cache consumption without hiding quota failures. Its first cloud run is pending.
+
+See [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md), [`docs/OPERATIONS.md`](docs/OPERATIONS.md), and [`docs/JR3997_ALIGNMENT_AND_ROADMAP.md`](docs/JR3997_ALIGNMENT_AND_ROADMAP.md).
+
 Current `main` extends the provisional workflow with deterministic oversampling before the 30/10/20 split. It screens a larger full-text pool, selects only machine-eligible records, keeps rejected and reserve records, and creates a metadata-only dual-review workpack. The executed 2026-07-10 run screened 90 JATS articles with no download or parse failure, found 78 machine-eligible records, and produced a 60-record provisional review queue. See [`study/confirmatory_60/RUN_2026-07-10.md`](study/confirmatory_60/RUN_2026-07-10.md).
 
 The same workflow now freezes deterministic protocol-event predictions before human annotation. Screening and prediction use the same ephemeral JATS snapshots; the snapshots are deleted before artifact upload. The verified run completed 60/60 articles with zero failure and produced 281 machine-generated event candidates in an artifact that is separate from the human workpack. These counts are not accuracy results. See [`study/confirmatory_60/PREDICTION_FREEZE_2026-07-10.md`](study/confirmatory_60/PREDICTION_FREEZE_2026-07-10.md).
@@ -64,6 +75,33 @@ pytest --cov=mdmeta --cov-branch --cov-report=term-missing --cov-fail-under=75
 ```
 
 GitHub Actions runs Python 3.11 and 3.12 independently. The corpus workflow also executes a live Europe PMC metadata query, in-memory JATS screening, deterministic finalization, checksum generation, workpack construction, and blinded prediction freezing.
+
+## Run the read-only query service
+
+The deployment image expects a verified `records.sqlite` snapshot on local server storage. It does
+not run ingestion inside the API process.
+
+The GHCR command below is a production deployment template. It becomes usable only after the
+manual/tag-triggered `Publish API container` workflow succeeds and reports an immutable image
+digest; no version 0.10 GHCR image has been published yet.
+
+```bash
+export MDMETA_DATA_DIR=/srv/mdmeta/current
+export MDMETA_DATASET_SHA256=<dataset-sha256>
+export MDMETA_BUILD_SHA=<git-commit-sha>
+export MDMETA_IMAGE=ghcr.io/xm2325/md_metadata_pipeline@sha256:<image-digest>
+docker compose pull
+docker compose up --detach --no-build --force-recreate
+
+curl --fail http://127.0.0.1:8000/readyz
+curl --fail http://127.0.0.1:8000/metadata
+```
+
+GitHub Actions is the authoritative test/build environment for this repository. The
+`Server readiness` workflow is configured to run lint, tests, coverage, wheel construction and a
+hardened container smoke test on GitHub-hosted Ubuntu runners; its first run is pending. Actions
+artifacts are short-lived evidence; durable scientific bundles must be promoted to a release or
+institutional repository.
 
 ## Run the end-to-end integration
 

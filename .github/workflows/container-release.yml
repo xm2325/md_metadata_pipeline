@@ -1,0 +1,150 @@
+name: Publish API container
+
+on:
+  workflow_dispatch:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  IMAGE: ghcr.io/${{ github.repository }}
+  CANDIDATE_TAG: validation-${{ github.run_id }}-${{ github.run_attempt }}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - name: Validate the release source
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          REF: ${{ github.ref }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          if [[ "$EVENT_NAME" == "workflow_dispatch" && "$REF" != "refs/heads/main" ]]; then
+            echo "Manual container publication is allowed only from main." >&2
+            exit 1
+          fi
+          if [[ "$EVENT_NAME" == "push" && ! "$REF_NAME" =~ ^v[0-9A-Za-z][0-9A-Za-z._-]{0,126}$ ]]; then
+            echo "Release tag is not a valid Docker tag: $REF_NAME" >&2
+            exit 1
+          fi
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+        with:
+          persist-credentials: false
+      - uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4
+      - name: Authenticate to GitHub Container Registry
+        env:
+          GHCR_TOKEN: ${{ github.token }}
+        run: echo "$GHCR_TOKEN" | docker login ghcr.io --username "${{ github.actor }}" --password-stdin
+      - name: Build and push a digest-addressed validation candidate
+        id: build
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7
+        with:
+          context: .
+          push: true
+          tags: ${{ env.IMAGE }}:${{ env.CANDIDATE_TAG }}
+          cache-from: type=gha,scope=mdmeta-api
+          cache-to: type=gha,mode=max,scope=mdmeta-api
+          provenance: mode=max
+          sbom: true
+      - name: Smoke-test the exact candidate digest
+        env:
+          IMAGE_DIGEST: ${{ steps.build.outputs.digest }}
+        run: |
+          mkdir -p reports
+          docker pull "${IMAGE}@${IMAGE_DIGEST}"
+          docker tag "${IMAGE}@${IMAGE_DIGEST}" mdmeta:release-candidate
+          docker volume create mdmeta-release-data
+          docker run --name mdmeta-release-snapshot \
+            --volume mdmeta-release-data:/data \
+            --env MDMETA_DATABASE_READ_ONLY=false \
+            mdmeta:release-candidate \
+            python -c 'from mdmeta.storage import SQLiteRecordStore; store = SQLiteRecordStore("/data/records.sqlite"); store.checkpoint()'
+          docker cp mdmeta-release-snapshot:/data/records.sqlite reports/records.sqlite
+          docker rm mdmeta-release-snapshot
+          docker volume rm mdmeta-release-data
+          dataset_sha=$(sha256sum reports/records.sqlite | cut -d ' ' -f 1)
+          docker run --detach --name mdmeta-release-api \
+            --read-only \
+            --tmpfs /tmp:rw,noexec,nosuid,size=64m \
+            --volume "$PWD/reports/records.sqlite:/data/records.sqlite:ro" \
+            --env MDMETA_DATABASE_READ_ONLY=true \
+            --env MDMETA_DATASET_SHA256="$dataset_sha" \
+            --env MDMETA_BUILD_SHA="${{ github.sha }}" \
+            --cap-drop ALL \
+            --security-opt no-new-privileges \
+            --pids-limit 128 \
+            --publish 127.0.0.1:8000:8000 \
+            mdmeta:release-candidate
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:8000/readyz > reports/readyz.json; then
+              break
+            fi
+            if [[ "$attempt" == "30" ]]; then
+              docker logs mdmeta-release-api
+              exit 1
+            fi
+            sleep 1
+          done
+          curl --fail --silent http://127.0.0.1:8000/metadata > reports/metadata.json
+          docker exec mdmeta-release-api python -c 'import os; assert os.getuid() == 10001'
+          if docker exec mdmeta-release-api sh -c 'touch /app/write-probe'; then
+            echo "container root filesystem is writable" >&2
+            exit 1
+          fi
+          if docker exec mdmeta-release-api sh -c 'touch /data/write-probe'; then
+            echo "dataset mount is writable" >&2
+            exit 1
+          fi
+          EXPECTED_DATASET_SHA="$dataset_sha" python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          metadata = json.loads(Path("reports/metadata.json").read_text())
+          readiness = json.loads(Path("reports/readyz.json").read_text())
+          assert metadata["database_mode"] == "read_only"
+          assert metadata["database_schema_version"] == 1
+          assert metadata["dataset_sha256"] == os.environ["EXPECTED_DATASET_SHA"]
+          assert metadata["build_sha"] == "${{ github.sha }}"
+          assert readiness["status"] == "ready"
+          assert readiness["database_schema_version"] == 1
+          PY
+      - name: Stop release-test containers
+        if: always()
+        run: |
+          docker logs mdmeta-release-api > reports/container.log 2>&1 || true
+          docker rm --force mdmeta-release-api || true
+          docker rm --force mdmeta-release-snapshot || true
+          docker volume rm mdmeta-release-data || true
+      - name: Promote the validated digest to release tags
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          IMAGE_DIGEST: ${{ steps.build.outputs.digest }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          docker buildx imagetools create \
+            --tag "${IMAGE}:${{ github.sha }}" \
+            "${IMAGE}@${IMAGE_DIGEST}"
+          if [[ "$EVENT_NAME" == "push" ]]; then
+            docker buildx imagetools create \
+              --tag "${IMAGE}:${REF_NAME}" \
+              "${IMAGE}@${IMAGE_DIGEST}"
+          fi
+          docker buildx imagetools inspect "${IMAGE}@${IMAGE_DIGEST}"
+          {
+            echo "## Published API image"
+            echo '```text'
+            echo "${IMAGE}@${IMAGE_DIGEST}"
+            echo '```'
+            echo "Commit: ${{ github.sha }}"
+            echo "Validated candidate: ${IMAGE}:${CANDIDATE_TAG}"
+          } >> "$GITHUB_STEP_SUMMARY"

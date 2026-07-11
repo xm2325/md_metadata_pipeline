@@ -10,6 +10,7 @@ from pathlib import Path
 
 import httpx
 
+from mdmeta import user_agent
 from mdmeta.benchmark import canonical_sha256
 from mdmeta.integration import integrate_article, summarize_integrated_records
 from mdmeta.storage import SQLiteRecordStore
@@ -63,7 +64,7 @@ def main() -> None:
     with httpx.Client(
         timeout=args.timeout,
         follow_redirects=True,
-        headers={"User-Agent": "md-metadata-pipeline/0.8 integrated-60"},
+        headers={"User-Agent": user_agent("integrated-60")},
     ) as client:
         validator = IdentifierValidator(client, cache_dir=args.cache_dir)
         for article in articles:
