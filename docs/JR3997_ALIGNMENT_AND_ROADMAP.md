@@ -79,7 +79,7 @@ demo:
 | Relevant postdoctoral experience | Applicant credential; cannot be established here. | **Gap** |
 | Graph databases such as Neo4j | No graph schema, export or Neo4j integration. | **Gap** |
 | REST APIs | Tested FastAPI health, record and PDB/UniProt search endpoints exist. See [API](../src/mdmeta/api.py). | **Strong** |
-| Containerisation | A pinned, non-root API `Dockerfile`, hardened read-only Compose service and GitHub-hosted container smoke workflow are implemented. The first cloud run and immutable image publication are still pending. | **Partial** |
+| Containerisation | A pinned, non-root API `Dockerfile`, hardened read-only Compose service and GitHub-hosted container smoke workflow are implemented. The Python, wheel and container PR gate passed on 2026-07-11; immutable image publication and server deployment are still pending. | **Partial** |
 | Workflow systems such as Nextflow | GitHub Actions automates the project, but this is not evidence of a scientific workflow engine such as Nextflow. | **Gap** |
 | Data visualisation and analysis | Metric computation and machine-readable reports exist; there is no user-facing visualisation layer. | **Partial** |
 | FAIR principles and the biological-data lifecycle | Acquisition, extraction, validation, provenance and retention boundaries are documented, but publication, long-term preservation, deprecation and deletion policies are incomplete. | **Partial** |
@@ -132,7 +132,7 @@ All items in this section are **planned**, not current capability claims.
    and compatibility policy, and create a citable immutable example release.
 6. **Close remaining production data-integrity gaps.** Foreign-key enforcement, bounded SQLite
    waiting, portable snapshot finalisation and idempotent-upsert integrity tests now exist. A
-   cloud wheel-build job is configured, with its first run pending. Add schema migrations,
+   cloud wheel-build and installed-wheel test passed on 2026-07-11. Add schema migrations,
    dependency locking, release manifests and end-to-end restore tests.
 
 ### P1 — differentiators and portfolio evidence
@@ -173,24 +173,27 @@ authoritative long-term scientific repository.
 
 The current FastAPI app factory, environment-configured Uvicorn entry point, health/readiness
 checks, metadata endpoint, SQLite store, container and Compose manifest are a useful server base.
-Cloud verification of the new image is pending, and there is not yet a database migration system,
-automated backup/restore test, production observability stack or deployed security envelope.
+Cloud verification of the Python, installed-wheel and hardened container paths passed in
+[PR run 29152448584](https://github.com/xm2325/md_metadata_pipeline/actions/runs/29152448584).
+There is not yet an immutable GHCR publication, database migration system, automated backup/restore
+test, production observability stack or deployed security envelope.
 
 ### Phase 1 — immutable dataset bundle
 
 1. Actions is configured to produce `records.sqlite`, compact JSON records, a database integrity
-   manifest and `SHA256SUMS`; the upgraded workflow's first cloud run is pending. Finish the bundle
-   with an explicit dataset version and source/provenance manifest.
+   manifest and `SHA256SUMS`. Offline integration and snapshot-verification tests passed in PR #30;
+   the first upgraded live `main`/manual bundle run remains pending. Finish the bundle with an
+   explicit dataset version and source/provenance manifest.
 2. SQLite integrity/foreign-key checks and scientific acceptance gates are configured before
-   artifact upload; confirm them in the first cloud run and bind the declared database digest to a
-   separately identified complete bundle.
+   artifact upload. Their offline and container paths passed in PR #30; confirm the live bundle
+   gate and bind the declared database digest to a separately identified complete bundle.
 3. Store the accepted bundle durably and deploy by digest; never promote a partial or failed bundle.
 
 ### Phase 2 — separate API and ingestion runtimes
 
 1. The Dockerfile and workflow define a small non-root API image built from a wheel; cloud
-   verification is pending. Add a separate worker image containing MDAnalysis and file-processing
-   dependencies.
+   verification passed on 2026-07-11. Add a separate worker image containing MDAnalysis and
+   file-processing dependencies; immutable GHCR publication remains pending.
 2. Environment settings, `/livez`, `/readyz`, `/metadata`, bounded search and build/dataset metadata
    now exist. A supplied database digest is verified against the mounted snapshot; require it in
    production, add whole-bundle/build-to-image binding, typed response models and structured

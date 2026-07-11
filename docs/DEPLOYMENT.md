@@ -2,8 +2,9 @@
 
 This project separates scientific ingestion from serving. GitHub Actions workflows are configured
 to build and validate a versioned SQLite snapshot; a small FastAPI container serves that snapshot
-read-only. The upgraded workflows have not yet completed their first GitHub-hosted run. Do not run
-the live database from OneDrive, NFS, or another synchronised filesystem.
+read-only. The upgraded Python, installed-wheel and hardened container paths passed their first
+GitHub-hosted PR run on 2026-07-11. Do not run the live database from OneDrive, NFS, or another
+synchronised filesystem.
 
 ## Deployment contract
 
@@ -29,7 +30,8 @@ A future whole-bundle digest should use a separate field rather than overloading
 ## Cloud validation
 
 `.github/workflows/server-readiness.yml` is configured to run entirely on GitHub-hosted Ubuntu
-runners. Its first cloud run is pending. The workflow is configured to:
+runners. [PR run 29152448584](https://github.com/xm2325/md_metadata_pipeline/actions/runs/29152448584)
+passed on 2026-07-11. The workflow:
 
 1. run Ruff, pytest, branch coverage, wheel construction and `pip check`;
 2. emit JUnit, coverage and dependency-audit reports;
@@ -63,9 +65,8 @@ sha256sum --check SHA256SUMS.txt
 ## Build for local acceptance only
 
 `docker compose up --build` is useful for local acceptance testing, but it resolves dependencies
-again. Before the first successful server-readiness run there is no GitHub-validated version 0.10
-image; after that run, a local rebuild is still not the exact image built by Actions. Do not use a
-server-side rebuild as a production release.
+again. A local rebuild is not the exact version 0.10 image that passed the GitHub-hosted container
+smoke test. Do not use a server-side rebuild as a production release.
 
 The manual/tag-triggered `Publish API container` workflow is configured to publish the image, SBOM
 and provenance to GHCR. Its first publication is pending. Production must use an immutable image
