@@ -64,7 +64,16 @@ Version 0.10 adds the first server-readiness layer:
   GitHub rejected the optional evidence artifacts because the account storage quota remained full,
   and the job summary recorded that failure.
 
-See [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md), [`docs/OPERATIONS.md`](docs/OPERATIONS.md), and [`docs/JR3997_ALIGNMENT_AND_ROADMAP.md`](docs/JR3997_ALIGNMENT_AND_ROADMAP.md).
+Version 0.11 is the current production-candidate change set. It adds strict JSON Schema and API
+contracts, semantic SQLite verification, WAL-safe backup/restore, digest-addressed release bundles,
+atomic release activation/rollback, production environment guards, request IDs, JSON request logs,
+Prometheus metrics and additional supply-chain/security controls. These new paths are implemented
+but have not yet completed their first GitHub Actions validation. Version 0.11 must therefore not be
+described as fully production ready.
+
+See [`docs/PRODUCTION_READINESS.md`](docs/PRODUCTION_READINESS.md),
+[`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md), [`docs/OPERATIONS.md`](docs/OPERATIONS.md), and
+[`docs/JR3997_ALIGNMENT_AND_ROADMAP.md`](docs/JR3997_ALIGNMENT_AND_ROADMAP.md).
 
 Current `main` extends the provisional workflow with deterministic oversampling before the 30/10/20 split. It screens a larger full-text pool, selects only machine-eligible records, keeps rejected and reserve records, and creates a metadata-only dual-review workpack. The executed 2026-07-10 run screened 90 JATS articles with no download or parse failure, found 78 machine-eligible records, and produced a 60-record provisional review queue. See [`study/confirmatory_60/RUN_2026-07-10.md`](study/confirmatory_60/RUN_2026-07-10.md).
 
@@ -80,7 +89,11 @@ ruff check .
 pytest --cov=mdmeta --cov-branch --cov-report=term-missing --cov-fail-under=75
 ```
 
-GitHub Actions runs Python 3.11 and 3.12 independently. The corpus workflow also executes a live Europe PMC metadata query, in-memory JATS screening, deterministic finalization, checksum generation, workpack construction, and blinded prediction freezing.
+GitHub Actions is the authoritative validation environment and runs Python 3.11 and 3.12
+independently. The commands above are developer instructions, not evidence that the current version
+0.11 change set has passed. The corpus workflow also executes a live Europe PMC metadata query,
+in-memory JATS screening, deterministic finalization, checksum generation, workpack construction,
+and blinded prediction freezing.
 
 ## Run the read-only query service
 
@@ -88,14 +101,16 @@ The deployment image expects a verified `records.sqlite` snapshot on local serve
 not run ingestion inside the API process.
 
 The GHCR command below is a production deployment template. It becomes usable only after the
-manual/tag-triggered `Publish API container` workflow succeeds and reports an immutable image
-digest; no version 0.10 GHCR image has been published yet.
+manual/tag-triggered `Publish API container` workflow succeeds for the exact candidate commit and
+reports an immutable image digest; no version 0.11 production deployment has been demonstrated.
 
 ```bash
 export MDMETA_DATA_DIR=/srv/mdmeta/current
-export MDMETA_DATASET_SHA256=<dataset-sha256>
-export MDMETA_BUILD_SHA=<git-commit-sha>
-export MDMETA_IMAGE=ghcr.io/xm2325/md_metadata_pipeline@sha256:<image-digest>
+export MDMETA_DATASET_SHA256="${DATABASE_SHA256:?set DATABASE_SHA256}"
+export MDMETA_BUILD_SHA="${GIT_COMMIT:?set GIT_COMMIT}"
+export MDMETA_IMAGE="ghcr.io/xm2325/md_metadata_pipeline@sha256:${IMAGE_DIGEST:?set IMAGE_DIGEST}"
+export MDMETA_ALLOWED_HOSTS=api.example.org,127.0.0.1,localhost
+export MDMETA_FORWARDED_ALLOW_IPS="${TRUSTED_PROXY:?set TRUSTED_PROXY}"
 docker compose pull
 docker compose up --detach --no-build --force-recreate
 
@@ -103,14 +118,69 @@ curl --fail http://127.0.0.1:8000/readyz
 curl --fail http://127.0.0.1:8000/metadata
 ```
 
+Compose enables production mode, a read-only database, one worker, explicit Host checking and
+disabled interactive docs. TLS, authentication, rate limiting, request-size controls and public
+access logging still belong at the institutional ingress. `/metrics` is intentionally absent from
+the public OpenAPI document and must remain reachable only by an internal Prometheus scraper; do
+not route it through the public ingress.
+
 GitHub Actions is the authoritative test/build environment for this repository. The
 `Server readiness` workflow runs lint, tests, coverage, wheel construction and a hardened
 container smoke test on GitHub-hosted Ubuntu runners. Python quality, installed-wheel tests,
-dependency audit, storage inventory and the non-root/read-only container smoke test passed in its
-first complete PR run on 2026-07-11. Optional artifact persistence was attempted but rejected by
-the current account quota, and was reported as a warning rather than silently described as stored.
-Actions artifacts are short-lived evidence; durable scientific bundles must be promoted to a
-release or institutional repository.
+dependency audit, storage inventory and the non-root/read-only version 0.10 container smoke test
+passed in its first complete PR run on 2026-07-11. Optional artifact persistence was attempted but
+rejected by the current account quota, and was reported as a warning rather than silently described
+as stored. That earlier run does not validate the new version 0.11 release, recovery, contract,
+observability or security paths. Actions artifacts are short-lived evidence; durable scientific
+bundles must be promoted to a release or institutional repository.
+
+## Production data contracts, release and recovery
+
+Export or verify the public contract artifacts with:
+
+```bash
+mdmeta-export-contracts --output-dir schemas
+mdmeta-export-contracts --output-dir schemas --check
+```
+
+After ingestion, finalize and verify `records.sqlite`, then use `mdmeta-release create` with real,
+authorised dataset identity, licence, creator, publisher and workflow provenance values. The command
+rejects placeholders; the repository does not choose those governance values for the operator.
+
+```bash
+mdmeta-verify-database \
+  --database "$BUNDLE_DIR/records.sqlite" \
+  --checkpoint \
+  --expected-articles "$EXPECTED_ARTICLES" \
+  --output "$BUNDLE_DIR/database-manifest.json"
+
+mdmeta-release create \
+  --bundle-dir "$BUNDLE_DIR" \
+  --dataset-id "$DATASET_ID" \
+  --dataset-version "$DATASET_VERSION" \
+  --title "$DATASET_TITLE" \
+  --license "$DATASET_LICENSE" \
+  --creator "$DATASET_CREATOR" \
+  --publisher "$DATASET_PUBLISHER" \
+  --created-at "$RELEASE_CREATED_AT" \
+  --git-commit "$GIT_COMMIT" \
+  --workflow-run-url "$WORKFLOW_RUN_URL" \
+  --workflow-run-id "$WORKFLOW_RUN_ID" \
+  --workflow-run-attempt "$WORKFLOW_RUN_ATTEMPT" \
+  --dependency-lock constraints/runtime.txt \
+  --source-manifest "$SOURCE_MANIFEST"
+
+mdmeta-release verify --bundle-dir "$BUNDLE_DIR"
+```
+
+The CLI records the installed package version and hashes the dependency lock and optional source
+manifest itself; it does not trust hand-entered digests. Omit `--source-manifest` only when that
+release genuinely has no source manifest.
+
+`mdmeta-recovery backup` uses SQLite's online backup API and includes committed WAL frames without
+checkpointing the live source. Restore into a new candidate path, verify it, and promote it as a new
+immutable release; do not overwrite the database underneath a running API. Exact server procedures
+are in [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md).
 
 ## Run the end-to-end integration
 

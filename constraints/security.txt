@@ -1,0 +1,3 @@
+# Security tools are exact at the top level; their findings are blocking in CI.
+bandit==1.9.4
+pip-audit==2.10.1

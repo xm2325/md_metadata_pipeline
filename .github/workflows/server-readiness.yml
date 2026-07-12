@@ -6,16 +6,18 @@ on:
   pull_request:
     paths:
       - .github/workflows/server-readiness.yml
+      - .github/workflows/container-release.yml
+      - constraints/**
       - Dockerfile
       - .dockerignore
       - compose.yaml
       - pyproject.toml
+      - scripts/check_runtime_lock.py
       - src/**
       - tests/**
   workflow_dispatch:
 
 permissions:
-  actions: read
   contents: read
 
 concurrency:
@@ -26,45 +28,122 @@ jobs:
   python-quality:
     runs-on: ubuntu-24.04
     timeout-minutes: 20
+    env:
+      PIP_BUILD_CONSTRAINT: ${{ github.workspace }}/constraints/build.txt
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
         with:
           persist-credentials: false
       - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
-          python-version: "3.12"
+          python-version: "3.12.13"
           cache: pip
-          cache-dependency-path: pyproject.toml
+          cache-dependency-path: |
+            pyproject.toml
+            constraints/build.txt
+            constraints/runtime.txt
+            constraints/security.txt
       - name: Install quality, API, and packaging dependencies
         run: |
-          python -m pip install --upgrade pip
-          python -m pip install -e '.[dev,api]' build pip-audit
+          python scripts/check_runtime_lock.py
+          python -m pip install --constraint constraints/runtime.txt -e '.[dev,api]'
+          python -m pip install -r constraints/build.txt -r constraints/security.txt
       - name: Build and inspect the wheel
         run: |
           mkdir -p reports
           python -m build
-          python -m pip install --force-reinstall dist/*.whl
+          wheel=$(find dist -maxdepth 1 -name '*.whl' -print -quit)
+          test -n "$wheel"
+          python -m pip install \
+            --constraint constraints/runtime.txt \
+            --force-reinstall \
+            "${wheel}[api]"
+          python scripts/check_runtime_lock.py --check-installed
           python -m pip check
           python - <<'PY'
           import json
+          import tomllib
           from importlib.metadata import version
+          from importlib.metadata import entry_points
+          from pathlib import Path
           from mdmeta.server import ServerSettings
 
-          assert version("md-metadata-pipeline") == "0.10.0"
+          expected_version = tomllib.loads(Path("pyproject.toml").read_text())["project"]["version"]
+          assert version("md-metadata-pipeline") == expected_version
+          expected_scripts = {
+              "mdmeta-export-contracts",
+              "mdmeta-recovery",
+              "mdmeta-release",
+              "mdmeta-serve",
+              "mdmeta-verify-database",
+          }
+          installed_scripts = {
+              entry.name for entry in entry_points(group="console_scripts")
+          }
+          assert expected_scripts <= installed_scripts
           settings = ServerSettings.from_env()
           print(json.dumps({"version": version("md-metadata-pipeline"), "settings": str(settings)}))
+          PY
+          mdmeta-export-contracts --help
+          mdmeta-recovery --help
+          mdmeta-release --help
+          mdmeta-verify-database --help
+      - name: "[TEMPORARY] Export contract schemas for cloud bootstrap"
+        run: |
+          # TEMPORARY: remove this log bootstrap after reviewed schemas/ artifacts are committed.
+          rm -rf reports/contract-schemas
+          mdmeta-export-contracts --output-dir reports/contract-schemas
+          python - <<'PY'
+          import base64
+          import hashlib
+          from pathlib import Path
+
+          root = Path("reports/contract-schemas")
+          schemas = sorted(root.glob("*.json"), key=lambda path: path.name)
+          if not schemas:
+              raise SystemExit("contract export produced no JSON schemas")
+
+          chunk_size = 3200
+          print("TEMPORARY_CONTRACT_SCHEMA_BOOTSTRAP_BEGIN")
+          for schema in schemas:
+              content = schema.read_bytes()
+              encoded = base64.b64encode(content).decode("ascii")
+              chunks = [
+                  encoded[offset : offset + chunk_size]
+                  for offset in range(0, len(encoded), chunk_size)
+              ]
+              print(
+                  "CONTRACT_SCHEMA_META "
+                  f"file={schema.name} bytes={len(content)} "
+                  f"sha256={hashlib.sha256(content).hexdigest()} parts={len(chunks):04d}"
+              )
+              for index, chunk in enumerate(chunks, 1):
+                  print(
+                      "CONTRACT_SCHEMA_B64 "
+                      f"file={schema.name} part={index:04d}/{len(chunks):04d} data={chunk}"
+                  )
+          print("TEMPORARY_CONTRACT_SCHEMA_BOOTSTRAP_END")
           PY
       - name: Test installed wheel server and integrity paths
         run: |
           pytest \
+            tests/test_contracts.py \
             tests/test_server.py \
             tests/test_integration.py \
+            tests/test_recovery.py \
+            tests/test_release.py \
+            tests/test_runtime_lock.py \
             tests/test_validation.py \
             --junitxml=reports/pytest-wheel.xml
       - name: Dependency vulnerability report
         id: dependency_audit
-        continue-on-error: true
-        run: python -m pip_audit --format json --output reports/pip-audit.json
+        run: >-
+          python -m pip_audit
+          --strict
+          --progress-spinner off
+          --requirement constraints/runtime.txt
+          --format json
+          --output reports/pip-audit.json
       - name: Upload test, audit, and package evidence
         id: quality_artifact
         if: always()
@@ -128,16 +207,22 @@ jobs:
             --read-only \
             --tmpfs /tmp:rw,noexec,nosuid,size=64m \
             --volume "$PWD/reports/records.sqlite:/data/records.sqlite:ro" \
+            --env MDMETA_ENV=production \
             --env MDMETA_DATABASE_READ_ONLY=true \
             --env MDMETA_DATASET_SHA256="$dataset_sha" \
-            --env MDMETA_BUILD_SHA=${{ github.sha }} \
+            --env MDMETA_BUILD_SHA="${{ github.sha }}" \
+            --env MDMETA_ALLOWED_HOSTS=127.0.0.1 \
+            --env MDMETA_ENABLE_DOCS=false \
+            --env MDMETA_PROXY_HEADERS=false \
             --cap-drop ALL \
             --security-opt no-new-privileges \
             --pids-limit 128 \
             --publish 127.0.0.1:8000:8000 \
             mdmeta:ci
           for attempt in $(seq 1 30); do
-            if curl --fail --silent http://127.0.0.1:8000/readyz > reports/readyz.json; then
+            if curl --disable --noproxy '*' --fail --silent \
+              --output reports/readyz.json \
+              http://127.0.0.1:8000/readyz; then
               break
             fi
             if [ "$attempt" = "30" ]; then
@@ -146,9 +231,34 @@ jobs:
             fi
             sleep 1
           done
-          curl --fail --silent http://127.0.0.1:8000/metadata > reports/metadata.json
-          curl --fail --silent http://127.0.0.1:8000/openapi.json > reports/openapi.json
-          curl --fail --silent 'http://127.0.0.1:8000/search?pdb_id=6VSB' > reports/search.json
+          api_base=http://127.0.0.1:8000
+          curl --disable --noproxy '*' --fail --silent \
+            --output reports/metadata.json \
+            "$api_base/metadata"
+          curl --disable --noproxy '*' --fail --silent \
+            --output reports/openapi.json \
+            "$api_base/openapi.json"
+          curl --disable --noproxy '*' --fail --silent --get \
+            --data-urlencode 'pdb_id=6VSB' \
+            --output reports/search.json \
+            "$api_base/search"
+          curl --disable --noproxy '*' --fail --silent \
+            --dump-header reports/metrics.headers \
+            --output reports/metrics.prom \
+            "$api_base/metrics"
+          curl --disable --noproxy '*' --silent \
+            --header 'X-Request-ID: smoke-docs-404' \
+            --dump-header reports/docs.headers \
+            --output reports/docs.json \
+            --write-out '%{http_code}\n' \
+            "$api_base/docs" > reports/docs.status
+          curl --disable --noproxy '*' --silent \
+            --header 'Host: attacker.example' \
+            --header 'X-Request-ID: smoke-invalid-host-400' \
+            --dump-header reports/invalid-host.headers \
+            --output reports/invalid-host.json \
+            --write-out '%{http_code}\n' \
+            "$api_base/livez" > reports/invalid-host.status
           docker exec mdmeta-api python -c 'import os; assert os.getuid() == 10001'
           if docker exec mdmeta-api sh -c 'touch /app/write-probe'; then
             echo "container root filesystem is writable" >&2
@@ -163,9 +273,45 @@ jobs:
           import os
           from pathlib import Path
 
+          def read_headers(path: str) -> dict[str, str]:
+              headers = {}
+              for raw_line in Path(path).read_bytes().splitlines():
+                  if b":" not in raw_line:
+                      continue
+                  raw_name, raw_value = raw_line.split(b":", 1)
+                  headers[raw_name.decode("latin-1").casefold()] = raw_value.decode(
+                      "latin-1"
+                  ).strip()
+              return headers
+
+          def assert_security_headers(
+              headers: dict[str, str], expected_request_id: str | None = None
+          ) -> None:
+              request_id = headers["x-request-id"]
+              if expected_request_id is None:
+                  assert len(request_id) == 32
+                  int(request_id, 16)
+              else:
+                  assert request_id == expected_request_id
+              assert headers["x-content-type-options"] == "nosniff"
+              assert headers["x-frame-options"] == "DENY"
+              assert headers["referrer-policy"] == "no-referrer"
+              assert headers["permissions-policy"] == (
+                  "accelerometer=(), camera=(), geolocation=(), microphone=()"
+              )
+              assert headers["content-security-policy"] == (
+                  "default-src 'none'; frame-ancestors 'none'; base-uri 'none'"
+              )
+
           metadata = json.loads(Path("reports/metadata.json").read_text())
           readiness = json.loads(Path("reports/readyz.json").read_text())
           search = json.loads(Path("reports/search.json").read_text())
+          docs_problem = json.loads(Path("reports/docs.json").read_text())
+          invalid_host_problem = json.loads(Path("reports/invalid-host.json").read_text())
+          docs_headers = read_headers("reports/docs.headers")
+          invalid_host_headers = read_headers("reports/invalid-host.headers")
+          metrics_headers = read_headers("reports/metrics.headers")
+          metrics = Path("reports/metrics.prom").read_text()
           assert metadata["database_mode"] == "read_only"
           assert metadata["database_schema_version"] == 1
           assert metadata["dataset_sha256"] == os.environ["EXPECTED_DATASET_SHA"]
@@ -173,9 +319,32 @@ jobs:
           assert readiness["status"] == "ready"
           assert readiness["database_schema_version"] == 1
           assert search == {"count": 0, "records": []}
+          assert Path("reports/docs.status").read_text().strip() == "404"
+          assert docs_headers["content-type"].startswith("application/problem+json")
+          assert docs_problem["status"] == 404
+          assert docs_problem["code"] == "http-404"
+          assert docs_problem["instance"] == "/docs"
+          assert docs_problem["request_id"] == "smoke-docs-404"
+          assert_security_headers(docs_headers, "smoke-docs-404")
+          assert Path("reports/invalid-host.status").read_text().strip() == "400"
+          assert invalid_host_headers["content-type"].startswith(
+              "application/problem+json"
+          )
+          assert invalid_host_problem["status"] == 400
+          assert invalid_host_problem["code"] == "invalid-host"
+          assert invalid_host_problem["request_id"] == "smoke-invalid-host-400"
+          assert_security_headers(invalid_host_headers, "smoke-invalid-host-400")
+          assert metrics_headers["content-type"].startswith("text/plain")
+          assert_security_headers(metrics_headers)
+          assert "mdmeta_build_info" in metrics
+          assert "mdmeta_dataset_articles 0.0" in metrics
           PY
           docker image inspect mdmeta:ci > reports/image-inspect.json
-      - name: Capture and stop container
+          docker stop --time 35 mdmeta-api > reports/docker-stop.txt
+          docker inspect --format '{{.State.ExitCode}}' mdmeta-api \
+            > reports/container-exit-code.txt
+          test "$(tr -d '\r\n' < reports/container-exit-code.txt)" = "0"
+      - name: Capture logs and tolerate cleanup failures
         if: always()
         run: |
           mkdir -p reports
@@ -208,6 +377,9 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
   actions-storage-inventory:
+    permissions:
+      actions: read
+      contents: read
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:

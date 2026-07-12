@@ -18,6 +18,10 @@ Status labels refer only to evidence visible in this repository:
 Planned work is labelled explicitly below. It must not be described as implemented in a CV,
 cover letter or interview.
 
+Version 0.11 production-candidate controls in the current change set are labelled separately as
+**implemented, cloud validation pending**. The successful version 0.10 PR run cannot be reused as
+evidence that those new paths passed. See [Production readiness](PRODUCTION_READINESS.md).
+
 ## Current evidence baseline
 
 The repository is already a credible scientific-software prototype rather than a notebook-only
@@ -40,6 +44,10 @@ demo:
   scientific workflows are implemented ([storage](../src/mdmeta/storage.py),
   [API](../src/mdmeta/api.py), [server](../src/mdmeta/server.py),
   [CI](../.github/workflows/ci.yml)).
+- The version 0.11 candidate adds public JSON Schema contracts, strict release manifests, semantic
+  database verification, WAL-safe recovery, atomic release rollback, typed API/error responses,
+  structured logs and Prometheus metrics. These are current code claims; their first complete cloud
+  run and a target-server exercise remain pending.
 - The 60-paper AI-consensus evaluation is explicitly exploratory. Human dual annotation and
   adjudication remain incomplete
   ([evaluation](../study/confirmatory_60/AI_ANNOTATED_EXPLORATORY_EVALUATION_2026-07-10.md),
@@ -52,9 +60,9 @@ demo:
 | Design pipelines connecting MDDB with PDBe, UniProt, PDBe-KB and other resources | The file-backed case connects one MDDB project to PDB/PDBe, UniProt and SIFTS; the 60-paper path integrates literature, PDBe and UniProt. There is no direct PDBe-KB adapter and the two paths are not yet a multi-project production ingestion service. See [file-backed runner](../scripts/run_file_backed_mddb_case.py) and [integration runner](../scripts/run_integrated_60.py). | **Partial** |
 | Develop and deploy AI/ML approaches to extract experimental and biological metadata from literature | Exact-span deterministic extraction, a provider-independent schema-constrained model adapter, blinded prediction freezing and evaluation code exist. There is no concrete production model backend, human gold standard or deployed ML service. See [LLM adapter](../src/mdmeta/llm_adapter.py), [protocol extractor](../src/mdmeta/protocol_events.py) and [event evaluation](../src/mdmeta/event_evaluation.py). | **Partial** |
 | Extend and maintain SIFTS infrastructure/code to integrate MD and other resources | Real SIFTS-derived mappings are consumed and composed with MD-to-PDB alignment, including explicit ambiguity and unmapped residues. The repository does not modify, import or contribute to the official [PDBeurope/SIFTS](https://github.com/PDBeurope/SIFTS) codebase. | **Partial** |
-| Develop and maintain software tools, APIs, workflows and documentation | Installable Python package, CLI scripts, tested FastAPI endpoints, SQLite persistence, CI/live workflows and detailed scientific documentation exist. Production deployment and operations are still planned. See [project configuration](../pyproject.toml), [API tests](../tests/test_integration.py) and [.github/workflows](../.github/workflows). | **Strong** |
+| Develop and maintain software tools, APIs, workflows and documentation | Installable Python package, CLI scripts, typed FastAPI endpoints, SQLite persistence, CI/live workflows and detailed scientific/operational documentation exist. Release/recovery/observability controls are implemented in the version 0.11 candidate, but cloud acceptance and a real production deployment are pending. See [project configuration](../pyproject.toml), [production readiness](PRODUCTION_READINESS.md) and [.github/workflows](../.github/workflows). | **Strong** |
 | Collaborate with domain experts, engineers and data-resource providers | Modular boundaries and scientific reporting are collaboration-ready, but a repository alone does not demonstrate actual co-development with those groups. | **Gap** |
-| Support FAIRification, standardisation and interoperability | Source/output hashes, provenance, explicit validation states, fixed schemas, licences captured for corpus sources and machine-readable JSON/SQLite outputs are present. Persistent dataset identifiers, formal ontology/controlled-vocabulary mappings, a published metadata profile, repository licence and durable releases are absent. | **Partial** |
+| Support FAIRification, standardisation and interoperability | Source/output hashes, provenance, explicit validation states, versioned JSON Schema models, a strict dataset-release contract and machine-readable JSON/SQLite outputs are present. The release CLI requires persistent identity/licence/creator/publisher values rather than guessing them. Authorised repository/data licensing, ontology/controlled-vocabulary mappings, a published profile and durable citable release are still absent. | **Partial** |
 | Collaborate with ELIXIR, Instruct-ERIC, EU-OPENSCREEN, HPC centres and industry | No direct collaboration evidence is present. | **Gap** |
 | Participate in standards, technical documentation, training, outreach and dissemination | Technical documentation and reproducible run reports are substantial. There is no evidence yet of community-standard participation, external training material, talks or outreach. | **Partial** |
 
@@ -78,7 +86,7 @@ demo:
 |---|---|---|
 | Relevant postdoctoral experience | Applicant credential; cannot be established here. | **Gap** |
 | Graph databases such as Neo4j | No graph schema, export or Neo4j integration. | **Gap** |
-| REST APIs | Tested FastAPI health, record and PDB/UniProt search endpoints exist. See [API](../src/mdmeta/api.py). | **Strong** |
+| REST APIs | Typed FastAPI health, record and PDB/UniProt search endpoints, stable problem details, request IDs and bounded queries exist. Version 0.10 API/container paths passed cloud tests; the expanded version 0.11 contract still awaits its first cloud run. See [API](../src/mdmeta/api.py). | **Strong** |
 | Containerisation | A pinned, non-root API `Dockerfile`, hardened read-only Compose service and GitHub-hosted container smoke workflow are implemented. The Python, wheel and container PR gate passed on 2026-07-11; immutable image publication and server deployment are still pending. | **Partial** |
 | Workflow systems such as Nextflow | GitHub Actions automates the project, but this is not evidence of a scientific workflow engine such as Nextflow. | **Gap** |
 | Data visualisation and analysis | Metric computation and machine-readable reports exist; there is no user-facing visualisation layer. | **Partial** |
@@ -111,7 +119,8 @@ The screenshots are useful summaries, but should not be treated as quotations fr
 
 ## Prioritised upgrades
 
-All items in this section are **planned**, not current capability claims.
+Items below distinguish remaining work from version 0.11 controls that are implemented but still
+await cloud or operational acceptance.
 
 ### P0 — strongest impact on JR3997 alignment
 
@@ -127,21 +136,24 @@ All items in this section are **planned**, not current capability claims.
 4. **Work against the official SIFTS package.** Add a reproducible local
    `PDBeurope/SIFTS` compatibility/extension experiment and regression cases for insertion codes,
    missing residues, isoforms, engineered mutations, chimeras and ambiguous chains.
-5. **Publish a formal metadata contract.** Version JSON Schema, define identifiers and controlled
-   vocabularies, record source/data licences, add `LICENSE` and `CITATION.cff`, document provenance
-   and compatibility policy, and create a citable immutable example release.
-6. **Close remaining production data-integrity gaps.** Foreign-key enforcement, bounded SQLite
-   waiting, portable snapshot finalisation and idempotent-upsert integrity tests now exist. A
-   cloud wheel-build and installed-wheel test passed on 2026-07-11. Add schema migrations,
-   dependency locking, release manifests and end-to-end restore tests.
+5. **Complete and publish the metadata contract.** Versioned Pydantic/JSON Schema and a strict
+   dataset-release manifest are implemented in the version 0.11 candidate. Cloud schema-drift tests,
+   authorised identifiers/licences, controlled vocabularies, `LICENSE`, `CITATION.cff`, a
+   compatibility policy and a citable durable example release remain.
+6. **Close remaining production data-integrity gaps.** Strict SQLite v1 structure/record validation,
+   pinned dependency inputs, WAL-safe backup/restore, tamper-resistant release bundles and atomic
+   A → B → A rollback tests are implemented in the version 0.11 candidate. Their first Actions run,
+   a versioned v1 → v2 migration system, durable backup automation and target-server recovery drill
+   remain outstanding.
 
 ### P1 — differentiators and portfolio evidence
 
 1. Export the integrated model to a small Neo4j graph with documented node/edge semantics and
    comparison queries against the relational API.
-2. Extend the current bounded search and software/schema metadata with typed response models,
-   stable error contracts and a concise user tutorial; require the database digest in production,
-   add a whole-bundle digest, and bind the reported build SHA to the published image digest.
+2. Typed response models, stable problem details, production database/build requirements and a
+   whole-bundle digest are implemented in the version 0.11 candidate. Complete a user tutorial,
+   validate them in Actions, and bind the bundle/build identity to the published image digest in one
+   deployment manifest.
 3. Add a minimal Nextflow proof of concept only after the Python pipeline interfaces and data
    contracts are stable.
 4. Add residue/provenance/coverage visualisations that expose uncertainty rather than hiding it.
@@ -175,63 +187,71 @@ The current FastAPI app factory, environment-configured Uvicorn entry point, hea
 checks, metadata endpoint, SQLite store, container and Compose manifest are a useful server base.
 Cloud verification of the Python, installed-wheel and hardened container paths passed in
 [PR run 29152448584](https://github.com/xm2325/md_metadata_pipeline/actions/runs/29152448584).
-There is not yet an immutable GHCR publication, database migration system, automated backup/restore
-test, production observability stack or deployed security envelope.
+That run covers version 0.10, not the current version 0.11 changes. Version 0.11 implements stricter
+production configuration, typed API/error contracts, semantic database verification, release and
+recovery CLIs, JSON logs and Prometheus metrics. Their first cloud validation is pending. There is
+still no immutable version 0.11 GHCR publication, database migration system, durable backup job,
+external observability stack or deployed TLS/authentication envelope.
 
 ### Phase 1 — immutable dataset bundle
 
-1. Actions is configured to produce `records.sqlite`, compact JSON records, a database integrity
-   manifest and `SHA256SUMS`. Offline integration and snapshot-verification tests passed in PR #30;
-   the first upgraded live `main`/manual bundle run remains pending. Finish the bundle with an
-   explicit dataset version and source/provenance manifest.
-2. SQLite integrity/foreign-key checks and scientific acceptance gates are configured before
-   artifact upload. Their offline and container paths passed in PR #30; confirm the live bundle
-   gate and bind the declared database digest to a separately identified complete bundle.
-3. Store the accepted bundle durably and deploy by digest; never promote a partial or failed bundle.
+1. `records.sqlite`, database verification, strict `release-manifest.json`, explicit
+   dataset/workflow provenance, `SHA256SUMS` and canonical bundle digest are implemented in the
+   version 0.11 candidate. Validate create/verify/tamper paths in Actions and execute the first live
+   release-quality run.
+2. Strict SQLite structure, integrity, foreign-key and semantic-record gates now precede bundle
+   acceptance. Bind the accepted bundle digest to the immutable image digest in a separate
+   deployment manifest.
+3. Obtain authorised identifier/licence/creator/publisher values, store the bundle durably, verify
+   after download and deploy by digest; never promote a partial or failed bundle.
 
 ### Phase 2 — separate API and ingestion runtimes
 
-1. The Dockerfile and workflow define a small non-root API image built from a wheel; cloud
-   verification passed on 2026-07-11. Add a separate worker image containing MDAnalysis and
-   file-processing dependencies; immutable GHCR publication remains pending.
-2. Environment settings, `/livez`, `/readyz`, `/metadata`, bounded search and build/dataset metadata
-   now exist. A supplied database digest is verified against the mounted snapshot; require it in
-   production, add whole-bundle/build-to-image binding, typed response models and structured
-   logging.
-3. The supplied container keeps its root filesystem and dataset mount read-only and API responses
-   redact internal `local_path` values; add TLS, request limits and any required authentication at
-   a reverse proxy.
+1. The Dockerfile and workflow define a small non-root API image built from a wheel; the version
+   0.10 container path passed on 2026-07-11. Validate and publish the version 0.11 digest, and add a
+   separate worker image containing MDAnalysis/file-processing dependencies only if deployment
+   needs it.
+2. Production mode, `/livez`, `/readyz`, `/metadata`, bounded typed search, problem details,
+   request IDs, JSON logs and `/metrics` now exist in code. Validate them in Actions and bind
+   bundle/build/image identity for promotion.
+3. The container keeps root and dataset filesystems read-only and redacts internal paths. Deploy a
+   managed reverse proxy for TLS, authentication policy, rate/request-size limits and access logs;
+   keep `/metrics` internal.
 
 ### Phase 3 — data and release operations
 
 1. At current scale, serve an immutable SQLite snapshot from local server storage with one writer
    and one or more read-only API workers. Do not serve a live database from OneDrive, NFS or another
    sync folder.
-2. Deploy a new verified snapshot beside the old one and switch atomically; keep the prior digest
-   for rollback. Back up active mutable SQLite through its backup API rather than copying a WAL
-   database blindly.
+2. Digest-addressed stage/activate/rollback and SQLite Backup API recovery are implemented with
+   tests in the version 0.11 candidate. Pass those tests in Actions, schedule governed backups and
+   execute a measured restore/rollback drill on the target server.
 3. Move to PostgreSQL when ingestion becomes multi-writer, updates must be continuous, or multiple
    API replicas need coordinated mutable state. Add Neo4j only for a justified graph query workload,
    not as a substitute for a defined metadata model.
 
 ### Phase 4 — observability, security and maintenance
 
-1. Add structured logs, request IDs, latency/error metrics, resource monitoring and alerts for
-   upstream-service failures and stale datasets.
-2. Dependency audit and Dependabot configuration now exist, and the release workflow is configured
-   to generate SBOM/provenance metadata. Its first publication is pending; add secret scanning,
-   CodeQL, container scanning, least-privilege service accounts and documented secret rotation.
-3. Test backup, restore, rollback, migration and disaster-recovery procedures; document retention,
-   incident response and upstream API/cache refresh policies.
+1. Structured request logs, request IDs and bounded-label application metrics are implemented.
+   Deploy collectors, resource monitoring, dashboards and alerts, keep `/metrics` private, and have
+   a service owner approve SLO/error-budget targets.
+2. Dependency audit, automated update configuration and security workflows exist in the current
+   change set, while container publication is configured for SBOM/provenance. Validate them in the
+   cloud, then add target-environment service accounts, secret/certificate rotation and evidence
+   retention.
+3. Backup, restore and rollback tests are implemented but await Actions and a real recovery drill.
+   Add schema migration tests, approved retention, RPO/RTO, incident ownership and upstream
+   API/cache refresh policies.
 4. Schedule heavy ingestion separately from the API. Consider Nextflow or a queue/HPC scheduler
    only when multi-stage retries, parallel file processing or HPC execution justify it.
 
 ## Defensible current summary
 
-The repository currently demonstrates a well-tested Python prototype for evidence-linked MD
+The repository currently demonstrates a well-tested Python prototype and an unvalidated version
+0.11 production-candidate change set for evidence-linked MD
 literature extraction, live PDBe/UniProt enrichment, SIFTS-derived residue mappings, one authentic
-file-backed MDDB case, provenance-aware storage, an executable query server, container manifests
-and CI/CD. It does
+file-backed MDDB case, provenance-aware storage, an executable query server, release/recovery
+controls, container manifests and CI/CD. It does
 **not** yet demonstrate a human gold-standard NLP result, direct PDBe-KB integration, contribution
-to the SIFTS codebase, formal FAIR conformance, a verified production deployment or international
-project collaboration.
+to the SIFTS codebase, formal FAIR conformance, a successful version 0.11 cloud release, a verified
+production deployment or international project collaboration.

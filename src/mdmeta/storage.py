@@ -17,6 +17,64 @@ _REQUIRED_TABLES = {
     "residue_mappings",
     "md_assets",
 }
+_EXPECTED_COLUMNS: dict[str, tuple[tuple[str, str, int, int], ...]] = {
+    "articles": (
+        ("document_id", "TEXT", 0, 1),
+        ("title", "TEXT", 1, 0),
+        ("doi", "TEXT", 0, 0),
+        ("source_uri", "TEXT", 1, 0),
+        ("source_sha256", "TEXT", 1, 0),
+        ("record_json", "TEXT", 1, 0),
+    ),
+    "literature_facts": (
+        ("document_id", "TEXT", 1, 0),
+        ("field", "TEXT", 1, 0),
+        ("value_json", "TEXT", 1, 0),
+        ("origin", "TEXT", 1, 0),
+        ("evidence_json", "TEXT", 1, 0),
+    ),
+    "validations": (
+        ("document_id", "TEXT", 1, 0),
+        ("category", "TEXT", 1, 0),
+        ("identifier_type", "TEXT", 1, 0),
+        ("query_json", "TEXT", 1, 0),
+        ("state", "TEXT", 1, 0),
+        ("reason", "TEXT", 1, 0),
+        ("response_sha256", "TEXT", 0, 0),
+        ("endpoint", "TEXT", 1, 0),
+    ),
+    "residue_mappings": (
+        ("document_id", "TEXT", 1, 0),
+        ("pdb_id", "TEXT", 1, 0),
+        ("uniprot_accession", "TEXT", 1, 0),
+        ("chain_id", "TEXT", 1, 0),
+        ("pdb_start", "INTEGER", 0, 0),
+        ("pdb_end", "INTEGER", 0, 0),
+        ("uniprot_start", "INTEGER", 0, 0),
+        ("uniprot_end", "INTEGER", 0, 0),
+    ),
+    "md_assets": (
+        ("document_id", "TEXT", 1, 0),
+        ("role", "TEXT", 1, 0),
+        ("identifier", "TEXT", 0, 0),
+        ("availability", "TEXT", 1, 0),
+        ("source_uri", "TEXT", 0, 0),
+        ("local_path", "TEXT", 0, 0),
+        ("sha256", "TEXT", 0, 0),
+        ("reason", "TEXT", 0, 0),
+    ),
+}
+_EXPECTED_INDEXES: dict[str, tuple[str, tuple[str, ...]]] = {
+    "idx_facts_field_value": ("literature_facts", ("field", "value_json")),
+    "idx_validation_state": ("validations", ("state",)),
+    "idx_mapping_pdb": ("residue_mappings", ("pdb_id",)),
+    "idx_mapping_uniprot": ("residue_mappings", ("uniprot_accession",)),
+}
+_EXPECTED_USER_OBJECTS = {
+    *(("table", table) for table in _REQUIRED_TABLES),
+    *(("index", index) for index in _EXPECTED_INDEXES),
+}
+_FOREIGN_KEY_TABLES = _REQUIRED_TABLES - {"articles"}
 _SCHEMA = """
 PRAGMA foreign_keys = ON;
 PRAGMA journal_mode = WAL;
@@ -91,6 +149,10 @@ class SQLiteRecordStore:
             with self._connect() as connection:
                 version = self._schema_version(connection)
                 if version == 0:
+                    if self._has_user_schema(connection):
+                        raise RuntimeError(
+                            "refusing to initialize a non-empty unversioned database"
+                        )
                     connection.executescript(_SCHEMA)
                     connection.execute(f"PRAGMA user_version = {SCHEMA_VERSION}")
                 elif version != SCHEMA_VERSION:
@@ -104,6 +166,19 @@ class SQLiteRecordStore:
     def _schema_version(connection: sqlite3.Connection) -> int:
         return int(connection.execute("PRAGMA user_version").fetchone()[0])
 
+    @staticmethod
+    def _has_user_schema(connection: sqlite3.Connection) -> bool:
+        row = connection.execute(
+            """
+            SELECT 1
+            FROM sqlite_master
+            WHERE name NOT LIKE 'sqlite_%'
+              AND type IN ('table', 'index', 'view', 'trigger')
+            LIMIT 1
+            """
+        ).fetchone()
+        return row is not None
+
     @classmethod
     def _validate_schema(cls, connection: sqlite3.Connection) -> None:
         version = cls._schema_version(connection)
@@ -111,13 +186,79 @@ class SQLiteRecordStore:
             raise RuntimeError(
                 f"unsupported database schema version {version}; expected {SCHEMA_VERSION}"
             )
-        rows = connection.execute(
-            "SELECT name FROM sqlite_master WHERE type = 'table'"
+        object_rows = connection.execute(
+            """
+            SELECT type, name FROM sqlite_master
+            WHERE type IN ('table', 'index', 'view', 'trigger')
+              AND name NOT LIKE 'sqlite_%'
+            """
         ).fetchall()
-        tables = {str(row[0]) for row in rows}
+        objects = {(str(row[0]), str(row[1])) for row in object_rows}
+        tables = {name for object_type, name in objects if object_type == "table"}
         missing = sorted(_REQUIRED_TABLES - tables)
         if missing:
             raise RuntimeError(f"database schema is incomplete; missing tables: {missing}")
+        unexpected = sorted(tables - _REQUIRED_TABLES)
+        if unexpected:
+            raise RuntimeError(
+                f"database schema contains unexpected tables for version 1: {unexpected}"
+            )
+        unexpected_objects = sorted(objects - _EXPECTED_USER_OBJECTS)
+        if unexpected_objects:
+            rendered = [f"{object_type}:{name}" for object_type, name in unexpected_objects]
+            raise RuntimeError(
+                "database schema contains unexpected version 1 objects: " + ", ".join(rendered)
+            )
+
+        for table, expected in _EXPECTED_COLUMNS.items():
+            rows = connection.execute(f"PRAGMA table_info({table})").fetchall()
+            actual = tuple(
+                (str(row[1]), str(row[2]).upper(), int(row[3]), int(row[5]))
+                for row in rows
+            )
+            if actual != expected:
+                raise RuntimeError(f"database table {table} has an incompatible column schema")
+
+        for table in sorted(_FOREIGN_KEY_TABLES):
+            rows = connection.execute(f"PRAGMA foreign_key_list({table})").fetchall()
+            actual = {
+                (
+                    str(row[2]),
+                    str(row[3]),
+                    str(row[4]),
+                    str(row[5]).upper(),
+                    str(row[6]).upper(),
+                    str(row[7]).upper(),
+                )
+                for row in rows
+            }
+            expected = {
+                (
+                    "articles",
+                    "document_id",
+                    "document_id",
+                    "NO ACTION",
+                    "CASCADE",
+                    "NONE",
+                )
+            }
+            if actual != expected:
+                raise RuntimeError(f"database table {table} has incompatible foreign keys")
+
+        for index, (table, expected_columns) in _EXPECTED_INDEXES.items():
+            rows = connection.execute(f"PRAGMA index_list({table})").fetchall()
+            matching = [row for row in rows if str(row[1]) == index]
+            if len(matching) != 1:
+                raise RuntimeError(f"database schema is missing required index {index}")
+            row = matching[0]
+            if int(row[2]) != 0 or int(row[4]) != 0:
+                raise RuntimeError(f"database index {index} has incompatible properties")
+            columns = tuple(
+                str(item[2])
+                for item in connection.execute(f"PRAGMA index_info({index})").fetchall()
+            )
+            if columns != expected_columns:
+                raise RuntimeError(f"database index {index} has incompatible columns")
 
     @contextmanager
     def _connect(self) -> Iterator[sqlite3.Connection]:
@@ -313,6 +454,19 @@ class SQLiteRecordStore:
         with self._connect() as connection:
             row = connection.execute("SELECT COUNT(*) AS n FROM articles").fetchone()
         return int(row["n"])
+
+    def verification_rows(self) -> list[dict[str, object]]:
+        """Return the stored record and its deliberately redundant article columns."""
+
+        with self._connect() as connection:
+            rows = connection.execute(
+                """
+                SELECT document_id, title, doi, source_uri, source_sha256, record_json
+                FROM articles
+                ORDER BY document_id
+                """
+            ).fetchall()
+        return [dict(row) for row in rows]
 
     def schema_version(self) -> int:
         with self._connect() as connection:

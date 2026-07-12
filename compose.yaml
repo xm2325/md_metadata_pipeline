@@ -3,20 +3,30 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: ${MDMETA_IMAGE:-md-metadata-pipeline:0.10.0}
+    image: ${MDMETA_IMAGE:-md-metadata-pipeline:0.11.0}
     init: true
     restart: unless-stopped
+    stop_grace_period: 30s
     ports:
       - "127.0.0.1:8000:8000"
     environment:
+      MDMETA_ENV: production
       MDMETA_DATABASE_PATH: /data/records.sqlite
       MDMETA_DATABASE_READ_ONLY: "true"
       MDMETA_HOST: 0.0.0.0
       MDMETA_PORT: "8000"
       MDMETA_WORKERS: "1"
       MDMETA_LOG_LEVEL: info
-      MDMETA_DATASET_SHA256: ${MDMETA_DATASET_SHA256:-unversioned}
-      MDMETA_BUILD_SHA: ${MDMETA_BUILD_SHA:-unknown}
+      MDMETA_ALLOWED_HOSTS: ${MDMETA_ALLOWED_HOSTS:-127.0.0.1,localhost}
+      MDMETA_PROXY_HEADERS: "true"
+      MDMETA_FORWARDED_ALLOW_IPS: ${MDMETA_FORWARDED_ALLOW_IPS:-127.0.0.1}
+      MDMETA_LIMIT_CONCURRENCY: ${MDMETA_LIMIT_CONCURRENCY:-100}
+      MDMETA_BACKLOG: ${MDMETA_BACKLOG:-128}
+      MDMETA_TIMEOUT_KEEP_ALIVE: ${MDMETA_TIMEOUT_KEEP_ALIVE:-5}
+      MDMETA_TIMEOUT_GRACEFUL_SHUTDOWN: ${MDMETA_TIMEOUT_GRACEFUL_SHUTDOWN:-25}
+      MDMETA_ENABLE_DOCS: "false"
+      MDMETA_DATASET_SHA256: ${MDMETA_DATASET_SHA256:?set MDMETA_DATASET_SHA256}
+      MDMETA_BUILD_SHA: ${MDMETA_BUILD_SHA:?set MDMETA_BUILD_SHA}
     volumes:
       - type: bind
         source: ${MDMETA_DATA_DIR:-./data}

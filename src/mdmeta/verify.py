@@ -5,15 +5,71 @@ import hashlib
 import json
 from pathlib import Path
 
+from .integration import IntegratedMDRecord
 from .storage import SCHEMA_VERSION, SQLiteRecordStore
 
 
-def _sha256(path: Path) -> str:
+RECORD_SCHEMA_VERSION = "integrated-md-record-v1"
+
+
+def sha256_file(path: Path) -> str:
     digest = hashlib.sha256()
     with path.open("rb") as handle:
         for chunk in iter(lambda: handle.read(1024 * 1024), b""):
             digest.update(chunk)
     return digest.hexdigest()
+
+
+def _verify_records(store: SQLiteRecordStore) -> dict[str, object]:
+    rows = store.verification_rows()
+    errors: list[dict[str, object]] = []
+    for row in rows:
+        document_id = str(row["document_id"])
+        try:
+            record = IntegratedMDRecord.model_validate_json(str(row["record_json"]))
+        except (TypeError, ValueError) as exc:
+            errors.append(
+                {
+                    "document_id": document_id,
+                    "reason": "invalid_record_json",
+                    "error_type": type(exc).__name__,
+                }
+            )
+            continue
+
+        if record.schema_version != RECORD_SCHEMA_VERSION:
+            errors.append(
+                {
+                    "document_id": document_id,
+                    "reason": "unsupported_record_schema",
+                    "record_schema": record.schema_version,
+                }
+            )
+            continue
+
+        comparisons = {
+            "document_id": record.article.document_id,
+            "title": record.article.title,
+            "doi": record.article.doi,
+            "source_uri": record.article.source_uri,
+            "source_sha256": record.article.full_text_sha256,
+        }
+        mismatches = sorted(
+            field for field, value in comparisons.items() if row[field] != value
+        )
+        if mismatches:
+            errors.append(
+                {
+                    "document_id": document_id,
+                    "reason": "redundant_column_mismatch",
+                    "fields": mismatches,
+                }
+            )
+    return {
+        "checked": len(rows),
+        "valid": not errors,
+        "errors": errors,
+    }
 
 
 def verify_database(
@@ -29,8 +85,21 @@ def verify_database(
     checkpoint_result = store.checkpoint() if checkpoint else None
     integrity = store.integrity_report()
     article_count = store.count_articles()
-    wal_path = Path(f"{path}-wal")
-    wal_bytes = wal_path.stat().st_size if wal_path.exists() else 0
+    record_validation = _verify_records(store)
+    sidecar_paths = (
+        Path(f"{path}-wal"),
+        Path(f"{path}-shm"),
+        Path(f"{path}-journal"),
+    )
+    sidecar_files = [
+        candidate.name
+        for candidate in sidecar_paths
+        if candidate.exists() or candidate.is_symlink()
+    ]
+    wal_path = sidecar_paths[0]
+    wal_bytes = (
+        wal_path.lstat().st_size if wal_path.exists() or wal_path.is_symlink() else 0
+    )
     checkpoint_complete = checkpoint_result is None or (
         checkpoint_result[0] == 0 and checkpoint_result[1] == checkpoint_result[2]
     )
@@ -40,19 +109,24 @@ def verify_database(
         and integrity["schema_version"] == SCHEMA_VERSION
         and integrity["journal_mode"] == "delete"
         and checkpoint_complete
-        and wal_bytes == 0
+        and not sidecar_files
         and (expected_articles is None or article_count == expected_articles)
+        and record_validation["valid"] is True
+        and record_validation["checked"] == article_count
     )
     return {
         "database": path.name,
         "byte_size": path.stat().st_size,
-        "sha256": _sha256(path),
+        "sha256": sha256_file(path),
         "article_count": article_count,
         "expected_article_count": expected_articles,
         "checkpoint": list(checkpoint_result) if checkpoint_result is not None else None,
         "checkpoint_complete": checkpoint_complete,
         "wal_byte_size": wal_bytes,
+        "sidecar_files": sidecar_files,
         "integrity": integrity,
+        "record_schema": RECORD_SCHEMA_VERSION,
+        "record_validation": record_validation,
         "valid": valid,
     }
 

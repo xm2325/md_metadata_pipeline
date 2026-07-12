@@ -6,7 +6,7 @@ import xml.etree.ElementTree as ET
 from collections import Counter
 from enum import StrEnum
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any, Callable, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
@@ -118,7 +118,7 @@ class ProvenanceRecord(BaseModel):
 class IntegratedMDRecord(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    schema_version: str = "integrated-md-record-v1"
+    schema_version: Literal["integrated-md-record-v1"] = "integrated-md-record-v1"
     article: ArticleMetadata
     literature_facts: list[LiteratureFact]
     protocol_events: list[ProtocolEvent]
