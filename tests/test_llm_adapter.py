@@ -6,14 +6,18 @@ from mdmeta.protocol_events import Paragraph
 
 
 class FakeBackend:
+    model_id = "fake-model"
+
     def __init__(self, payload):
         self.payload = payload
         self.prompt = ""
         self.schema = {}
+        self.last_audit = None
 
     def complete(self, prompt, json_schema):
         self.prompt = prompt
         self.schema = json_schema
+        self.last_audit = {"model_id": self.model_id, "request_id": "fake-request"}
         return self.payload
 
 
@@ -50,7 +54,8 @@ def _payload(paragraph):
 def test_accepts_exact_evidence_and_normalizes_units():
     paragraph = _paragraph()
     backend = FakeBackend(_payload(paragraph))
-    events = SchemaConstrainedEventExtractor(backend, "fake-model").extract([paragraph])
+    extractor = SchemaConstrainedEventExtractor(backend)
+    events = extractor.extract([paragraph])
     assert len(events) == 1
     event = events[0]
     assert event.event_type is EventType.PRODUCTION
@@ -61,9 +66,14 @@ def test_accepts_exact_evidence_and_normalizes_units():
     assert event.ensemble == "NPT"
     assert event.replicates == 3
     assert event.evidence[0].quote == paragraph.text
-    assert event.relation_method == "schema_constrained_llm:fake-model:exact_span_v1"
+    assert (
+        event.relation_method
+        == "schema_constrained_llm:fake-model:md-protocol-events-exact-span-v2"
+    )
     assert "Do not infer missing values" in backend.prompt
+    assert "Distinguish simulated duration" in backend.prompt
     assert "events" in backend.schema["properties"]
+    assert extractor.last_audit == {"model_id": "fake-model", "request_id": "fake-request"}
 
 
 def test_rejects_quote_that_does_not_match_offsets():
