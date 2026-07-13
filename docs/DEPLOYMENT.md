@@ -4,10 +4,10 @@ This project separates scientific ingestion from serving. Ingestion produces a f
 bundle; a small FastAPI container serves one verified SQLite snapshot read-only. Do not serve the
 database from OneDrive, NFS or another synchronised filesystem.
 
-The version 0.10 Python, installed-wheel and hardened-container paths passed a GitHub-hosted PR run
-on 2026-07-11. Version 0.11 adds the release, recovery, contract and observability procedures below,
-but those additions still require their first successful Actions run. This document is a production
-deployment procedure, not evidence that a production deployment already exists.
+The version 0.11 Python, installed-wheel, contract, recovery/release, security and
+hardened-container repository gates passed for commit `c2981e2` on 2026-07-13. This document is a
+production deployment procedure, not evidence that a live dataset was released, an image was
+published or a production deployment already exists.
 
 See [Production readiness](PRODUCTION_READINESS.md) for the acceptance boundary.
 
@@ -42,21 +42,24 @@ institutional repository or governed object store and verified again after downl
 
 ## Cloud validation boundary
 
-[PR run 29152448584](https://github.com/xm2325/md_metadata_pipeline/actions/runs/29152448584)
-passed the version 0.10 compute gates on 2026-07-11. Optional evidence uploads failed because the
-account artifact quota was full, and that failure was reported in the job summary.
+For exact head `c2981e2120649fe6cdbe14ace402d60f7ac00a57`, the
+[main CI](https://github.com/xm2325/md_metadata_pipeline/actions/runs/29217837097) passed 145 tests
+on both Python 3.11 and 3.12 at 77.90% branch coverage; the
+[security workflow](https://github.com/xm2325/md_metadata_pipeline/actions/runs/29217837131)
+passed its dependency and Bandit gates; and
+[Server readiness](https://github.com/xm2325/md_metadata_pipeline/actions/runs/29217837100)
+passed committed-schema verification, 98 installed-wheel tests and hardened container smoke.
+Deterministic PR jobs also passed for
+[integrated enrichment](https://github.com/xm2325/md_metadata_pipeline/actions/runs/29217837135),
+[file-backed mapping](https://github.com/xm2325/md_metadata_pipeline/actions/runs/29217837098) and
+[provisional-corpus construction](https://github.com/xm2325/md_metadata_pipeline/actions/runs/29217837108).
+Their live jobs were skipped by PR policy.
 
-The current version 0.11 commit still needs cloud evidence for:
-
-1. strict JSON Schema drift checks and installed CLI entry points;
-2. semantic database verification;
-3. WAL backup, restore and failure rollback;
-4. release tamper rejection and A → B → A activation/rollback;
-5. production-mode API, structured logs, metrics and graceful shutdown;
-6. dependency/static/container security scans; and
-7. immutable GHCR publication with SBOM and build provenance.
-
-Do not promote merely because an earlier commit was green.
+These runs do not validate a live scientific release, secret-history/container-CVE scans, GHCR
+publication, SBOM/provenance publication or target-server deployment. Workflow-owned server
+evidence uploads succeeded, while Docker's extra build-record artifact still reported a quota
+warning. Do not promote merely because repository tests are green: require the exact live bundle,
+image and deployment digests and the remaining acceptance controls.
 
 ## Export and check public contracts
 

@@ -67,9 +67,15 @@ Version 0.10 adds the first server-readiness layer:
 Version 0.11 is the current production-candidate change set. It adds strict JSON Schema and API
 contracts, semantic SQLite verification, WAL-safe backup/restore, digest-addressed release bundles,
 atomic release activation/rollback, production environment guards, request IDs, JSON request logs,
-Prometheus metrics and additional supply-chain/security controls. These new paths are implemented
-but have not yet completed their first GitHub Actions validation. Version 0.11 must therefore not be
-described as fully production ready.
+Prometheus metrics and additional supply-chain/security controls. The repository gates for commit
+`c2981e2` passed on 2026-07-13: the [main CI](https://github.com/xm2325/md_metadata_pipeline/actions/runs/29217837097)
+passed 145 tests on each of Python 3.11 and 3.12 at 77.90% branch coverage, the
+[Python security gates](https://github.com/xm2325/md_metadata_pipeline/actions/runs/29217837131)
+passed the exact-constraint dependency audit and Bandit scan, and
+[Server readiness](https://github.com/xm2325/md_metadata_pipeline/actions/runs/29217837100)
+passed contract drift, 98 installed-wheel tests and the hardened container smoke test. This is
+cloud validation of the production-candidate code, not a live scientific release, GHCR publication
+or server deployment. Version 0.11 must therefore still not be described as fully production ready.
 
 See [`docs/PRODUCTION_READINESS.md`](docs/PRODUCTION_READINESS.md),
 [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md), [`docs/OPERATIONS.md`](docs/OPERATIONS.md), and
@@ -90,10 +96,14 @@ pytest --cov=mdmeta --cov-branch --cov-report=term-missing --cov-fail-under=75
 ```
 
 GitHub Actions is the authoritative validation environment and runs Python 3.11 and 3.12
-independently. The commands above are developer instructions, not evidence that the current version
-0.11 change set has passed. The corpus workflow also executes a live Europe PMC metadata query,
-in-memory JATS screening, deterministic finalization, checksum generation, workpack construction,
-and blinded prediction freezing.
+independently. On commit `c2981e2`, both jobs passed 145 tests with 77.90% branch coverage. The
+commands above remain developer instructions rather than substitutes for that dated cloud evidence.
+The PR also passed the deterministic offline jobs for
+[integrated enrichment](https://github.com/xm2325/md_metadata_pipeline/actions/runs/29217837135),
+[file-backed mapping](https://github.com/xm2325/md_metadata_pipeline/actions/runs/29217837098) and
+[provisional-corpus construction](https://github.com/xm2325/md_metadata_pipeline/actions/runs/29217837108).
+Their live external-service/file jobs are intentionally skipped on pull requests, so these green
+PR runs do not constitute a new live corpus, integration or file-backed execution.
 
 ## Run the read-only query service
 
@@ -126,13 +136,14 @@ not route it through the public ingress.
 
 GitHub Actions is the authoritative test/build environment for this repository. The
 `Server readiness` workflow runs lint, tests, coverage, wheel construction and a hardened
-container smoke test on GitHub-hosted Ubuntu runners. Python quality, installed-wheel tests,
-dependency audit, storage inventory and the non-root/read-only version 0.10 container smoke test
-passed in its first complete PR run on 2026-07-11. Optional artifact persistence was attempted but
-rejected by the current account quota, and was reported as a warning rather than silently described
-as stored. That earlier run does not validate the new version 0.11 release, recovery, contract,
-observability or security paths. Actions artifacts are short-lived evidence; durable scientific
-bundles must be promoted to a release or institutional repository.
+container smoke test on GitHub-hosted Ubuntu runners. For version 0.11 commit `c2981e2`, contract
+drift checks, 98 installed-wheel tests, dependency audit, storage inventory and the hardened
+non-root/read-only container smoke test passed on 2026-07-13 in
+[run 29217837100](https://github.com/xm2325/md_metadata_pipeline/actions/runs/29217837100).
+Workflow-owned Python and container evidence uploads succeeded, but the extra Docker build-record
+artifact still emitted a storage-quota warning. Actions artifacts are short-lived evidence and the
+quota is not considered fully recovered; durable scientific bundles must be promoted to a release
+or institutional repository.
 
 ## Production data contracts, release and recovery
 

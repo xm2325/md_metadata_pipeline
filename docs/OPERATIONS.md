@@ -2,7 +2,8 @@
 
 This is an operational contract for a future service, not evidence of an active production service.
 Version 0.11 observability, recovery and release code is implemented in the current change set but
-still awaits its first GitHub Actions validation and target-environment exercise.
+its repository cloud gates passed for commit `c2981e2` on 2026-07-13. A live release,
+target-environment exercise and operational ownership remain pending.
 
 ## Workload separation
 
@@ -40,8 +41,11 @@ Never skip from computed to active.
 ## GitHub Actions storage
 
 The repository has observed `Failed to CreateArtifact: Artifact storage quota has been hit` on
-otherwise successful jobs. A green compute step therefore does not prove that its output was
-retained.
+otherwise successful jobs. In Server readiness run
+[29217837100](https://github.com/xm2325/md_metadata_pipeline/actions/runs/29217837100), the
+workflow-owned Python and container evidence uploads succeeded, but Docker's additional
+build-record artifact still emitted a quota warning. A green compute step therefore does not prove
+that every output was retained, and the quota must not be described as fully recovered.
 
 | Output class | Storage | Retention |
 |---|---|---:|

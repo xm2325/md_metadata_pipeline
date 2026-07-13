@@ -1,9 +1,9 @@
 # Production readiness status
 
 The repository is **not yet fully production ready**. It now contains a substantially stronger
-production candidate, but code in the current version 0.11 change set must still pass its first
-GitHub Actions run and several deployment, governance and service-management decisions remain
-outside the repository.
+production candidate whose repository cloud gates passed for commit `c2981e2` on 2026-07-13.
+Live release execution, image publication, target-server deployment and several governance and
+service-management decisions remain outside that evidence.
 
 ## Evidence boundary
 
@@ -11,13 +11,13 @@ Three different kinds of evidence must not be conflated:
 
 | State | What it means |
 |---|---|
-| Previously cloud-validated | The version 0.10 Python, installed-wheel and hardened-container paths passed PR #30 on 2026-07-11. |
-| Implemented, cloud validation pending | Version 0.11 adds stricter data contracts, recovery/release tooling, typed API contracts, production configuration checks, structured request logging, Prometheus metrics and additional security controls. These claims describe code, not a successful current Actions run. |
+| Repository cloud-validated | For version 0.11 commit `c2981e2`, Python 3.11/3.12 CI, committed-contract drift, installed-wheel release/recovery/API tests, exact dependency audit, Bandit, hardened container smoke and the three deterministic domain-workflow PR paths passed on 2026-07-13. |
+| Live/release validation pending | Pull-request live scientific jobs were skipped by design. No version 0.11 dataset bundle, GHCR image/SBOM/provenance or target-server deployment was published or exercised by these runs. |
 | External decision or deployment required | Dataset identity and licence, publisher/creators, durable archive, image promotion, DNS/TLS, authentication policy, rate limits, monitoring ownership, SLOs, RPO/RTO and incident ownership cannot be established by repository code alone. |
 
-The previous version 0.10 Actions result does not validate the new version 0.11 paths. A current
-commit is promotable only after all required Actions jobs pass and their exact commit and image
-digests are recorded.
+The dated checks validate repository code at `c2981e2`; they do not create a promotable release.
+A candidate is promotable only after the live release workflow succeeds and its exact commit,
+dataset bundle and image digests are recorded and accepted.
 
 ## Implemented production-candidate controls
 
@@ -45,23 +45,32 @@ digests are recorded.
 - Runtime/build/security dependency inputs are separated into constraints files; security and
   container-release workflows are present in the current change set.
 
-## Still awaiting cloud validation
+## Cloud validation evidence and remaining release gates
 
-Before describing version 0.11 as release-ready, GitHub Actions must demonstrate on the exact
-candidate commit that:
+The following GitHub-hosted PR runs passed for exact head `c2981e2120649fe6cdbe14ace402d60f7ac00a57`
+on 2026-07-13:
 
-1. Python 3.11 and 3.12 lint, tests and coverage pass;
-2. committed JSON Schema artifacts match their Pydantic models;
-3. strict SQLite schema and semantic-record checks pass;
-4. WAL backup, restore, failure cleanup and overwrite rollback tests pass;
-5. release tamper tests and A → B → A activation/rollback tests pass;
-6. the installed wheel exposes every documented CLI;
-7. the non-root/read-only container passes production-mode API, metrics and shutdown checks;
-8. blocking dependency and Bandit gates pass, and approved immutable-SHA secret-history and
-   container-CVE scanners are added and pass;
-9. the exact image digest, SBOM and provenance are published successfully; and
-10. required evidence is retained somewhere durable rather than being lost to the current Actions
-    artifact quota.
+- [CI 29217837097](https://github.com/xm2325/md_metadata_pipeline/actions/runs/29217837097):
+  Ruff and 145 tests passed independently on Python 3.11 and 3.12 with 77.90% branch coverage.
+- [Python security gates 29217837131](https://github.com/xm2325/md_metadata_pipeline/actions/runs/29217837131):
+  exact production constraints, blocking `pip-audit` and blocking Bandit passed.
+- [Server readiness 29217837100](https://github.com/xm2325/md_metadata_pipeline/actions/runs/29217837100):
+  wheel/CLI inspection, committed JSON Schema drift, 98 installed-wheel contract, database,
+  recovery, release, API and validation tests, dependency audit and hardened container smoke passed.
+- [Integrated 29217837135](https://github.com/xm2325/md_metadata_pipeline/actions/runs/29217837135),
+  [file-backed 29217837098](https://github.com/xm2325/md_metadata_pipeline/actions/runs/29217837098)
+  and [provisional 29217837108](https://github.com/xm2325/md_metadata_pipeline/actions/runs/29217837108):
+  their deterministic offline PR jobs passed on supported Python versions. Live jobs were skipped
+  by PR policy and are not represented as executed evidence.
+
+Before describing version 0.11 as release-ready or deployed, the project still needs:
+
+1. an accepted live release-quality scientific run and sealed dataset bundle;
+2. approved immutable-SHA secret-history and container-CVE scanning;
+3. successful immutable GHCR publication with image digest, SBOM and build provenance;
+4. a deployment record binding commit, bundle, database and image digests;
+5. durable evidence storage despite the remaining Docker build-record artifact quota warning; and
+6. a target-server deployment, recovery drill and operational acceptance.
 
 ## External governance and infrastructure blockers
 
@@ -99,8 +108,9 @@ and must not route it to the public API.
 - Production Python versions and the offline image wheelhouse are checked exactly, but the
   constraints do not yet carry reviewed package hashes and installs do not use `--require-hashes`.
   A lock refresh therefore still needs a controlled hash-generation and review procedure.
-- The account artifact quota is full. Test execution can still be observed in job logs, but durable
-  evidence and scientific releases require a separate approved store.
+- Artifact storage remains constrained. Workflow-owned Python and container evidence uploads for
+  run 29217837100 succeeded, but Docker's additional build-record artifact still reported a quota
+  warning. Durable evidence and scientific releases still require a separate approved store.
 - SQLite schema version 1 is checked strictly, but there is not yet a versioned v1 → v2 migration
   framework. A schema change must not be deployed until forward migration and recovery are tested.
 - Digest-addressed staging verifies content before activation, but staged files are not made
@@ -133,5 +143,5 @@ A production owner should approve promotion only when all of the following are t
 - ingress and monitoring controls are active; and
 - governance metadata, SLO/RPO/RTO, on-call ownership and incident procedures are approved.
 
-Until then, the accurate description is **production-candidate engineering with cloud and
-operational acceptance pending**.
+Until then, the accurate description is **production-candidate engineering with repository cloud
+gates passed for `c2981e2`, while release, deployment and operational acceptance remain pending**.
