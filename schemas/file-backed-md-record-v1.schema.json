@@ -1,0 +1,553 @@
+{
+  "$defs": {
+    "ChainAlignmentAudit": {
+      "additionalProperties": false,
+      "properties": {
+        "assignment_ambiguous": {
+          "title": "Assignment Ambiguous",
+          "type": "boolean"
+        },
+        "assignment_method": {
+          "title": "Assignment Method",
+          "type": "string"
+        },
+        "identity": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Identity",
+          "type": "number"
+        },
+        "matches": {
+          "title": "Matches",
+          "type": "integer"
+        },
+        "md_chain_id": {
+          "title": "Md Chain Id",
+          "type": "string"
+        },
+        "md_insertions": {
+          "title": "Md Insertions",
+          "type": "integer"
+        },
+        "mismatches": {
+          "title": "Mismatches",
+          "type": "integer"
+        },
+        "pdb_chain_id": {
+          "title": "Pdb Chain Id",
+          "type": "string"
+        },
+        "pdb_deletions": {
+          "title": "Pdb Deletions",
+          "type": "integer"
+        },
+        "pdb_residue_coverage": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Pdb Residue Coverage",
+          "type": "number"
+        },
+        "score": {
+          "title": "Score",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "md_chain_id",
+        "pdb_chain_id",
+        "assignment_method",
+        "assignment_ambiguous",
+        "score",
+        "matches",
+        "mismatches",
+        "md_insertions",
+        "pdb_deletions",
+        "pdb_residue_coverage",
+        "identity"
+      ],
+      "title": "ChainAlignmentAudit",
+      "type": "object"
+    },
+    "ConsistencyAudit": {
+      "additionalProperties": false,
+      "properties": {
+        "atom_count_consistent": {
+          "title": "Atom Count Consistent",
+          "type": "boolean"
+        },
+        "atom_identity_match_count": {
+          "title": "Atom Identity Match Count",
+          "type": "integer"
+        },
+        "atom_identity_match_fraction": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Atom Identity Match Fraction",
+          "type": "number"
+        },
+        "atom_identity_mismatch_count": {
+          "title": "Atom Identity Mismatch Count",
+          "type": "integer"
+        },
+        "coordinates_finite": {
+          "title": "Coordinates Finite",
+          "type": "boolean"
+        },
+        "expected_frame_count": {
+          "title": "Expected Frame Count",
+          "type": "integer"
+        },
+        "failures": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Failures",
+          "type": "array"
+        },
+        "observed_frame_count": {
+          "title": "Observed Frame Count",
+          "type": "integer"
+        },
+        "passed": {
+          "title": "Passed",
+          "type": "boolean"
+        },
+        "residue_count_consistent": {
+          "title": "Residue Count Consistent",
+          "type": "boolean"
+        },
+        "segment_identity_match_fraction": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Segment Identity Match Fraction",
+          "type": "number"
+        }
+      },
+      "required": [
+        "atom_count_consistent",
+        "residue_count_consistent",
+        "atom_identity_match_count",
+        "atom_identity_mismatch_count",
+        "atom_identity_match_fraction",
+        "segment_identity_match_fraction",
+        "coordinates_finite",
+        "expected_frame_count",
+        "observed_frame_count",
+        "passed"
+      ],
+      "title": "ConsistencyAudit",
+      "type": "object"
+    },
+    "FileHash": {
+      "additionalProperties": false,
+      "properties": {
+        "byte_size": {
+          "minimum": 0,
+          "title": "Byte Size",
+          "type": "integer"
+        },
+        "content_type": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Content Type"
+        },
+        "filename": {
+          "title": "Filename",
+          "type": "string"
+        },
+        "local_path": {
+          "title": "Local Path",
+          "type": "string"
+        },
+        "retrieval_command": {
+          "title": "Retrieval Command",
+          "type": "string"
+        },
+        "role": {
+          "title": "Role",
+          "type": "string"
+        },
+        "sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Sha256",
+          "type": "string"
+        },
+        "source_uri": {
+          "title": "Source Uri",
+          "type": "string"
+        }
+      },
+      "required": [
+        "role",
+        "filename",
+        "source_uri",
+        "local_path",
+        "byte_size",
+        "sha256",
+        "retrieval_command"
+      ],
+      "title": "FileHash",
+      "type": "object"
+    },
+    "MolecularCounts": {
+      "additionalProperties": false,
+      "properties": {
+        "chains": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Chains",
+          "type": "array"
+        },
+        "metadata_atoms": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Metadata Atoms"
+        },
+        "pdb_atoms": {
+          "title": "Pdb Atoms",
+          "type": "integer"
+        },
+        "pdb_residues": {
+          "title": "Pdb Residues",
+          "type": "integer"
+        },
+        "protein_residues": {
+          "title": "Protein Residues",
+          "type": "integer"
+        },
+        "psf_atoms": {
+          "title": "Psf Atoms",
+          "type": "integer"
+        },
+        "psf_residues": {
+          "title": "Psf Residues",
+          "type": "integer"
+        },
+        "trajectory_atoms": {
+          "title": "Trajectory Atoms",
+          "type": "integer"
+        },
+        "trajectory_frames": {
+          "title": "Trajectory Frames",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "psf_atoms",
+        "pdb_atoms",
+        "trajectory_atoms",
+        "psf_residues",
+        "pdb_residues",
+        "protein_residues",
+        "chains",
+        "trajectory_frames"
+      ],
+      "title": "MolecularCounts",
+      "type": "object"
+    },
+    "ResidueMappingAudit": {
+      "additionalProperties": false,
+      "properties": {
+        "ambiguous_chain_count": {
+          "title": "Ambiguous Chain Count",
+          "type": "integer"
+        },
+        "chain_alignments": {
+          "items": {
+            "$ref": "#/$defs/ChainAlignmentAudit"
+          },
+          "title": "Chain Alignments",
+          "type": "array"
+        },
+        "expected_uniprot_accessions": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Expected Uniprot Accessions",
+          "type": "array"
+        },
+        "mapped_md_to_pdb": {
+          "title": "Mapped Md To Pdb",
+          "type": "integer"
+        },
+        "mapped_md_to_pdb_to_uniprot": {
+          "title": "Mapped Md To Pdb To Uniprot",
+          "type": "integer"
+        },
+        "md_protein_residue_count": {
+          "title": "Md Protein Residue Count",
+          "type": "integer"
+        },
+        "pdb_id": {
+          "title": "Pdb Id",
+          "type": "string"
+        },
+        "pdb_mapping_coverage": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Pdb Mapping Coverage",
+          "type": "number"
+        },
+        "pdb_protein_residue_count": {
+          "title": "Pdb Protein Residue Count",
+          "type": "integer"
+        },
+        "sequence_mismatch_count": {
+          "title": "Sequence Mismatch Count",
+          "type": "integer"
+        },
+        "status": {
+          "title": "Status",
+          "type": "string"
+        },
+        "uniprot_mapping_coverage": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Uniprot Mapping Coverage",
+          "type": "number"
+        }
+      },
+      "required": [
+        "pdb_id",
+        "expected_uniprot_accessions",
+        "chain_alignments",
+        "mapped_md_to_pdb",
+        "mapped_md_to_pdb_to_uniprot",
+        "sequence_mismatch_count",
+        "ambiguous_chain_count",
+        "md_protein_residue_count",
+        "pdb_protein_residue_count",
+        "pdb_mapping_coverage",
+        "uniprot_mapping_coverage",
+        "status"
+      ],
+      "title": "ResidueMappingAudit",
+      "type": "object"
+    },
+    "WorkflowEvidence": {
+      "additionalProperties": false,
+      "properties": {
+        "ensemble": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ensemble"
+        },
+        "force_fields": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Force Fields",
+          "type": "array"
+        },
+        "original_simulation_command": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Original Simulation Command"
+        },
+        "original_simulation_command_status": {
+          "title": "Original Simulation Command Status",
+          "type": "string"
+        },
+        "program": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Program"
+        },
+        "retrieval_command": {
+          "title": "Retrieval Command",
+          "type": "string"
+        },
+        "sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Sha256",
+          "type": "string"
+        },
+        "source_uri": {
+          "title": "Source Uri",
+          "type": "string"
+        },
+        "standardized_input_status": {
+          "title": "Standardized Input Status",
+          "type": "string"
+        },
+        "temperature_k": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Temperature K"
+        },
+        "timestep_fs": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Timestep Fs"
+        },
+        "version": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Version"
+        }
+      },
+      "required": [
+        "source_uri",
+        "sha256",
+        "standardized_input_status",
+        "original_simulation_command_status",
+        "retrieval_command"
+      ],
+      "title": "WorkflowEvidence",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "assets": {
+      "items": {
+        "$ref": "#/$defs/FileHash"
+      },
+      "title": "Assets",
+      "type": "array"
+    },
+    "audit_command": {
+      "title": "Audit Command",
+      "type": "string"
+    },
+    "case_id": {
+      "title": "Case Id",
+      "type": "string"
+    },
+    "consistency": {
+      "$ref": "#/$defs/ConsistencyAudit"
+    },
+    "counts": {
+      "$ref": "#/$defs/MolecularCounts"
+    },
+    "files_listing_sha256": {
+      "pattern": "^[0-9a-f]{64}$",
+      "title": "Files Listing Sha256",
+      "type": "string"
+    },
+    "project_accession": {
+      "title": "Project Accession",
+      "type": "string"
+    },
+    "project_metadata_sha256": {
+      "pattern": "^[0-9a-f]{64}$",
+      "title": "Project Metadata Sha256",
+      "type": "string"
+    },
+    "project_uri": {
+      "title": "Project Uri",
+      "type": "string"
+    },
+    "public_file_names": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Public File Names",
+      "type": "array"
+    },
+    "published": {
+      "title": "Published",
+      "type": "boolean"
+    },
+    "residue_mapping": {
+      "$ref": "#/$defs/ResidueMappingAudit"
+    },
+    "residue_mapping_rows_sha256": {
+      "pattern": "^[0-9a-f]{64}$",
+      "title": "Residue Mapping Rows Sha256",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "file-backed-md-record-v1",
+      "default": "file-backed-md-record-v1",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "scientific_boundaries": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Scientific Boundaries",
+      "type": "array"
+    },
+    "workflow": {
+      "$ref": "#/$defs/WorkflowEvidence"
+    }
+  },
+  "required": [
+    "case_id",
+    "project_accession",
+    "project_uri",
+    "published",
+    "project_metadata_sha256",
+    "files_listing_sha256",
+    "public_file_names",
+    "assets",
+    "workflow",
+    "counts",
+    "consistency",
+    "residue_mapping",
+    "residue_mapping_rows_sha256",
+    "audit_command",
+    "scientific_boundaries"
+  ],
+  "title": "FileBackedMDReport",
+  "type": "object"
+}

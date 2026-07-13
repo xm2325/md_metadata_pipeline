@@ -1,0 +1,926 @@
+{
+  "$defs": {
+    "ArticleMetadata": {
+      "additionalProperties": false,
+      "properties": {
+        "document_id": {
+          "title": "Document Id",
+          "type": "string"
+        },
+        "doi": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Doi"
+        },
+        "full_text_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Full Text Sha256",
+          "type": "string"
+        },
+        "source_uri": {
+          "title": "Source Uri",
+          "type": "string"
+        },
+        "title": {
+          "title": "Title",
+          "type": "string"
+        }
+      },
+      "required": [
+        "document_id",
+        "title",
+        "source_uri",
+        "full_text_sha256"
+      ],
+      "title": "ArticleMetadata",
+      "type": "object"
+    },
+    "AssetAvailability": {
+      "enum": [
+        "verified_local",
+        "externally_referenced",
+        "declared_unavailable",
+        "not_provided"
+      ],
+      "title": "AssetAvailability",
+      "type": "string"
+    },
+    "EventType": {
+      "enum": [
+        "minimisation",
+        "heating",
+        "equilibration",
+        "production",
+        "analysis_window",
+        "sampling_interval",
+        "unknown"
+      ],
+      "title": "EventType",
+      "type": "string"
+    },
+    "Evidence": {
+      "additionalProperties": false,
+      "properties": {
+        "context_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Context Sha256",
+          "type": "string"
+        },
+        "document_id": {
+          "title": "Document Id",
+          "type": "string"
+        },
+        "end_char": {
+          "exclusiveMinimum": 0,
+          "title": "End Char",
+          "type": "integer"
+        },
+        "paragraph_id": {
+          "title": "Paragraph Id",
+          "type": "string"
+        },
+        "quote": {
+          "title": "Quote",
+          "type": "string"
+        },
+        "section": {
+          "title": "Section",
+          "type": "string"
+        },
+        "start_char": {
+          "minimum": 0,
+          "title": "Start Char",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "document_id",
+        "section",
+        "paragraph_id",
+        "quote",
+        "start_char",
+        "end_char",
+        "context_sha256"
+      ],
+      "title": "Evidence",
+      "type": "object"
+    },
+    "FactOrigin": {
+      "enum": [
+        "literature",
+        "pdbe",
+        "uniprot",
+        "sifts",
+        "asset_manifest",
+        "pipeline"
+      ],
+      "title": "FactOrigin",
+      "type": "string"
+    },
+    "LiteratureFact": {
+      "additionalProperties": false,
+      "properties": {
+        "confidence": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Confidence",
+          "type": "number"
+        },
+        "evidence": {
+          "$ref": "#/$defs/Evidence"
+        },
+        "extraction_method": {
+          "title": "Extraction Method",
+          "type": "string"
+        },
+        "field": {
+          "title": "Field",
+          "type": "string"
+        },
+        "origin": {
+          "$ref": "#/$defs/FactOrigin",
+          "default": "literature"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "boolean"
+            }
+          ],
+          "title": "Value"
+        }
+      },
+      "required": [
+        "field",
+        "value",
+        "evidence",
+        "extraction_method",
+        "confidence"
+      ],
+      "title": "LiteratureFact",
+      "type": "object"
+    },
+    "MDAsset": {
+      "additionalProperties": false,
+      "properties": {
+        "availability": {
+          "$ref": "#/$defs/AssetAvailability"
+        },
+        "identifier": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Identifier"
+        },
+        "local_path": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Local Path"
+        },
+        "media_type": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Media Type"
+        },
+        "origin": {
+          "$ref": "#/$defs/FactOrigin",
+          "default": "asset_manifest"
+        },
+        "reason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reason"
+        },
+        "role": {
+          "title": "Role",
+          "type": "string"
+        },
+        "sha256": {
+          "anyOf": [
+            {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Sha256"
+        },
+        "source_uri": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Source Uri"
+        }
+      },
+      "required": [
+        "role",
+        "availability"
+      ],
+      "title": "MDAsset",
+      "type": "object"
+    },
+    "MDToPDBMappingStatus": {
+      "enum": [
+        "verified",
+        "declared_only",
+        "not_computable"
+      ],
+      "title": "MDToPDBMappingStatus",
+      "type": "string"
+    },
+    "MappingDiscovery": {
+      "additionalProperties": false,
+      "properties": {
+        "accessions": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Accessions",
+          "type": "array"
+        },
+        "attempts": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Attempts",
+          "type": "integer"
+        },
+        "cache_hit": {
+          "default": false,
+          "title": "Cache Hit",
+          "type": "boolean"
+        },
+        "endpoint": {
+          "title": "Endpoint",
+          "type": "string"
+        },
+        "http_status": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Http Status"
+        },
+        "mapping_segments": {
+          "items": {
+            "$ref": "#/$defs/MappingSegment"
+          },
+          "title": "Mapping Segments",
+          "type": "array"
+        },
+        "pdb_id": {
+          "title": "Pdb Id",
+          "type": "string"
+        },
+        "reason": {
+          "title": "Reason",
+          "type": "string"
+        },
+        "response_sha256": {
+          "anyOf": [
+            {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Response Sha256"
+        },
+        "state": {
+          "$ref": "#/$defs/ValidationState"
+        }
+      },
+      "required": [
+        "pdb_id",
+        "state",
+        "endpoint",
+        "reason"
+      ],
+      "title": "MappingDiscovery",
+      "type": "object"
+    },
+    "MappingSegment": {
+      "additionalProperties": false,
+      "properties": {
+        "chain_id": {
+          "title": "Chain Id",
+          "type": "string"
+        },
+        "pdb_end": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Pdb End"
+        },
+        "pdb_id": {
+          "title": "Pdb Id",
+          "type": "string"
+        },
+        "pdb_start": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Pdb Start"
+        },
+        "uniprot_accession": {
+          "title": "Uniprot Accession",
+          "type": "string"
+        },
+        "uniprot_end": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Uniprot End"
+        },
+        "uniprot_start": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Uniprot Start"
+        }
+      },
+      "required": [
+        "pdb_id",
+        "uniprot_accession",
+        "chain_id"
+      ],
+      "title": "MappingSegment",
+      "type": "object"
+    },
+    "ProtocolEvent": {
+      "additionalProperties": false,
+      "properties": {
+        "confidence": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Confidence",
+          "type": "number"
+        },
+        "duration_ps": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Duration Ps"
+        },
+        "ensemble": {
+          "anyOf": [
+            {
+              "enum": [
+                "NVE",
+                "NVT",
+                "NPT",
+                "NPAT",
+                "NPH"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ensemble"
+        },
+        "event_id": {
+          "title": "Event Id",
+          "type": "string"
+        },
+        "event_type": {
+          "$ref": "#/$defs/EventType"
+        },
+        "evidence": {
+          "items": {
+            "$ref": "#/$defs/Evidence"
+          },
+          "title": "Evidence",
+          "type": "array"
+        },
+        "pressure_bar": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Pressure Bar"
+        },
+        "relation_method": {
+          "title": "Relation Method",
+          "type": "string"
+        },
+        "replicates": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Replicates"
+        },
+        "restraints": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Restraints"
+        },
+        "temperature_k": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Temperature K"
+        },
+        "timestep_fs": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Timestep Fs"
+        }
+      },
+      "required": [
+        "event_id",
+        "event_type",
+        "evidence",
+        "relation_method",
+        "confidence"
+      ],
+      "title": "ProtocolEvent",
+      "type": "object"
+    },
+    "ProvenanceRecord": {
+      "additionalProperties": false,
+      "properties": {
+        "assets": {
+          "items": {
+            "$ref": "#/$defs/MDAsset"
+          },
+          "title": "Assets",
+          "type": "array"
+        },
+        "md_to_pdb_mapping_reason": {
+          "default": "no prepared structure or residue correspondence supplied",
+          "title": "Md To Pdb Mapping Reason",
+          "type": "string"
+        },
+        "md_to_pdb_mapping_status": {
+          "$ref": "#/$defs/MDToPDBMappingStatus",
+          "default": "not_computable"
+        },
+        "workflow_steps": {
+          "items": {
+            "$ref": "#/$defs/WorkflowStep"
+          },
+          "title": "Workflow Steps",
+          "type": "array"
+        }
+      },
+      "title": "ProvenanceRecord",
+      "type": "object"
+    },
+    "RequestAttempt": {
+      "additionalProperties": false,
+      "properties": {
+        "attempt": {
+          "minimum": 0,
+          "title": "Attempt",
+          "type": "integer"
+        },
+        "error_type": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Error Type"
+        },
+        "http_status": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Http Status"
+        },
+        "outcome": {
+          "enum": [
+            "cache",
+            "response",
+            "network_error"
+          ],
+          "title": "Outcome",
+          "type": "string"
+        },
+        "retry_after_seconds": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Retry After Seconds"
+        }
+      },
+      "required": [
+        "attempt",
+        "outcome"
+      ],
+      "title": "RequestAttempt",
+      "type": "object"
+    },
+    "ValidationRecord": {
+      "additionalProperties": false,
+      "properties": {
+        "attempts": {
+          "default": 1,
+          "minimum": 0,
+          "title": "Attempts",
+          "type": "integer"
+        },
+        "cache_hit": {
+          "default": false,
+          "title": "Cache Hit",
+          "type": "boolean"
+        },
+        "endpoint": {
+          "title": "Endpoint",
+          "type": "string"
+        },
+        "http_status": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Http Status"
+        },
+        "identifier_type": {
+          "enum": [
+            "pdb",
+            "uniprot",
+            "pdb_uniprot_mapping"
+          ],
+          "title": "Identifier Type",
+          "type": "string"
+        },
+        "mapping_segments": {
+          "items": {
+            "$ref": "#/$defs/MappingSegment"
+          },
+          "title": "Mapping Segments",
+          "type": "array"
+        },
+        "payload": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Payload"
+        },
+        "query": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "title": "Query",
+          "type": "object"
+        },
+        "reason": {
+          "title": "Reason",
+          "type": "string"
+        },
+        "request_log": {
+          "items": {
+            "$ref": "#/$defs/RequestAttempt"
+          },
+          "title": "Request Log",
+          "type": "array"
+        },
+        "response_sha256": {
+          "anyOf": [
+            {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Response Sha256"
+        },
+        "retrieved_at": {
+          "format": "date-time",
+          "title": "Retrieved At",
+          "type": "string"
+        },
+        "state": {
+          "$ref": "#/$defs/ValidationState"
+        }
+      },
+      "required": [
+        "identifier_type",
+        "query",
+        "state",
+        "endpoint",
+        "reason"
+      ],
+      "title": "ValidationRecord",
+      "type": "object"
+    },
+    "ValidationState": {
+      "enum": [
+        "validated",
+        "conflict",
+        "unresolved",
+        "not_applicable"
+      ],
+      "title": "ValidationState",
+      "type": "string"
+    },
+    "WorkflowStep": {
+      "additionalProperties": false,
+      "properties": {
+        "evidence_quote": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Evidence Quote"
+        },
+        "inputs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Inputs",
+          "type": "array"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "origin": {
+          "$ref": "#/$defs/FactOrigin",
+          "default": "literature"
+        },
+        "outputs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Outputs",
+          "type": "array"
+        },
+        "software": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Software"
+        },
+        "version": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Version"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "title": "WorkflowStep",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "article": {
+      "$ref": "#/$defs/ArticleMetadata"
+    },
+    "completeness": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "title": "Completeness",
+      "type": "object"
+    },
+    "literature_facts": {
+      "items": {
+        "$ref": "#/$defs/LiteratureFact"
+      },
+      "title": "Literature Facts",
+      "type": "array"
+    },
+    "mapping_discoveries": {
+      "items": {
+        "$ref": "#/$defs/MappingDiscovery"
+      },
+      "title": "Mapping Discoveries",
+      "type": "array"
+    },
+    "mapping_validations": {
+      "items": {
+        "$ref": "#/$defs/ValidationRecord"
+      },
+      "title": "Mapping Validations",
+      "type": "array"
+    },
+    "pdb_validations": {
+      "items": {
+        "$ref": "#/$defs/ValidationRecord"
+      },
+      "title": "Pdb Validations",
+      "type": "array"
+    },
+    "protocol_events": {
+      "items": {
+        "$ref": "#/$defs/ProtocolEvent"
+      },
+      "title": "Protocol Events",
+      "type": "array"
+    },
+    "provenance": {
+      "$ref": "#/$defs/ProvenanceRecord"
+    },
+    "residue_mappings": {
+      "items": {
+        "$ref": "#/$defs/MappingSegment"
+      },
+      "title": "Residue Mappings",
+      "type": "array"
+    },
+    "schema_version": {
+      "const": "integrated-md-record-v1",
+      "default": "integrated-md-record-v1",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "uniprot_validations": {
+      "items": {
+        "$ref": "#/$defs/ValidationRecord"
+      },
+      "title": "Uniprot Validations",
+      "type": "array"
+    }
+  },
+  "required": [
+    "article",
+    "literature_facts",
+    "protocol_events",
+    "pdb_validations",
+    "mapping_discoveries",
+    "uniprot_validations",
+    "mapping_validations",
+    "residue_mappings",
+    "provenance",
+    "completeness"
+  ],
+  "title": "IntegratedMDRecord",
+  "type": "object"
+}

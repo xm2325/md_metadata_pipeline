@@ -8,6 +8,7 @@ version = "0.11.0"
 description = "Evidence-linked molecular-dynamics literature and file metadata integration"
 requires-python = ">=3.11"
 dependencies = [
+  "defusedxml>=0.7.1,<1",
   "pydantic>=2.7,<3",
   "httpx>=0.27,<1",
   "fastapi>=0.115,<1",

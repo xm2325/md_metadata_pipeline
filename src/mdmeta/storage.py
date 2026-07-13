@@ -440,11 +440,13 @@ class SQLiteRecordStore:
             selected_ids = sorted(document_ids)
             if limit is not None:
                 selected_ids = selected_ids[:limit]
+            # The interpolated text is generated solely from literal DB-API
+            # question-mark placeholders; every document ID remains parameter-bound.
             placeholders = ",".join("?" for _ in selected_ids)
             rows = connection.execute(
                 (
-                    "SELECT record_json FROM articles "
-                    f"WHERE document_id IN ({placeholders}) ORDER BY document_id"
+                    "SELECT record_json FROM articles "  # nosec B608
+                    f"WHERE document_id IN ({placeholders}) ORDER BY document_id"  # nosec B608
                 ),
                 tuple(selected_ids),
             ).fetchall()

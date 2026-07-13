@@ -8,6 +8,7 @@ from enum import StrEnum
 from pathlib import Path
 from typing import Any, Callable, Literal
 
+from defusedxml.ElementTree import fromstring as safe_xml_fromstring
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from .models import Evidence, MappingSegment, ProtocolEvent, ValidationRecord, ValidationState
@@ -187,7 +188,7 @@ def _text(node: ET.Element | None) -> str:
 
 
 def parse_jats_paragraphs(document_id: str, xml_bytes: bytes) -> list[Paragraph]:
-    root = ET.fromstring(xml_bytes)
+    root = safe_xml_fromstring(xml_bytes)
     paragraphs: list[Paragraph] = []
     seen: set[tuple[str, str]] = set()
     for section_index, section in enumerate(root.findall(".//body//sec"), start=1):
@@ -218,7 +219,7 @@ def extract_article_metadata(
     *,
     source_uri: str,
 ) -> ArticleMetadata:
-    root = ET.fromstring(xml_bytes)
+    root = safe_xml_fromstring(xml_bytes)
     title = _text(root.find(".//article-title"))
     doi_node = root.find(".//article-id[@pub-id-type='doi']")
     doi = _text(doi_node) or None

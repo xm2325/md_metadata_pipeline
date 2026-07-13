@@ -8,6 +8,7 @@ from pathlib import Path
 
 import httpx
 import pytest
+from defusedxml.common import EntitiesForbidden
 from fastapi.testclient import TestClient
 
 from mdmeta import __version__
@@ -129,6 +130,40 @@ def test_article_and_exact_literature_fact_extraction() -> None:
             item for item in paragraphs if item.paragraph_id == fact.evidence.paragraph_id
         )
         assert paragraph.text[fact.evidence.start_char : fact.evidence.end_char] == fact.value
+
+
+def test_jats_parsers_reject_declared_entities() -> None:
+    xml_bytes = b"""\
+    <!DOCTYPE article [<!ENTITY payload "expanded">]>
+    <article><front><article-meta><title-group><article-title>&payload;</article-title>
+    </title-group></article-meta></front><body><sec><p>&payload;</p></sec></body></article>
+    """
+
+    with pytest.raises(EntitiesForbidden):
+        parse_jats_paragraphs("UNTRUSTED", xml_bytes)
+    with pytest.raises(EntitiesForbidden):
+        extract_article_metadata(
+            "UNTRUSTED",
+            xml_bytes,
+            source_uri="https://example.org/untrusted.xml",
+        )
+
+
+def test_parameterized_search_treats_document_ids_as_data(tmp_path: Path) -> None:
+    record = _record(tmp_path)
+    malicious_id = "DOC') OR 1=1 --"
+    record = record.model_copy(
+        update={
+            "article": record.article.model_copy(update={"document_id": malicious_id})
+        }
+    )
+    store = SQLiteRecordStore(tmp_path / "parameterized-search.sqlite")
+    store.write(record)
+
+    matches = store.search(pdb_id="6VSB")
+
+    assert [item["article"]["document_id"] for item in matches] == [malicious_id]
+    assert store.count_articles() == 1
 
 
 def test_end_to_end_integration_keeps_sources_separate(tmp_path: Path) -> None:

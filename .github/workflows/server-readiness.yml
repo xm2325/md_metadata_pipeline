@@ -12,6 +12,7 @@ on:
       - .dockerignore
       - compose.yaml
       - pyproject.toml
+      - schemas/**
       - scripts/check_runtime_lock.py
       - src/**
       - tests/**
@@ -88,42 +89,8 @@ jobs:
           mdmeta-recovery --help
           mdmeta-release --help
           mdmeta-verify-database --help
-      - name: "[TEMPORARY] Export contract schemas for cloud bootstrap"
-        run: |
-          # TEMPORARY: remove this log bootstrap after reviewed schemas/ artifacts are committed.
-          rm -rf reports/contract-schemas
-          mdmeta-export-contracts --output-dir reports/contract-schemas
-          python - <<'PY'
-          import base64
-          import hashlib
-          from pathlib import Path
-
-          root = Path("reports/contract-schemas")
-          schemas = sorted(root.glob("*.json"), key=lambda path: path.name)
-          if not schemas:
-              raise SystemExit("contract export produced no JSON schemas")
-
-          chunk_size = 3200
-          print("TEMPORARY_CONTRACT_SCHEMA_BOOTSTRAP_BEGIN")
-          for schema in schemas:
-              content = schema.read_bytes()
-              encoded = base64.b64encode(content).decode("ascii")
-              chunks = [
-                  encoded[offset : offset + chunk_size]
-                  for offset in range(0, len(encoded), chunk_size)
-              ]
-              print(
-                  "CONTRACT_SCHEMA_META "
-                  f"file={schema.name} bytes={len(content)} "
-                  f"sha256={hashlib.sha256(content).hexdigest()} parts={len(chunks):04d}"
-              )
-              for index, chunk in enumerate(chunks, 1):
-                  print(
-                      "CONTRACT_SCHEMA_B64 "
-                      f"file={schema.name} part={index:04d}/{len(chunks):04d} data={chunk}"
-                  )
-          print("TEMPORARY_CONTRACT_SCHEMA_BOOTSTRAP_END")
-          PY
+      - name: Verify committed public contract schemas
+        run: mdmeta-export-contracts --output-dir schemas --check
       - name: Test installed wheel server and integrity paths
         run: |
           pytest \
