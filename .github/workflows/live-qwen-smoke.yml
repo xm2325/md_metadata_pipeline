@@ -8,6 +8,12 @@ on:
       - scripts/run_live_llm_smoke.py
       - src/mdmeta/llm_adapter.py
       - src/mdmeta/openai_backend.py
+  pull_request:
+    paths:
+      - .github/workflows/live-qwen-smoke.yml
+      - scripts/run_live_llm_smoke.py
+      - src/mdmeta/llm_adapter.py
+      - src/mdmeta/openai_backend.py
   workflow_dispatch:
 
 permissions:
