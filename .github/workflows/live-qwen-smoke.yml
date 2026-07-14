@@ -1,30 +1,19 @@
 name: Live Qwen extraction smoke
 
 on:
-  push:
-    branches: [agent/qwen-structured-extraction]
-    paths:
-      - .github/workflows/live-qwen-smoke.yml
-      - scripts/run_live_llm_smoke.py
-      - scripts/run_compact_llm_probe.py
-      - scripts/run_unconstrained_llm_probe.py
-      - scripts/run_minimal_llm_probe.py
-      - src/mdmeta/llm_adapter.py
-      - src/mdmeta/openai_backend.py
-  pull_request:
-    paths:
-      - .github/workflows/live-qwen-smoke.yml
-      - scripts/run_live_llm_smoke.py
-      - scripts/run_compact_llm_probe.py
-      - scripts/run_unconstrained_llm_probe.py
-      - scripts/run_minimal_llm_probe.py
-      - src/mdmeta/llm_adapter.py
-      - src/mdmeta/openai_backend.py
   workflow_dispatch:
+    inputs:
+      probe:
+        description: Probe to execute on the CPU runner
+        required: true
+        default: minimal
+        type: choice
+        options:
+          - minimal
+          - strict
 
 permissions:
   contents: read
-  pull-requests: write
 
 concurrency:
   group: live-qwen-smoke-${{ github.ref }}
@@ -33,7 +22,7 @@ concurrency:
 jobs:
   qwen-live-smoke:
     runs-on: ubuntu-24.04
-    timeout-minutes: 25
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
         with:
@@ -83,7 +72,8 @@ jobs:
           cat /tmp/health.json
           curl --silent --fail http://127.0.0.1:8081/v1/models
 
-      - name: Run minimal positive capability control
+      - name: Run minimal positive capability probe
+        if: inputs.probe == 'minimal'
         env:
           MDMETA_LLM_BASE_URL: http://127.0.0.1:8081/v1
           MDMETA_LLM_MODEL: Qwen/Qwen3.5-0.8B
@@ -91,21 +81,36 @@ jobs:
           mkdir -p results/live_qwen_smoke
           python scripts/run_minimal_llm_probe.py \
             --output results/live_qwen_smoke/minimal_probe.json \
-            --markdown results/live_qwen_smoke/pr-comment.md
-          cat results/live_qwen_smoke/pr-comment.md >> "$GITHUB_STEP_SUMMARY"
+            --markdown results/live_qwen_smoke/summary.md
+          cat results/live_qwen_smoke/summary.md >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Publish minimal-probe result on PR 31
-        if: always() && hashFiles('results/live_qwen_smoke/pr-comment.md') != ''
+      - name: Run full exact-span schema probe
+        if: inputs.probe == 'strict'
         env:
-          GH_TOKEN: ${{ github.token }}
-        run: gh pr comment 31 --body-file results/live_qwen_smoke/pr-comment.md
+          MDMETA_LLM_BASE_URL: http://127.0.0.1:8081/v1
+          MDMETA_LLM_MODEL: Qwen/Qwen3.5-0.8B
+          MDMETA_LLM_TIMEOUT_SECONDS: "180"
+          MDMETA_LLM_MAX_OUTPUT_TOKENS: "300"
+          MDMETA_LLM_MAX_RETRIES: "0"
+          MDMETA_LLM_RETRY_BACKOFF_SECONDS: "2"
+          MDMETA_LLM_DISABLE_THINKING: "true"
+          MDMETA_LLM_SEED: "0"
+        run: |
+          mkdir -p results/live_qwen_smoke
+          python scripts/run_live_llm_smoke.py \
+            --output results/live_qwen_smoke/strict_probe.json \
+            --summary results/live_qwen_smoke/summary.md
+          cat results/live_qwen_smoke/summary.md >> "$GITHUB_STEP_SUMMARY"
 
       - name: Show detailed result and server tail
         if: always()
         run: |
-          if [ -f results/live_qwen_smoke/minimal_probe.json ]; then
-            cat results/live_qwen_smoke/minimal_probe.json
-          fi
+          for result in results/live_qwen_smoke/*.json; do
+            if [ -f "$result" ]; then
+              echo "--- $result ---"
+              cat "$result"
+            fi
+          done
           echo "--- llama-server tail ---"
           tail -n 200 /tmp/llama-server.log || true
 
@@ -114,7 +119,7 @@ jobs:
         continue-on-error: true
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
-          name: live-qwen35-08b-smoke-${{ github.sha }}
+          name: live-qwen35-08b-${{ inputs.probe }}-${{ github.sha }}
           path: results/live_qwen_smoke
           if-no-files-found: warn
           retention-days: 7
