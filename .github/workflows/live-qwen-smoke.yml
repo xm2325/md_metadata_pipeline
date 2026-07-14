@@ -80,11 +80,11 @@ jobs:
         env:
           MDMETA_LLM_BASE_URL: http://127.0.0.1:8081/v1
           MDMETA_LLM_MODEL: Qwen/Qwen3.5-0.8B
-          MDMETA_LLM_TIMEOUT_SECONDS: "600"
-          MDMETA_LLM_MAX_OUTPUT_TOKENS: "450"
-          MDMETA_LLM_MAX_RETRIES: "1"
+          MDMETA_LLM_TIMEOUT_SECONDS: "180"
+          MDMETA_LLM_MAX_OUTPUT_TOKENS: "320"
+          MDMETA_LLM_MAX_RETRIES: "0"
           MDMETA_LLM_RETRY_BACKOFF_SECONDS: "2"
-          MDMETA_LLM_DISABLE_THINKING: "false"
+          MDMETA_LLM_DISABLE_THINKING: "true"
           MDMETA_LLM_SEED: "0"
         run: |
           mkdir -p results/live_qwen_smoke
