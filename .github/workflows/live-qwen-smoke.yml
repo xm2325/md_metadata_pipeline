@@ -6,12 +6,14 @@ on:
     paths:
       - .github/workflows/live-qwen-smoke.yml
       - scripts/run_live_llm_smoke.py
+      - scripts/run_compact_llm_probe.py
       - src/mdmeta/llm_adapter.py
       - src/mdmeta/openai_backend.py
   pull_request:
     paths:
       - .github/workflows/live-qwen-smoke.yml
       - scripts/run_live_llm_smoke.py
+      - scripts/run_compact_llm_probe.py
       - src/mdmeta/llm_adapter.py
       - src/mdmeta/openai_backend.py
   workflow_dispatch:
@@ -77,76 +79,24 @@ jobs:
           cat /tmp/health.json
           curl --silent --fail http://127.0.0.1:8081/v1/models
 
-      - name: Run real structured extraction and validator
+      - name: Run compact evidence-first structured extraction
         env:
           MDMETA_LLM_BASE_URL: http://127.0.0.1:8081/v1
           MDMETA_LLM_MODEL: Qwen/Qwen3.5-0.8B
           MDMETA_LLM_TIMEOUT_SECONDS: "180"
-          MDMETA_LLM_MAX_OUTPUT_TOKENS: "300"
+          MDMETA_LLM_MAX_OUTPUT_TOKENS: "200"
           MDMETA_LLM_MAX_RETRIES: "0"
           MDMETA_LLM_RETRY_BACKOFF_SECONDS: "2"
           MDMETA_LLM_DISABLE_THINKING: "true"
           MDMETA_LLM_SEED: "0"
         run: |
           mkdir -p results/live_qwen_smoke
-          python - <<'PY'
-          import importlib.util
-          import json
-          from pathlib import Path
+          python scripts/run_compact_llm_probe.py \
+            --output results/live_qwen_smoke/compact_probe.json \
+            --markdown results/live_qwen_smoke/pr-comment.md
+          cat results/live_qwen_smoke/pr-comment.md >> "$GITHUB_STEP_SUMMARY"
 
-          path = Path("scripts/run_live_llm_smoke.py")
-          spec = importlib.util.spec_from_file_location("live_smoke", path)
-          module = importlib.util.module_from_spec(spec)
-          assert spec.loader is not None
-          spec.loader.exec_module(module)
-          module.CASES = [
-              case for case in module.CASES
-              if case["case_id"] == "single_production_complete"
-          ]
-          payload = module.run(Path("results/live_qwen_smoke/qwen35_08b_results.json"))
-          summary = module._summary(payload)
-          Path("results/live_qwen_smoke/summary.md").write_text(summary, encoding="utf-8")
-
-          lines = [
-              "## Live Qwen3.5-0.8B positive extraction probe",
-              "",
-              f"Commit: `{__import__('os').environ.get('GITHUB_SHA', 'unknown')}`",
-              "",
-              summary,
-              "## Case details",
-          ]
-          for case in payload["cases"]:
-              lines.extend(
-                  [
-                      "",
-                      f"### `{case['case_id']}`",
-                      f"- Strict match: `{case['strict_case_match']}`",
-                      f"- Validation error: `{json.dumps(case['validation_error'], ensure_ascii=False)}`",
-                      f"- Audit: `{json.dumps(case['audit'], ensure_ascii=False, sort_keys=True)}`",
-                      "- Accepted events:",
-                      "```json",
-                      json.dumps(case["accepted_events"], indent=2, ensure_ascii=False, sort_keys=True),
-                      "```",
-                      "- Raw model response:",
-                      "```json",
-                      json.dumps(case["raw_model_response"], indent=2, ensure_ascii=False, sort_keys=True),
-                      "```",
-                  ]
-              )
-          lines.extend(
-              [
-                  "",
-                  "This is a one-case CPU probe of an 0.8B Q8 model with a 180-second request limit, not a corpus accuracy estimate and not evidence for Qwen3.6-27B performance.",
-              ]
-          )
-          Path("results/live_qwen_smoke/pr-comment.md").write_text(
-              "\n".join(lines) + "\n", encoding="utf-8"
-          )
-          print(summary)
-          PY
-          cat results/live_qwen_smoke/summary.md >> "$GITHUB_STEP_SUMMARY"
-
-      - name: Publish result on PR 31
+      - name: Publish compact-probe result on PR 31
         if: always() && hashFiles('results/live_qwen_smoke/pr-comment.md') != ''
         env:
           GH_TOKEN: ${{ github.token }}
@@ -155,8 +105,8 @@ jobs:
       - name: Show detailed result and server tail
         if: always()
         run: |
-          if [ -f results/live_qwen_smoke/qwen35_08b_results.json ]; then
-            cat results/live_qwen_smoke/qwen35_08b_results.json
+          if [ -f results/live_qwen_smoke/compact_probe.json ]; then
+            cat results/live_qwen_smoke/compact_probe.json
           fi
           echo "--- llama-server tail ---"
           tail -n 200 /tmp/llama-server.log || true
