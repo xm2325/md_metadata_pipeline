@@ -7,6 +7,7 @@ on:
       - .github/workflows/live-qwen-smoke.yml
       - scripts/run_live_llm_smoke.py
       - scripts/run_compact_llm_probe.py
+      - scripts/run_unconstrained_llm_probe.py
       - src/mdmeta/llm_adapter.py
       - src/mdmeta/openai_backend.py
   pull_request:
@@ -14,6 +15,7 @@ on:
       - .github/workflows/live-qwen-smoke.yml
       - scripts/run_live_llm_smoke.py
       - scripts/run_compact_llm_probe.py
+      - scripts/run_unconstrained_llm_probe.py
       - src/mdmeta/llm_adapter.py
       - src/mdmeta/openai_backend.py
   workflow_dispatch:
@@ -79,24 +81,18 @@ jobs:
           cat /tmp/health.json
           curl --silent --fail http://127.0.0.1:8081/v1/models
 
-      - name: Run compact evidence-first structured extraction
+      - name: Run unconstrained JSON control
         env:
           MDMETA_LLM_BASE_URL: http://127.0.0.1:8081/v1
           MDMETA_LLM_MODEL: Qwen/Qwen3.5-0.8B
-          MDMETA_LLM_TIMEOUT_SECONDS: "180"
-          MDMETA_LLM_MAX_OUTPUT_TOKENS: "200"
-          MDMETA_LLM_MAX_RETRIES: "0"
-          MDMETA_LLM_RETRY_BACKOFF_SECONDS: "2"
-          MDMETA_LLM_DISABLE_THINKING: "true"
-          MDMETA_LLM_SEED: "0"
         run: |
           mkdir -p results/live_qwen_smoke
-          python scripts/run_compact_llm_probe.py \
-            --output results/live_qwen_smoke/compact_probe.json \
+          python scripts/run_unconstrained_llm_probe.py \
+            --output results/live_qwen_smoke/unconstrained_probe.json \
             --markdown results/live_qwen_smoke/pr-comment.md
           cat results/live_qwen_smoke/pr-comment.md >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Publish compact-probe result on PR 31
+      - name: Publish control result on PR 31
         if: always() && hashFiles('results/live_qwen_smoke/pr-comment.md') != ''
         env:
           GH_TOKEN: ${{ github.token }}
@@ -105,8 +101,8 @@ jobs:
       - name: Show detailed result and server tail
         if: always()
         run: |
-          if [ -f results/live_qwen_smoke/compact_probe.json ]; then
-            cat results/live_qwen_smoke/compact_probe.json
+          if [ -f results/live_qwen_smoke/unconstrained_probe.json ]; then
+            cat results/live_qwen_smoke/unconstrained_probe.json
           fi
           echo "--- llama-server tail ---"
           tail -n 200 /tmp/llama-server.log || true
