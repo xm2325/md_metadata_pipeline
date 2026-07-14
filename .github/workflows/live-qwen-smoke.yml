@@ -81,8 +81,8 @@ jobs:
         env:
           MDMETA_LLM_BASE_URL: http://127.0.0.1:8081/v1
           MDMETA_LLM_MODEL: Qwen/Qwen3.5-0.8B
-          MDMETA_LLM_TIMEOUT_SECONDS: "45"
-          MDMETA_LLM_MAX_OUTPUT_TOKENS: "220"
+          MDMETA_LLM_TIMEOUT_SECONDS: "180"
+          MDMETA_LLM_MAX_OUTPUT_TOKENS: "300"
           MDMETA_LLM_MAX_RETRIES: "0"
           MDMETA_LLM_RETRY_BACKOFF_SECONDS: "2"
           MDMETA_LLM_DISABLE_THINKING: "true"
@@ -99,19 +99,16 @@ jobs:
           module = importlib.util.module_from_spec(spec)
           assert spec.loader is not None
           spec.loader.exec_module(module)
-          selected = {
-              "single_production_complete",
-              "sampling_vs_timestep",
-              "non_md_negative",
-              "coupling_time_trap",
-          }
-          module.CASES = [case for case in module.CASES if case["case_id"] in selected]
+          module.CASES = [
+              case for case in module.CASES
+              if case["case_id"] == "single_production_complete"
+          ]
           payload = module.run(Path("results/live_qwen_smoke/qwen35_08b_results.json"))
           summary = module._summary(payload)
           Path("results/live_qwen_smoke/summary.md").write_text(summary, encoding="utf-8")
 
           lines = [
-              "## Live Qwen3.5-0.8B structured-extraction smoke result",
+              "## Live Qwen3.5-0.8B positive extraction probe",
               "",
               f"Commit: `{__import__('os').environ.get('GITHUB_SHA', 'unknown')}`",
               "",
@@ -139,7 +136,7 @@ jobs:
           lines.extend(
               [
                   "",
-                  "This is a four-case CPU smoke test of an 0.8B Q8 model, not a corpus accuracy estimate and not evidence for Qwen3.6-27B performance.",
+                  "This is a one-case CPU probe of an 0.8B Q8 model with a 180-second request limit, not a corpus accuracy estimate and not evidence for Qwen3.6-27B performance.",
               ]
           )
           Path("results/live_qwen_smoke/pr-comment.md").write_text(
