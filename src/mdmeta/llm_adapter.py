@@ -11,6 +11,9 @@ from .models import EventType, Evidence, ProtocolEvent
 from .protocol_events import Paragraph
 
 
+PROMPT_VERSION = "md-protocol-events-exact-span-v2"
+
+
 class StructuredBackend(Protocol):
     """Provider-independent interface for structured model generation."""
 
@@ -151,12 +154,21 @@ def _replicate_count(count: RawCount, quote: str) -> int:
     return parsed
 
 
+def _audit_payload(value: object) -> dict[str, Any] | None:
+    if isinstance(value, BaseModel):
+        return value.model_dump(mode="json")
+    if isinstance(value, dict):
+        return dict(value)
+    return None
+
+
 class SchemaConstrainedEventExtractor:
     """Accept only model events that pass exact evidence and deterministic unit checks."""
 
-    def __init__(self, backend: StructuredBackend, model_id: str) -> None:
+    def __init__(self, backend: StructuredBackend, model_id: str | None = None) -> None:
         self.backend = backend
-        self.model_id = model_id
+        self.model_id = model_id or str(getattr(backend, "model_id", "unknown-model"))
+        self.last_audit: dict[str, Any] | None = None
 
     @staticmethod
     def _prompt(paragraphs: list[Paragraph]) -> str:
@@ -165,12 +177,20 @@ class SchemaConstrainedEventExtractor:
             for paragraph in paragraphs
         )
         return (
+            f"Prompt version: {PROMPT_VERSION}.\n"
             "Extract only explicitly stated molecular-dynamics protocol events. "
-            "Do not infer missing values and do not use outside knowledge. "
-            "For each event, copy one exact evidence quote from one supplied paragraph and provide "
-            "zero-based character offsets relative to that paragraph. For every numeric field, "
-            "copy the exact numeric-unit expression into raw_text and also return its parsed value "
-            "and unit. Return an empty events list when no supported event is present.\n\n"
+            "Do not infer missing values, do not use outside knowledge, and do not copy an "
+            "attribute from a nearby phase unless the text explicitly associates it with that phase. "
+            "Use only these event types: minimisation, heating, equilibration, production, "
+            "analysis_window, sampling_interval, or unknown. Distinguish simulated duration from "
+            "integration time step, trajectory sampling interval, thermostat/barostat coupling time, "
+            "and post-simulation analysis window. If one paragraph states several phases, return a "
+            "separate event for each supported phase. For each event, copy one exact contiguous "
+            "evidence quote from one supplied paragraph and provide zero-based character offsets "
+            "relative to that paragraph. The quote must contain every returned attribute. For every "
+            "numeric field, copy the exact numeric-unit expression into raw_text and also return its "
+            "parsed value and unit. Confidence is an uncalibrated model score and must not replace "
+            "evidence checks. Return an empty events list when no supported event is present.\n\n"
             f"SOURCE PARAGRAPHS\n{blocks}"
         )
 
@@ -179,6 +199,7 @@ class SchemaConstrainedEventExtractor:
             self._prompt(paragraphs),
             LLMEventResponse.model_json_schema(),
         )
+        self.last_audit = _audit_payload(getattr(self.backend, "last_audit", None))
         parsed = LLMEventResponse.model_validate(response)
         by_id = {paragraph.paragraph_id: paragraph for paragraph in paragraphs}
         events: list[ProtocolEvent] = []
@@ -246,7 +267,9 @@ class SchemaConstrainedEventExtractor:
                     candidate.restraints or "",
                 ]
             )
-            event_id = f"llm-event-{hashlib.sha256(stable_payload.encode('utf-8')).hexdigest()[:16]}"
+            event_id = (
+                f"llm-event-{hashlib.sha256(stable_payload.encode('utf-8')).hexdigest()[:16]}"
+            )
             if event_id in seen:
                 continue
             seen.add(event_id)
@@ -271,7 +294,9 @@ class SchemaConstrainedEventExtractor:
                     restraints=candidate.restraints,
                     replicates=normalized["replicates"],
                     evidence=[evidence],
-                    relation_method=f"schema_constrained_llm:{self.model_id}:exact_span_v1",
+                    relation_method=(
+                        f"schema_constrained_llm:{self.model_id}:{PROMPT_VERSION}"
+                    ),
                     confidence=candidate.confidence,
                 )
             )
