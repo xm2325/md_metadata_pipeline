@@ -8,6 +8,7 @@ on:
       - scripts/run_live_llm_smoke.py
       - scripts/run_compact_llm_probe.py
       - scripts/run_unconstrained_llm_probe.py
+      - scripts/run_minimal_llm_probe.py
       - src/mdmeta/llm_adapter.py
       - src/mdmeta/openai_backend.py
   pull_request:
@@ -16,6 +17,7 @@ on:
       - scripts/run_live_llm_smoke.py
       - scripts/run_compact_llm_probe.py
       - scripts/run_unconstrained_llm_probe.py
+      - scripts/run_minimal_llm_probe.py
       - src/mdmeta/llm_adapter.py
       - src/mdmeta/openai_backend.py
   workflow_dispatch:
@@ -81,18 +83,18 @@ jobs:
           cat /tmp/health.json
           curl --silent --fail http://127.0.0.1:8081/v1/models
 
-      - name: Run unconstrained JSON control
+      - name: Run minimal positive capability control
         env:
           MDMETA_LLM_BASE_URL: http://127.0.0.1:8081/v1
           MDMETA_LLM_MODEL: Qwen/Qwen3.5-0.8B
         run: |
           mkdir -p results/live_qwen_smoke
-          python scripts/run_unconstrained_llm_probe.py \
-            --output results/live_qwen_smoke/unconstrained_probe.json \
+          python scripts/run_minimal_llm_probe.py \
+            --output results/live_qwen_smoke/minimal_probe.json \
             --markdown results/live_qwen_smoke/pr-comment.md
           cat results/live_qwen_smoke/pr-comment.md >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Publish control result on PR 31
+      - name: Publish minimal-probe result on PR 31
         if: always() && hashFiles('results/live_qwen_smoke/pr-comment.md') != ''
         env:
           GH_TOKEN: ${{ github.token }}
@@ -101,8 +103,8 @@ jobs:
       - name: Show detailed result and server tail
         if: always()
         run: |
-          if [ -f results/live_qwen_smoke/unconstrained_probe.json ]; then
-            cat results/live_qwen_smoke/unconstrained_probe.json
+          if [ -f results/live_qwen_smoke/minimal_probe.json ]; then
+            cat results/live_qwen_smoke/minimal_probe.json
           fi
           echo "--- llama-server tail ---"
           tail -n 200 /tmp/llama-server.log || true
