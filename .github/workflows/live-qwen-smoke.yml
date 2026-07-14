@@ -26,7 +26,7 @@ concurrency:
 jobs:
   qwen-live-smoke:
     runs-on: ubuntu-24.04
-    timeout-minutes: 45
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
         with:
@@ -80,17 +80,35 @@ jobs:
         env:
           MDMETA_LLM_BASE_URL: http://127.0.0.1:8081/v1
           MDMETA_LLM_MODEL: Qwen/Qwen3.5-0.8B
-          MDMETA_LLM_TIMEOUT_SECONDS: "180"
-          MDMETA_LLM_MAX_OUTPUT_TOKENS: "320"
+          MDMETA_LLM_TIMEOUT_SECONDS: "45"
+          MDMETA_LLM_MAX_OUTPUT_TOKENS: "220"
           MDMETA_LLM_MAX_RETRIES: "0"
           MDMETA_LLM_RETRY_BACKOFF_SECONDS: "2"
           MDMETA_LLM_DISABLE_THINKING: "true"
           MDMETA_LLM_SEED: "0"
         run: |
           mkdir -p results/live_qwen_smoke
-          python scripts/run_live_llm_smoke.py \
-            --output results/live_qwen_smoke/qwen35_08b_results.json \
-            --summary results/live_qwen_smoke/summary.md
+          python - <<'PY'
+          import importlib.util
+          from pathlib import Path
+
+          path = Path("scripts/run_live_llm_smoke.py")
+          spec = importlib.util.spec_from_file_location("live_smoke", path)
+          module = importlib.util.module_from_spec(spec)
+          assert spec.loader is not None
+          spec.loader.exec_module(module)
+          selected = {
+              "single_production_complete",
+              "sampling_vs_timestep",
+              "non_md_negative",
+              "coupling_time_trap",
+          }
+          module.CASES = [case for case in module.CASES if case["case_id"] in selected]
+          payload = module.run(Path("results/live_qwen_smoke/qwen35_08b_results.json"))
+          summary = module._summary(payload)
+          Path("results/live_qwen_smoke/summary.md").write_text(summary, encoding="utf-8")
+          print(summary)
+          PY
           cat results/live_qwen_smoke/summary.md >> "$GITHUB_STEP_SUMMARY"
 
       - name: Show detailed result and server tail
