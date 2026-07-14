@@ -18,6 +18,7 @@ on:
 
 permissions:
   contents: read
+  pull-requests: write
 
 concurrency:
   group: live-qwen-smoke-${{ github.ref }}
@@ -90,6 +91,7 @@ jobs:
           mkdir -p results/live_qwen_smoke
           python - <<'PY'
           import importlib.util
+          import json
           from pathlib import Path
 
           path = Path("scripts/run_live_llm_smoke.py")
@@ -107,9 +109,51 @@ jobs:
           payload = module.run(Path("results/live_qwen_smoke/qwen35_08b_results.json"))
           summary = module._summary(payload)
           Path("results/live_qwen_smoke/summary.md").write_text(summary, encoding="utf-8")
+
+          lines = [
+              "## Live Qwen3.5-0.8B structured-extraction smoke result",
+              "",
+              f"Commit: `{__import__('os').environ.get('GITHUB_SHA', 'unknown')}`",
+              "",
+              summary,
+              "## Case details",
+          ]
+          for case in payload["cases"]:
+              lines.extend(
+                  [
+                      "",
+                      f"### `{case['case_id']}`",
+                      f"- Strict match: `{case['strict_case_match']}`",
+                      f"- Validation error: `{json.dumps(case['validation_error'], ensure_ascii=False)}`",
+                      f"- Audit: `{json.dumps(case['audit'], ensure_ascii=False, sort_keys=True)}`",
+                      "- Accepted events:",
+                      "```json",
+                      json.dumps(case["accepted_events"], indent=2, ensure_ascii=False, sort_keys=True),
+                      "```",
+                      "- Raw model response:",
+                      "```json",
+                      json.dumps(case["raw_model_response"], indent=2, ensure_ascii=False, sort_keys=True),
+                      "```",
+                  ]
+              )
+          lines.extend(
+              [
+                  "",
+                  "This is a four-case CPU smoke test of an 0.8B Q8 model, not a corpus accuracy estimate and not evidence for Qwen3.6-27B performance.",
+              ]
+          )
+          Path("results/live_qwen_smoke/pr-comment.md").write_text(
+              "\n".join(lines) + "\n", encoding="utf-8"
+          )
           print(summary)
           PY
           cat results/live_qwen_smoke/summary.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Publish result on PR 31
+        if: always() && hashFiles('results/live_qwen_smoke/pr-comment.md') != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh pr comment 31 --body-file results/live_qwen_smoke/pr-comment.md
 
       - name: Show detailed result and server tail
         if: always()
