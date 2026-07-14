@@ -41,19 +41,17 @@ jobs:
       - name: Install project
         run: python -m pip install -e .
 
-      - name: Build latest llama.cpp CPU server
+      - name: Install official llama.cpp CPU binaries
         run: |
-          git clone --depth 1 https://github.com/ggml-org/llama.cpp.git /tmp/llama.cpp
-          cmake -S /tmp/llama.cpp -B /tmp/llama.cpp/build \
-            -DCMAKE_BUILD_TYPE=Release \
-            -DGGML_NATIVE=ON \
-            -DGGML_OPENMP=ON
-          cmake --build /tmp/llama.cpp/build --config Release --target llama-server -j 2
-          /tmp/llama.cpp/build/bin/llama-server --version
+          curl --fail --location --silent --show-error https://llama.app/install.sh | sh
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          export PATH="$HOME/.local/bin:$PATH"
+          command -v llama
+          llama --version
 
       - name: Start Qwen3.5-0.8B Q8 server
         run: |
-          nohup /tmp/llama.cpp/build/bin/llama-server \
+          nohup llama server \
             -hf ggerganov/Qwen3.5-0.8B-GGUF:Q8_0 \
             --alias Qwen/Qwen3.5-0.8B \
             --host 127.0.0.1 \
