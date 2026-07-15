@@ -1,3 +1,3 @@
-"""MD literature metadata pipeline."""
+"""MD literature metadata and scientific decision-support pipeline."""
 
-__version__ = "0.8.0"
+__version__ = "1.0.0"

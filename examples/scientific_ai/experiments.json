@@ -1,0 +1,42 @@
+[
+  {
+    "experiment_id": "EXP-001",
+    "candidate_id": "CAND-002",
+    "name": "Independent orthogonal binding assay",
+    "expected_information_gain": 0.82,
+    "cost": 3.0,
+    "feasibility": 0.90,
+    "execution_risk": 0.10,
+    "decision_relevance": 0.92
+  },
+  {
+    "experiment_id": "EXP-002",
+    "candidate_id": "CAND-003",
+    "name": "Functional perturbation pilot",
+    "expected_information_gain": 0.91,
+    "cost": 5.0,
+    "feasibility": 0.72,
+    "execution_risk": 0.24,
+    "decision_relevance": 0.95
+  },
+  {
+    "experiment_id": "EXP-003",
+    "candidate_id": "CAND-001",
+    "name": "Prospective external replication",
+    "expected_information_gain": 0.60,
+    "cost": 7.0,
+    "feasibility": 0.78,
+    "execution_risk": 0.18,
+    "decision_relevance": 0.88
+  },
+  {
+    "experiment_id": "EXP-004",
+    "candidate_id": "CAND-004",
+    "name": "Mechanism-focused cell assay",
+    "expected_information_gain": 0.74,
+    "cost": 4.0,
+    "feasibility": 0.84,
+    "execution_risk": 0.16,
+    "decision_relevance": 0.90
+  }
+]
