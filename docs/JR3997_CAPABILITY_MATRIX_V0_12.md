@@ -2,9 +2,11 @@
 
 ## Executive assessment
 
-This repository can demonstrate approximately **80%–85% of the role's technical core** after the
-new code is reviewed and the Roihu path is executed. This is a structured portfolio estimate, not a
-recruiter score and not a claim that 80%–85% of every hiring criterion is satisfied.
+After the live PDBe-KB run, this repository can demonstrate approximately **82%–86% of the role's
+technical core**. Across the **whole JD**, including interpersonal performance, publications,
+postdoctoral depth, international collaboration, training delivery and official resource ownership,
+the evidence readiness is closer to **70%–75%**. These are structured portfolio estimates, not
+recruiter scores and not claims that every criterion can be reduced to a percentage.
 
 The repository cannot establish the applicant's PhD, publication record, postdoctoral experience,
 interpersonal performance or direct participation in named collaborations. It also does not yet
@@ -25,7 +27,7 @@ official job match score.
 
 | Responsibility | Evidence after this upgrade | Status | Interview-safe wording | Next proof |
 |---|---|---|---|---|
-| Integrate MDDB with PDBe, UniProt, PDBe-KB and other resources | Real file-backed MDDB case; PDBe/UniProt validation; SIFTS-derived ranges; direct audited PDBe-KB/FunPDBe sidecar; Neo4j projection | Implemented, live PDBe-KB run pending | “I built and tested the integration boundaries and can run the PDBe-KB sidecar against frozen PDB IDs; it is not yet an institutional production feed.” | Execute several diverse MDDB projects and live PDBe-KB payload profiling; migrate reviewed common fields into the stable record/API |
+| Integrate MDDB with PDBe, UniProt, PDBe-KB and other resources | Real file-backed MDDB case; PDBe/UniProt validation; SIFTS-derived ranges; live two-stage PDBe-KB/FunPDBe run with 41,600 projected annotations; Neo4j projection | Strong prototype | “I implemented and live-tested the integration boundaries, including provider-level conflicts; it is not yet an institutional production feed.” | Profile diverse structures and MDDB projects; migrate reviewed common fields into the stable record/API with indexes and pagination |
 | Develop and deploy AI/ML literature mining | Deterministic extractor, concrete OpenAI-compatible backend, exact-evidence validator, CPU real-model diagnostic, Roihu vLLM workflow, comparative evaluation | Implemented, GPU benchmark pending | “The model path is executable and auditable; performance remains exploratory until the frozen GPU/human-reference run.” | Qwen3.6/DeepSeek GPU benchmark, dual annotation and deployment exercise |
 | Extend and maintain SIFTS for MD integration | Consumes SIFTS ranges; composes MD→PDB→UniProt; new QA for gaps, overlaps, mismatches and multi-accession chains | Partial | “I implemented a compatibility and quality layer around SIFTS outputs, not an official SIFTS code contribution.” | Run official SIFTS package/data fixtures and submit an upstream issue or PR |
 | Develop software tools, APIs, workflows and documentation | Installable typed Python package, CLI tools, FastAPI, SQLite, release/recovery, GitHub Actions, Slurm/vLLM, Nextflow PoC and runbooks | Strong | “The domain logic is packaged and tested; deployment and scientific releases remain separate controlled steps.” | Institutional deployment manifest and recovery drill |
@@ -39,8 +41,8 @@ official job match score.
 |---|---|---:|
 | Structural biology and molecular-simulation data | Real PSF/PDB/XTC verification, chains, glycans, construct ambiguity and residue mapping | 90% |
 | NLP/LLM literature mining | Exact-span extraction, real backend, failure analysis, GPU workflow and evaluation; human benchmark pending | 80% |
-| FAIR data and scientific repositories | Provenance, data contracts, release/recovery and public-resource integration; citable release pending | 85% |
-| Protein sequence, structure and functional annotation | PDB↔UniProt ranges plus PDBe-KB sidecar; detailed residue edge cases remain | 80% |
+| FAIR data and scientific repositories | Provenance, data contracts, release/recovery and public-resource integration; citable release pending | 87% |
+| Protein sequence, structure and functional annotation | PDB↔UniProt ranges plus live PDBe-KB residue annotations; official SIFTS edge-case contribution remains | 88% |
 | Scientific software development | Typed Python, tests, packaging, CLI, API, databases and documented design decisions | 95% |
 | Linux, Git and CI/CD | Linux workflows, Slurm, Git branches/PRs, Python matrices, security and container checks | 95% |
 | Communication and problem solving | Run reports and explicit corrective decisions; interpersonal evidence must come from examples | 75% repository evidence |
@@ -63,8 +65,8 @@ official job match score.
 | Stage | Repository-demonstrable technical core | Main limitation |
 |---|---:|---|
 | Before production/LLM upgrades | approximately 70%–75% | No concrete model backend, direct PDBe-KB path or production controls |
-| Current version 0.12 code, before new live runs | approximately 80%–85% | PDBe-KB and Roihu paths implemented but not yet executed; SIFTS not upstream |
-| After live GPU + PDBe-KB + human benchmark | potentially 87%–90% | Official SIFTS contribution, multi-project production deployment and external collaboration still missing |
+| Current version 0.12 candidate after live PDBe-KB | approximately 82%–86% | GPU/human LLM benchmark pending; SIFTS not upstream; only one file-backed MDDB project |
+| After live GPU + human benchmark + official SIFTS contribution | potentially 88%–92% | Multi-project production deployment and external collaboration still cannot be simulated by code |
 
 ## What the Roihu result can change
 
@@ -92,7 +94,8 @@ or expert prioritisation.
 
 1. Complete independent dual annotation and adjudication on a locked test set.
 2. Run Qwen3.6 and one exact DeepSeek revision on Roihu with identical frozen inputs.
-3. Execute and profile the PDBe-KB adapter on diverse PDB entries; agree the stable common contract.
+3. Profile PDBe-KB on a stratified structure sample; quantify provider field variability and design a
+   versioned indexed API/storage migration for reviewed common fields.
 4. Run official SIFTS compatibility fixtures for insertion codes, missing residues, isoforms,
    engineered mutations, chimeras and homomer ambiguity.
 5. Expand from one file-backed MDDB project to several heterogeneous projects and test incremental
