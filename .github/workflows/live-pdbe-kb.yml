@@ -16,6 +16,7 @@ on:
 
 permissions:
   contents: read
+  pull-requests: write
 
 concurrency:
   group: live-pdbe-kb-${{ github.ref }}
@@ -77,6 +78,12 @@ jobs:
               )
           PY
           cat results/live_pdbe_kb/enrichment.json
+
+      - name: Publish live result on the pull request
+        if: github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh pr comment "${{ github.event.pull_request.number }}" --body-file results/live_pdbe_kb/summary.md
 
       - name: Upload compact live evidence
         if: always()
