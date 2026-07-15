@@ -37,13 +37,18 @@ ELIGIBILITY_REASONS = [
 ]
 
 
-def build_workpack(plan: dict, screen: dict) -> tuple[list[dict], dict]:
+def build_workpack(
+    plan: dict,
+    screen: dict,
+    *,
+    splits: tuple[str, ...] = ("development", "validation", "locked_test"),
+) -> tuple[list[dict], dict]:
     if plan["source_pool_plan_sha256"] != screen["plan_sha256"]:
         raise ValueError("final plan and full-text screen do not share the same pool plan")
     records = {row["document_id"]: row for row in screen["records"]}
     rows: list[dict] = []
     order = 0
-    for split in ("development", "validation", "locked_test"):
+    for split in splits:
         for article in plan[split]:
             order += 1
             record = records.get(article["document_id"])
@@ -80,6 +85,7 @@ def build_workpack(plan: dict, screen: dict) -> tuple[list[dict], dict]:
         "plan_sha256": plan["plan_sha256"],
         "screen_sha256": plan["screen_sha256"],
         "article_count": len(rows),
+        "included_splits": list(splits),
         "split_counts": {
             split: sum(row["split"] == split for row in rows)
             for split in ("development", "validation", "locked_test")
@@ -95,14 +101,27 @@ def build_workpack(plan: dict, screen: dict) -> tuple[list[dict], dict]:
             "Model predictions are not shown during reference annotation.",
             "Exact quotes and offsets are recorded only in annotator-owned JSONL exports.",
             "Database validation cannot populate reference labels.",
-            "The provisional corpus cannot be reported as a locked confirmatory benchmark.",
+            (
+                "No accuracy claim is allowed until dual review, adjudication and the "
+                "reference freeze are complete."
+            ),
+            (
+                "Locked-test reference labels stay hidden from model developers, and model "
+                "predictions stay hidden from annotators, until evaluation unsealing."
+            ),
         ],
     }
     return rows, metadata
 
 
-def write_workpack(plan: dict, screen: dict, output_dir: Path) -> None:
-    rows, metadata = build_workpack(plan, screen)
+def write_workpack(
+    plan: dict,
+    screen: dict,
+    output_dir: Path,
+    *,
+    splits: tuple[str, ...] = ("development", "validation", "locked_test"),
+) -> None:
+    rows, metadata = build_workpack(plan, screen, splits=splits)
     output_dir.mkdir(parents=True, exist_ok=True)
     csv_path = output_dir / "human_eligibility_review.csv"
     with csv_path.open("w", encoding="utf-8", newline="") as handle:
@@ -124,9 +143,10 @@ def write_workpack(plan: dict, screen: dict, output_dir: Path) -> None:
         "3. Each annotator records exact-span facts in their own JSONL file using "
         "`annotation_fact.schema.json`.\n"
         "4. Do not inspect model predictions during first-pass annotation.\n"
-        "5. This corpus remains provisional until human eligibility review is complete and "
-        "the missing prior held-out identifiers are recovered or a separate non-overlap "
-        "argument is accepted.\n",
+        "5. Keep locked-test human labels hidden from model developers and predictions hidden "
+        "from annotators until unsealing.\n"
+        "6. This corpus is not an accuracy benchmark until dual review, adjudication and the "
+        "reference freeze are complete.\n",
         encoding="utf-8",
     )
 
@@ -136,11 +156,19 @@ def main() -> None:
     parser.add_argument("--plan", type=Path, required=True)
     parser.add_argument("--screen", type=Path, required=True)
     parser.add_argument("--output-dir", type=Path, required=True)
+    parser.add_argument(
+        "--split",
+        action="append",
+        choices=["development", "validation", "locked_test"],
+        dest="splits",
+    )
     args = parser.parse_args()
     plan = json.loads(args.plan.read_text(encoding="utf-8"))
     screen = json.loads(args.screen.read_text(encoding="utf-8"))
-    write_workpack(plan, screen, args.output_dir)
-    print(json.dumps({"articles": 60, "output_dir": str(args.output_dir)}, indent=2))
+    splits = tuple(args.splits or ("development", "validation", "locked_test"))
+    write_workpack(plan, screen, args.output_dir, splits=splits)
+    article_count = sum(len(plan[split]) for split in splits)
+    print(json.dumps({"articles": article_count, "output_dir": str(args.output_dir)}, indent=2))
 
 
 if __name__ == "__main__":

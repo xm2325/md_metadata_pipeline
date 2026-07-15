@@ -359,6 +359,12 @@ checks. None is evidence that the extracted scientific statement is semantically
 
 ## Future independent 100 / gold 20 / MDDB 3 study
 
+The implemented selection and sealing protocol is tracked in
+[`study/independent_100/README.md`](../study/independent_100/README.md) and
+`.github/workflows/independent-100-corpus.yml`. The workflow does not run the LLM: it freezes the
+new-article exclusion registry, rule-screened 80/20 plan and prediction-free human workpacks before
+any Roihu inference.
+
 The later independent study should use **100 total new literature articles**, of which 20 are a
 preselected, sealed human-gold subset: 80 scale articles plus 20 gold articles, not 120 and not the
 current 60. It is not a current accuracy claim. Freeze the query, collection date, eligibility

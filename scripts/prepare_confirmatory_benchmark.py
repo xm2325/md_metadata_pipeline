@@ -22,9 +22,14 @@ def main() -> None:
     parser.add_argument("--require-known-year", action="store_true")
     parser.add_argument(
         "--study-status",
-        choices=["locked_confirmatory", "provisional_temporal_isolation"],
+        choices=[
+            "locked_confirmatory",
+            "provisional_temporal_isolation",
+            "independent_100_candidate_pool",
+        ],
         default="locked_confirmatory",
     )
+    parser.add_argument("--study-id")
     args = parser.parse_args()
 
     excluded: set[str] = set()
@@ -34,7 +39,11 @@ def main() -> None:
             for line in args.excluded_ids.read_text(encoding="utf-8").splitlines()
             if line.strip() and not line.lstrip().startswith("#")
         }
-    if args.study_status == "locked_confirmatory" and len(excluded) < args.minimum_excluded:
+    exclusion_required = args.study_status in {
+        "locked_confirmatory",
+        "independent_100_candidate_pool",
+    }
+    if exclusion_required and len(excluded) < args.minimum_excluded:
         raise SystemExit(
             f"exclusion registry has {len(excluded)} unique IDs; "
             f"at least {args.minimum_excluded} are required before locking the corpus"
@@ -53,6 +62,7 @@ def main() -> None:
         publication_year_max=args.publication_year_max,
         require_known_year=args.require_known_year,
         study_status=args.study_status,
+        study_id=args.study_id,
         development_size=args.development_size,
         validation_size=args.validation_size,
         locked_test_size=args.locked_test_size,

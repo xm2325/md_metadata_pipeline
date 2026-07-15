@@ -73,3 +73,20 @@ def test_temporal_isolation_filters_years_and_labels_plan_provisional() -> None:
     assert reasons["PMC999998"] == "publication_year_above_window"
     assert reasons["PMC999999"] == "missing_publication_year"
     assert plan.eligibility_rules["publication_year_max"] == 2020
+
+
+def test_custom_study_identity_supports_an_independent_candidate_pool() -> None:
+    plan = create_benchmark_plan(
+        _candidates(120),
+        excluded_document_ids={"PMC000000"},
+        development_size=100,
+        validation_size=0,
+        locked_test_size=0,
+        study_status="independent_100_candidate_pool",
+        study_id="mdmeta-independent-100-candidate-pool-v1",
+    )
+    assert plan.study_id == "mdmeta-independent-100-candidate-pool-v1"
+    assert plan.study_status == "independent_100_candidate_pool"
+    assert len(plan.development) == 100
+    assert plan.validation == []
+    assert plan.locked_test == []

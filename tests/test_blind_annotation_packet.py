@@ -45,3 +45,30 @@ def test_packet_is_blinded_and_hash_locked(tmp_path: Path) -> None:
     assert "Background only" not in str(packet)
     assert "prediction" not in str(article).lower()
     assert len(packet["packet_sha256"]) == 64
+
+
+def test_packet_can_include_only_the_sealed_gold_split(tmp_path: Path) -> None:
+    digest = hashlib.sha256(XML).hexdigest()
+    cache = tmp_path / "cache"
+    cache.mkdir()
+    (cache / "PMC1.xml").write_bytes(XML)
+    screen = {"records": [{"document_id": "PMC1", "full_text_sha256": digest}]}
+    article = {
+        "document_id": "PMC1",
+        "title": "Protein MD study",
+        "doi": "10.1/example",
+        "year": 2020,
+        "source_uri": "https://europepmc.org/articles/PMC1",
+    }
+    plan = {
+        "study_status": "independent_100_machine_screened_unreviewed",
+        "plan_sha256": "a" * 64,
+        "screen_sha256": canonical_sha256(screen),
+        "development": [],
+        "validation": [],
+        "locked_test": [article],
+    }
+    packet = build_packet(plan, screen, cache, splits=("locked_test",))
+    assert packet["article_count"] == 1
+    assert packet["included_splits"] == ["locked_test"]
+    assert packet["articles"][0]["split"] == "locked_test"

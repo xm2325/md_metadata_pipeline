@@ -1,0 +1,254 @@
+name: Prepare independent 100 corpus
+
+on:
+  workflow_dispatch:
+    inputs:
+      max_candidates:
+        description: Maximum Europe PMC metadata candidates
+        required: false
+        default: "750"
+      seed:
+        description: Deterministic selection and gold split seed
+        required: false
+        default: "3997"
+      screening_pool_size:
+        description: Number of articles to rule-screen before selecting 100
+        required: false
+        default: "160"
+  pull_request:
+    paths:
+      - .github/workflows/independent-100-corpus.yml
+      - scripts/audit_independent_plan.py
+      - scripts/build_exclusion_registry.py
+      - scripts/prepare_confirmatory_benchmark.py
+      - scripts/query_europe_pmc.py
+      - scripts/screen_selected_fulltext.py
+      - scripts/finalize_screened_plan.py
+      - scripts/build_annotation_workpack.py
+      - scripts/build_blind_annotation_packet.py
+      - src/mdmeta/benchmark.py
+      - tests/test_benchmark.py
+      - tests/test_independent_100.py
+      - tests/test_query_europe_pmc.py
+      - tests/test_fulltext_screen.py
+      - tests/test_screened_plan_workpack.py
+      - tests/test_blind_annotation_packet.py
+      - study/independent_100/README.md
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
+
+jobs:
+  offline-tests:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: pyproject.toml
+      - run: python -m pip install -e '.[dev]'
+      - name: Lint independent-corpus code
+        run: >-
+          ruff check
+          scripts/audit_independent_plan.py
+          scripts/build_exclusion_registry.py
+          scripts/prepare_confirmatory_benchmark.py
+          scripts/finalize_screened_plan.py
+          scripts/build_annotation_workpack.py
+          scripts/build_blind_annotation_packet.py
+          src/mdmeta/benchmark.py
+          tests/test_independent_100.py
+          tests/test_screened_plan_workpack.py
+      - name: Run independent-corpus offline tests
+        run: >-
+          pytest -q
+          tests/test_benchmark.py
+          tests/test_independent_100.py
+          tests/test_query_europe_pmc.py
+          tests/test_fulltext_screen.py
+          tests/test_screened_plan_workpack.py
+          tests/test_blind_annotation_packet.py
+
+  prepare-and-seal:
+    if: github.event_name == 'workflow_dispatch'
+    needs: offline-tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 75
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: pyproject.toml
+      - run: python -m pip install -e .
+      - name: Build conservative prior-article exclusion registry
+        run: |
+          mkdir -p study/independent_100/generated
+          python scripts/build_exclusion_registry.py \
+            --text study/confirmatory_60/prior_article_ids.txt \
+            --json study/integration_60/source_manifest.json \
+            --json study/integration_60/source_manifest_original.json \
+            --json study/integration_60/source_manifest_superseded_185650.json \
+            --json study/integration_60/source_pool_audit.json \
+            --json study/integration_60/source_pool_rebuild_report.json \
+            --json study/integration_60/source_substitution_report.json \
+            --output-json study/independent_100/generated/exclusion_registry.json \
+            --output-txt study/independent_100/generated/excluded_article_ids.txt
+      - name: Freeze collection and selection policy
+        env:
+          MAX_CANDIDATES: ${{ inputs.max_candidates || '750' }}
+          SCREENING_POOL_SIZE: ${{ inputs.screening_pool_size || '160' }}
+          SEED: ${{ inputs.seed || '3997' }}
+        run: |
+          jq -n \
+            --arg collected_at "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            --arg repository "$GITHUB_REPOSITORY" \
+            --arg source_commit "$GITHUB_SHA" \
+            --arg run_id "$GITHUB_RUN_ID" \
+            --arg run_attempt "$GITHUB_RUN_ATTEMPT" \
+            --arg seed "$SEED" \
+            --arg max_candidates "$MAX_CANDIDATES" \
+            --arg screening_pool_size "$SCREENING_POOL_SIZE" \
+            '{
+              schema_version: "mdmeta.independent-study-context.v1",
+              collected_at_utc: $collected_at,
+              repository: $repository,
+              source_commit: $source_commit,
+              github_run_id: $run_id,
+              github_run_attempt: $run_attempt,
+              query: "OPEN_ACCESS:Y AND HAS_FT:Y AND (TITLE_ABS:\"molecular dynamics\" OR TITLE_ABS:\"MD simulation\") AND (TITLE_ABS:protein OR TITLE_ABS:enzyme OR TITLE_ABS:receptor OR TITLE_ABS:ligand OR TITLE_ABS:peptide OR TITLE_ABS:membrane OR TITLE_ABS:DNA OR TITLE_ABS:RNA OR TITLE_ABS:biomolecular)",
+              seed: ($seed | tonumber),
+              max_candidates: ($max_candidates | tonumber),
+              screening_pool_size: ($screening_pool_size | tonumber),
+              target_split: {development_scale: 80, validation: 0, locked_test_gold: 20},
+              eligibility_policy: "open-access full text, PMC identifier, biomolecular MD query, then rule-based protocol triage; human review remains required",
+              negative_control_policy: "machine-ineligible records are retained for audit but are not selected into the initial accuracy cohort",
+              selection_uses_model_output: false,
+              gold_predictions_generated: false
+            }' > study/independent_100/generated/study_context.json
+      - name: Query independent biomolecular MD metadata
+        env:
+          MAX_CANDIDATES: ${{ inputs.max_candidates || '750' }}
+        run: |
+          python scripts/query_europe_pmc.py \
+            --output study/independent_100/generated/candidates.json \
+            --max-candidates "$MAX_CANDIDATES" \
+            --query 'OPEN_ACCESS:Y AND HAS_FT:Y AND (TITLE_ABS:"molecular dynamics" OR TITLE_ABS:"MD simulation") AND (TITLE_ABS:protein OR TITLE_ABS:enzyme OR TITLE_ABS:receptor OR TITLE_ABS:ligand OR TITLE_ABS:peptide OR TITLE_ABS:membrane OR TITLE_ABS:DNA OR TITLE_ABS:RNA OR TITLE_ABS:biomolecular)'
+      - name: Freeze deterministic oversampled screening pool
+        env:
+          SEED: ${{ inputs.seed || '3997' }}
+          SCREENING_POOL_SIZE: ${{ inputs.screening_pool_size || '160' }}
+        run: |
+          python scripts/prepare_confirmatory_benchmark.py \
+            --candidates study/independent_100/generated/candidates.json \
+            --excluded-ids study/independent_100/generated/excluded_article_ids.txt \
+            --minimum-excluded 60 \
+            --study-status independent_100_candidate_pool \
+            --study-id mdmeta-independent-100-candidate-pool-v1 \
+            --seed "$SEED" \
+            --development-size "$SCREENING_POOL_SIZE" \
+            --validation-size 0 \
+            --locked-test-size 0 \
+            --output study/independent_100/generated/screening_pool.json
+      - name: Rule-screen full text in an ephemeral runner cache
+        run: |
+          mkdir -p "$RUNNER_TEMP/mdmeta-independent100-jats"
+          python scripts/screen_selected_fulltext.py \
+            --plan study/independent_100/generated/screening_pool.json \
+            --output study/independent_100/generated/fulltext_machine_screen.json \
+            --xml-cache-dir "$RUNNER_TEMP/mdmeta-independent100-jats"
+      - name: Freeze scale80 and stratified sealed gold20 before inference
+        env:
+          SEED: ${{ inputs.seed || '3997' }}
+        run: |
+          python scripts/finalize_screened_plan.py \
+            --pool-plan study/independent_100/generated/screening_pool.json \
+            --screen study/independent_100/generated/fulltext_machine_screen.json \
+            --development-size 80 \
+            --validation-size 0 \
+            --locked-test-size 20 \
+            --study-id mdmeta-independent-100-v1 \
+            --study-status independent_100_machine_screened_unreviewed \
+            --split-strategy locked_test_stratified \
+            --split-seed "$SEED" \
+            --output study/independent_100/generated/frozen_plan.json
+      - name: Audit non-overlap and gold seal
+        run: |
+          python scripts/audit_independent_plan.py \
+            --plan study/independent_100/generated/frozen_plan.json \
+            --exclusion-registry study/independent_100/generated/exclusion_registry.json \
+            --output study/independent_100/generated/plan_audit.json
+      - name: Build no-full-text eligibility workpack for all 100
+        run: |
+          python scripts/build_annotation_workpack.py \
+            --plan study/independent_100/generated/frozen_plan.json \
+            --screen study/independent_100/generated/fulltext_machine_screen.json \
+            --output-dir study/independent_100/generated/all100_eligibility_workpack
+      - name: Build sealed dual-annotation gold20 workpack
+        run: |
+          python scripts/build_annotation_workpack.py \
+            --plan study/independent_100/generated/frozen_plan.json \
+            --screen study/independent_100/generated/fulltext_machine_screen.json \
+            --split locked_test \
+            --output-dir study/independent_100/generated/sealed_gold20_workpack
+          python scripts/build_blind_annotation_packet.py \
+            --plan study/independent_100/generated/frozen_plan.json \
+            --screen study/independent_100/generated/fulltext_machine_screen.json \
+            --xml-cache-dir "$RUNNER_TEMP/mdmeta-independent100-jats" \
+            --split locked_test \
+            --output study/independent_100/generated/sealed_gold20_workpack/articles.json
+      - name: Delete ephemeral article XML snapshots
+        if: always()
+        run: rm -rf "$RUNNER_TEMP/mdmeta-independent100-jats"
+      - name: Write artifact checksums
+        if: always()
+        run: |
+          cd study/independent_100/generated
+          sha256sum study_context.json exclusion_registry.json excluded_article_ids.txt candidates.json screening_pool.json fulltext_machine_screen.json frozen_plan.json plan_audit.json > CORPUS_SHA256SUMS.txt || true
+          find all100_eligibility_workpack -type f ! -name SHA256SUMS.txt -print0 | sort -z | xargs -0 sha256sum > all100_eligibility_workpack/SHA256SUMS.txt || true
+          find sealed_gold20_workpack -type f ! -name SHA256SUMS.txt -print0 | sort -z | xargs -0 sha256sum > sealed_gold20_workpack/SHA256SUMS.txt || true
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        if: always()
+        with:
+          name: independent100-corpus-metadata-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            study/independent_100/generated/exclusion_registry.json
+            study/independent_100/generated/excluded_article_ids.txt
+            study/independent_100/generated/study_context.json
+            study/independent_100/generated/candidates.json
+            study/independent_100/generated/screening_pool.json
+            study/independent_100/generated/fulltext_machine_screen.json
+            study/independent_100/generated/frozen_plan.json
+            study/independent_100/generated/plan_audit.json
+            study/independent_100/generated/CORPUS_SHA256SUMS.txt
+          if-no-files-found: error
+          retention-days: 90
+          compression-level: 9
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        if: always()
+        with:
+          name: independent100-eligibility-workpack-${{ github.run_id }}-${{ github.run_attempt }}
+          path: study/independent_100/generated/all100_eligibility_workpack/
+          if-no-files-found: error
+          retention-days: 90
+          compression-level: 9
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        if: always()
+        with:
+          name: sealed-gold20-blind-workpack-${{ github.run_id }}-${{ github.run_attempt }}
+          path: study/independent_100/generated/sealed_gold20_workpack/
+          if-no-files-found: error
+          retention-days: 90
+          compression-level: 9

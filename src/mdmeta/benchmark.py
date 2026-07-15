@@ -65,6 +65,7 @@ def create_benchmark_plan(
     publication_year_max: int | None = None,
     require_known_year: bool = False,
     study_status: str = "locked_confirmatory",
+    study_id: str | None = None,
 ) -> BenchmarkPlan:
     target_size = development_size + validation_size + locked_test_size
     excluded_document_ids = {item.upper() for item in (excluded_document_ids or set())}
@@ -137,11 +138,12 @@ def create_benchmark_plan(
         "require_known_year": require_known_year,
         "excluded_document_id_count": len(excluded_document_ids),
     }
-    study_id = (
-        "mdmeta-confirmatory-60-v1"
-        if study_status == "locked_confirmatory"
-        else "mdmeta-provisional-temporal-60-v1"
-    )
+    if study_id is None:
+        study_id = (
+            "mdmeta-confirmatory-60-v1"
+            if study_status == "locked_confirmatory"
+            else "mdmeta-provisional-temporal-60-v1"
+        )
     plan_core = {
         "study_id": study_id,
         "study_status": study_status,
