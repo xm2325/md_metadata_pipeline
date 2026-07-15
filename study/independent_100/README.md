@@ -30,6 +30,13 @@ the study status is `independent_100_machine_screened_unreviewed`.
 6. Generate gold20 predictions separately, unseal once, and report per-field metrics with
    article-bootstrap uncertainty and complete failure accounting.
 
+Scale and gold are now separated by an executable model-protocol freeze and gold authorization
+gate. Batch v7 binds the source-independent prompt contract, and the freeze binds the exact scale80
+GPU/CPU results, model snapshot, decoding configuration, normalisation and evaluation code. A
+private gold20 source manifest cannot be authorized until both that scale freeze and the label-free
+dual-human reference receipt pass. See
+[`docs/INDEPENDENT_GOLD_PROTOCOL.md`](../../docs/INDEPENDENT_GOLD_PROTOCOL.md).
+
 The code now enforces step 3 through
 [`scripts/gold_reference_gate.py`](../../scripts/gold_reference_gate.py): two content-addressed
 20-article submissions, explicit reviewed-zero states, source and paragraph hashes, distinct

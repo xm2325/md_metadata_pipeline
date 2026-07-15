@@ -8,8 +8,10 @@ import pytest
 from mdmeta.benchmark import canonical_sha256
 from mdmeta.llm_adapter import (
     LLMEventResponse,
+    PROMPT_CONTRACT_VERSION,
     SchemaConstrainedEventExtractor,
     StructuredGenerationRejection,
+    prompt_contract_sha256,
 )
 from mdmeta.llm_batch import (
     FrozenArticle,
@@ -195,8 +197,11 @@ def test_model_batch_classifies_every_task_without_silent_dropping() -> None:
     }
     assert len(backend.calls) == 1
     assert result["response_schema_sha256"] == canonical_sha256(backend.calls[0][1])
+    assert result["prompt_contract_version"] == PROMPT_CONTRACT_VERSION
+    assert result["prompt_contract_sha256"] == prompt_contract_sha256()
     assert checkpoints[-1]["task_count_classified"] == 3
     assert checkpoints[-1]["response_schema_sha256"] == result["response_schema_sha256"]
+    assert checkpoints[-1]["prompt_contract_sha256"] == result["prompt_contract_sha256"]
     assert checkpoints[-1]["status"] == "running"
 
 

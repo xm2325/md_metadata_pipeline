@@ -20,14 +20,16 @@ from .llm_adapter import (
     EvidenceValidationAudit,
     LLMEventResponse,
     MAX_EVENTS_PER_PARAGRAPH,
+    PROMPT_CONTRACT_VERSION,
     SchemaConstrainedEventExtractor,
     StructuredGenerationRejection,
+    prompt_contract_sha256,
 )
 from .models import ProtocolEvent
 from .protocol_events import Paragraph
 
 
-SCHEMA_VERSION = "mdmeta.llm-protocol-batch.v6"
+SCHEMA_VERSION = "mdmeta.llm-protocol-batch.v7"
 RESPONSE_SCHEMA_VERSION = "mdmeta.llm-event-response.v3"
 RESPONSE_SCHEMA_FILENAME = "llm-event-response-v3.schema.json"
 FULLTEXT_URL = "https://www.ebi.ac.uk/europepmc/webservices/rest/{document_id}/fullTextXML"
@@ -502,6 +504,8 @@ def run_model_batch(
                     "schema_version": SCHEMA_VERSION,
                     "response_schema_version": RESPONSE_SCHEMA_VERSION,
                     "response_schema_sha256": response_schema_sha256,
+                    "prompt_contract_version": PROMPT_CONTRACT_VERSION,
+                    "prompt_contract_sha256": prompt_contract_sha256(),
                     "status": "running",
                     "task_count_total": len(tasks),
                     "task_count_classified": len(task_results),
@@ -572,6 +576,8 @@ def run_model_batch(
     return {
         "response_schema_version": RESPONSE_SCHEMA_VERSION,
         "response_schema_sha256": response_schema_sha256,
+        "prompt_contract_version": PROMPT_CONTRACT_VERSION,
+        "prompt_contract_sha256": prompt_contract_sha256(),
         "task_count": len(tasks),
         "task_count_classified": len(task_results),
         "classification_counts": dict(sorted(classifications.items())),
@@ -642,6 +648,8 @@ def compact_summary(result: dict[str, Any]) -> dict[str, Any]:
                 "determinism_check",
                 "response_schema_version",
                 "response_schema_sha256",
+                "prompt_contract_version",
+                "prompt_contract_sha256",
             )
         },
         "result_sha256": result.get("result_sha256"),

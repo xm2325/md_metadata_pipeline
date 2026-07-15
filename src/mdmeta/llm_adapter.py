@@ -10,11 +10,56 @@ from typing import Any, Protocol
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator
 
+from .benchmark import canonical_sha256
 from .models import EventType, Evidence, ProtocolEvent
 from .protocol_events import Paragraph
 
 
 MAX_EVENTS_PER_PARAGRAPH = 16
+PROMPT_CONTRACT_VERSION = "mdmeta.protocol-event-prompt.v1"
+PROMPT_PARAGRAPH_BLOCK_FORMAT = "[paragraph_id={paragraph_id}; section={section}]\n{text}"
+PROMPT_INSTRUCTION = (
+    "Extract only explicitly stated molecular-dynamics protocol events. "
+    "Do not infer missing values and do not use outside knowledge. "
+    "For each event, copy event_type_raw_text as the exact phrase that supports the "
+    "declared event_type; the phase label must match that phrase. Group attributes that "
+    "explicitly describe the same phase into one event. Never emit a separate phase-only "
+    "or duplicate event when an attributed event describes that phase, and never return an "
+    "event with all protocol attributes null. For the chosen quote, populate every supported "
+    "protocol attribute that it explicitly states: duration, temperature, pressure, "
+    "timestep, ensemble, restraints and replicates. For example, copy '80 ns' into duration, "
+    "'NPT' into ensemble and 'no restrictions' into restraints instead of leaving those "
+    "fields null. Do not split one explicitly linked phase description across multiple "
+    "events merely to shorten the quote. If a quote states MD or simulation details but does "
+    "not name a supported phase, use unknown and copy the exact MD or simulation phrase as "
+    "event_type_raw_text. "
+    "For each event, copy one exact, contiguous evidence quote from one supplied paragraph. "
+    "The quote itself must contain every non-null numeric raw_text, ensemble and restraints "
+    "value returned for that event; use the shortest exact source span that contains them. "
+    "Provide zero-based character offsets relative to that paragraph: start_char is the "
+    "index of the quote's first character and end_char is the exclusive index immediately "
+    "after its last character. Do not return offsets for only an attribute or a fragment of "
+    "the quote. For every numeric field, copy the exact numeric-unit expression into "
+    "raw_text and also return its parsed value and unit. Set every unstated or unsupported "
+    "attribute to null; never invent placeholders such as 'none'. Do not attach an attribute "
+    "from another sentence unless the single contiguous quote contains both statements and "
+    "the wording explicitly links them to the same phase. Return an empty events list when "
+    "no supported event is present."
+)
+
+
+def prompt_contract_sha256() -> str:
+    """Commit the source-independent instruction and paragraph serialization contract."""
+
+    return canonical_sha256(
+        {
+            "schema_version": PROMPT_CONTRACT_VERSION,
+            "instruction": PROMPT_INSTRUCTION,
+            "paragraph_block_format": PROMPT_PARAGRAPH_BLOCK_FORMAT,
+            "paragraph_separator": "\n\n",
+            "source_heading": "SOURCE PARAGRAPHS",
+        }
+    )
 
 
 class StructuredBackend(Protocol):
@@ -636,38 +681,14 @@ class SchemaConstrainedEventExtractor:
     @staticmethod
     def build_prompt(paragraphs: list[Paragraph]) -> str:
         blocks = "\n\n".join(
-            f"[paragraph_id={paragraph.paragraph_id}; section={paragraph.section}]\n{paragraph.text}"
+            PROMPT_PARAGRAPH_BLOCK_FORMAT.format(
+                paragraph_id=paragraph.paragraph_id,
+                section=paragraph.section,
+                text=paragraph.text,
+            )
             for paragraph in paragraphs
         )
-        return (
-            "Extract only explicitly stated molecular-dynamics protocol events. "
-            "Do not infer missing values and do not use outside knowledge. "
-            "For each event, copy event_type_raw_text as the exact phrase that supports the "
-            "declared event_type; the phase label must match that phrase. Group attributes that "
-            "explicitly describe the same phase into one event. Never emit a separate phase-only "
-            "or duplicate event when an attributed event describes that phase, and never return an "
-            "event with all protocol attributes null. For the chosen quote, populate every supported "
-            "protocol attribute that it explicitly states: duration, temperature, pressure, "
-            "timestep, ensemble, restraints and replicates. For example, copy '80 ns' into duration, "
-            "'NPT' into ensemble and 'no restrictions' into restraints instead of leaving those "
-            "fields null. Do not split one explicitly linked phase description across multiple "
-            "events merely to shorten the quote. If a quote states MD or simulation details but does "
-            "not name a supported phase, use unknown and copy the exact MD or simulation phrase as "
-            "event_type_raw_text. "
-            "For each event, copy one exact, contiguous evidence quote from one supplied paragraph. "
-            "The quote itself must contain every non-null numeric raw_text, ensemble and restraints "
-            "value returned for that event; use the shortest exact source span that contains them. "
-            "Provide zero-based character offsets relative to that paragraph: start_char is the "
-            "index of the quote's first character and end_char is the exclusive index immediately "
-            "after its last character. Do not return offsets for only an attribute or a fragment of "
-            "the quote. For every numeric field, copy the exact numeric-unit expression into "
-            "raw_text and also return its parsed value and unit. Set every unstated or unsupported "
-            "attribute to null; never invent placeholders such as 'none'. Do not attach an attribute "
-            "from another sentence unless the single contiguous quote contains both statements and "
-            "the wording explicitly links them to the same phase. Return an empty events list when "
-            "no supported event is present.\n\n"
-            f"SOURCE PARAGRAPHS\n{blocks}"
-        )
+        return f"{PROMPT_INSTRUCTION}\n\nSOURCE PARAGRAPHS\n{blocks}"
 
     @staticmethod
     def _prompt(paragraphs: list[Paragraph]) -> str:

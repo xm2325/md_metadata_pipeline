@@ -25,7 +25,9 @@ from mdmeta.integration import (
 )
 from mdmeta.llm_adapter import (
     LLMEventResponse,
+    PROMPT_CONTRACT_VERSION,
     SchemaConstrainedEventExtractor,
+    prompt_contract_sha256,
 )
 from mdmeta.llm_batch import (
     RESPONSE_SCHEMA_FILENAME,
@@ -90,6 +92,10 @@ def _validated_event_map(
         committed_response_schema
     ):
         raise ValueError("model result response-schema commitment is invalid")
+    if batch.get("prompt_contract_version") != PROMPT_CONTRACT_VERSION:
+        raise ValueError("model result prompt-contract version is unsupported")
+    if batch.get("prompt_contract_sha256") != prompt_contract_sha256():
+        raise ValueError("model result prompt-contract commitment is invalid")
     tasks = batch.get("tasks")
     if not isinstance(tasks, list):
         raise ValueError("model result does not contain task-level predictions")

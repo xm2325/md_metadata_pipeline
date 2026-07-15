@@ -34,6 +34,11 @@ The repository now has a strict gold-reference gate for two independent, source-
 submissions, explicit reviewed-zero states, item-level adjudication and a label-free public freeze
 receipt. Actions validates only synthetic labels; this infrastructure does not change the 0/20
 human-annotation progress.
+The next model-batch contract also records a source-independent prompt commitment. After a real
+scale80 GPU/CPU run, an executable freeze will bind the model snapshot, prompt, response schema,
+decoding configuration, normalisation and evaluation code; only that freeze plus the label-free
+human-reference receipt can authorize a private gold20 inference manifest. No scale80 or gold20
+model result has been generated yet.
 
 Version 0.3 added a phase-aware protocol-event schema and PDBe, UniProt, and SIFTS-derived validation states.
 

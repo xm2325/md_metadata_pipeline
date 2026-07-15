@@ -25,7 +25,7 @@ A proposed event enters the pipeline only after its phase, quote and at least on
 
 The original structured response and its hash remain unchanged. A candidate with a supported phase and at least one valid attribute may survive conservative removal of unsupported attributes; the private result records candidate indices, candidate hashes, repairs and rejection reason codes. A candidate with no valid attribute is rejected. One rejected candidate does not erase an independently valid candidate from the same schema-valid response. A structurally invalid response is still rejected as a whole.
 
-Batch result schema v6 also isolates an unclean completion to its own task. A token-limited,
+Batch result schema v7 also isolates an unclean completion to its own task. A token-limited,
 missing, or non-strict-JSON response is retained privately as raw text (or an explicit null), bound
 to a SHA-256 commitment, and classified as `generation_rejected`; valid peer responses in the
 same inference batch continue through validation. Compact summaries contain only aggregate stable
@@ -43,11 +43,17 @@ An incorrect `event_type_raw_text` can be repaired only when it is an exact subs
 - timestep: fs, ps;
 - replicate counts: integers or English words one through ten.
 
-The adapter currently treats one exact quote as the evidence unit for one event. Cross-paragraph relation extraction is not accepted. Response schema v3 permits at most 16 candidate events from one paragraph, preventing unbounded schema-constrained enumeration. Batch result schema v6 distinguishes fully accepted tasks from `accepted_with_evidence_rejections` and `generation_rejected`, and publishes only aggregate reason counts in compact summaries. The cap is enforced by the schema but its numeric value is deliberately absent from the prompt because a completed Roihu gate showed that a numeric prompt hint encouraged cap-filling output.
+The adapter currently treats one exact quote as the evidence unit for one event. Cross-paragraph relation extraction is not accepted. Response schema v3 permits at most 16 candidate events from one paragraph, preventing unbounded schema-constrained enumeration. Batch result schema v7 distinguishes fully accepted tasks from `accepted_with_evidence_rejections` and `generation_rejected`, and publishes only aggregate reason counts in compact summaries. The cap is enforced by the schema but its numeric value is deliberately absent from the prompt because a completed Roihu gate showed that a numeric prompt hint encouraged cap-filling output.
 
 ## Prompt rule
 
 The generated prompt instructs the model to extract only explicit MD protocol events, avoid outside knowledge, return exact paragraph-relative offsets, and return an empty list when no supported event is present. It also forbids phase-only or duplicate events, requires at least one supported protocol attribute per event, and requires every supported attribute explicitly stated in the chosen quote to be populated instead of silently omitted.
+
+The source-independent instruction, paragraph serialization format, separator and source heading
+form `mdmeta.protocol-event-prompt.v1`. Batch v7 records its canonical SHA-256 in the checkpoint,
+private result and compact summary. CPU replay rejects a missing or changed prompt-contract
+commitment before integrating any event. Per-task prompt hashes remain separate because each one
+also commits the frozen paragraph text.
 
 ## Evaluation rule
 

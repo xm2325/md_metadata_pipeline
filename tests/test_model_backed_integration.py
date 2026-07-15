@@ -6,7 +6,11 @@ from pathlib import Path
 import pytest
 
 from mdmeta.benchmark import canonical_sha256
-from mdmeta.llm_adapter import SchemaConstrainedEventExtractor
+from mdmeta.llm_adapter import (
+    PROMPT_CONTRACT_VERSION,
+    SchemaConstrainedEventExtractor,
+    prompt_contract_sha256,
+)
 from mdmeta.llm_batch import (
     RESPONSE_SCHEMA_FILENAME,
     RESPONSE_SCHEMA_VERSION,
@@ -88,6 +92,8 @@ def test_maps_only_exact_task_bound_events_to_the_jats_paragraph() -> None:
         "batch": {
             "response_schema_version": RESPONSE_SCHEMA_VERSION,
             "response_schema_sha256": _response_schema_sha256(),
+            "prompt_contract_version": PROMPT_CONTRACT_VERSION,
+            "prompt_contract_sha256": prompt_contract_sha256(),
             "tasks": [
                 {
                     "task_id": task_id,
@@ -127,6 +133,12 @@ def test_maps_only_exact_task_bound_events_to_the_jats_paragraph() -> None:
     with pytest.raises(ValueError, match="response-schema commitment"):
         _validated_event_map(prediction, {"PMC1": xml_bytes}, {"PMC1": split})
     prediction["batch"]["response_schema_sha256"] = expected_schema_sha256
+
+    expected_prompt_contract = prediction["batch"]["prompt_contract_sha256"]
+    prediction["batch"]["prompt_contract_sha256"] = "0" * 64
+    with pytest.raises(ValueError, match="prompt-contract commitment"):
+        _validated_event_map(prediction, {"PMC1": xml_bytes}, {"PMC1": split})
+    prediction["batch"]["prompt_contract_sha256"] = expected_prompt_contract
 
     task = prediction["batch"]["tasks"][0]
     expected_candidate_sha256 = task["repairs"][0]["candidate_sha256"]
@@ -178,6 +190,8 @@ def test_schema_invalid_response_cannot_be_relabelled_as_evidence_rejected() -> 
         "batch": {
             "response_schema_version": RESPONSE_SCHEMA_VERSION,
             "response_schema_sha256": _response_schema_sha256(),
+            "prompt_contract_version": PROMPT_CONTRACT_VERSION,
+            "prompt_contract_sha256": prompt_contract_sha256(),
             "tasks": [task],
         },
     }
@@ -234,6 +248,8 @@ def test_generation_rejection_is_committed_and_replayed_as_an_empty_task() -> No
         "batch": {
             "response_schema_version": RESPONSE_SCHEMA_VERSION,
             "response_schema_sha256": _response_schema_sha256(),
+            "prompt_contract_version": PROMPT_CONTRACT_VERSION,
+            "prompt_contract_sha256": prompt_contract_sha256(),
             "tasks": [task],
         },
     }
