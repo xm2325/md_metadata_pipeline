@@ -10,9 +10,16 @@ On 2026-07-15, a complete current-source audit checked the original 60 selected 
 18 ordered reserves: 58 selected payloads still matched, two had drifted, 17 reserves were valid
 and zero rows were unresolved. A deterministic one-generation rebuild replaced only those two
 positions and preserved 60 unique rows and the provisional 30/10/20 layout. This is source-integrity
-evidence, not annotation or accuracy evidence; model-backed 1/5/60 inference against the rebuilt
-pool has not yet been reported. See
+evidence, not annotation or accuracy evidence. See
 [`study/integration_60/SOURCE_POOL_REBUILD_2026-07-15.md`](study/integration_60/SOURCE_POOL_REBUILD_2026-07-15.md).
+
+The subsequent bounded response-v3 Roihu experiment completed its 1 → 5 → 60 GPU/CPU chain. The
+full batch classified 740/740 paragraph tasks with zero generation rejection and produced 66
+evidence-gated model events; CPU integration wrote 60/60 records with zero failures, 62 unique PDB
+identifiers, 69 unique UniProt accessions and 274 residue-mapping segments. These are operational
+coverage and throughput results, not accuracy. Cross-job temperature-zero inference was not
+bitwise deterministic, and the independent dual-human 100-article study remains 0/100. See
+[`study/roihu_llm_60/RUN_2026-07-15.md`](study/roihu_llm_60/RUN_2026-07-15.md).
 
 Version 0.3 added a phase-aware protocol-event schema and PDBe, UniProt, and SIFTS-derived validation states.
 

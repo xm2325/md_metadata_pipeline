@@ -2,11 +2,14 @@
 
 ## Status and purpose
 
-This document is an execution protocol, not a run report. As of 2026-07-15, the repository has a
-successful one-GH200 PyTorch/CUDA infrastructure smoke test, but the model-backed 1-article
-technical gate, 5-article pilot and 60-article frozen batch described below have **not** yet been
-reported as executed. The infrastructure result is documented separately in the
-[2026-07-15 GH200 run report](../study/roihu_gpu_smoke/RUN_2026-07-15.md).
+This document is the execution protocol. Its bounded response-v3 1 → 5 → 60 chain completed on
+2026-07-15: GPU jobs 189325, 189333 and 189353 and CPU integration jobs 189330, 189352 and 189371
+all passed. The 60-article run classified 740/740 tasks with zero generation rejections, and the
+CPU integration produced 60/60 records with zero failures. Commitments, aggregate results,
+preserved failures and reproducibility limits are in the
+[2026-07-15 1 → 5 → 60 run report](../study/roihu_llm_60/RUN_2026-07-15.md). The infrastructure
+smoke result remains documented in the
+[2026-07-15 GH200 smoke report](../study/roihu_gpu_smoke/RUN_2026-07-15.md).
 
 The immediate experiment is designed to produce bounded evidence relevant to EMBL-EBI JR3997:
 
@@ -235,7 +238,7 @@ Proceed to five only when all of the following hold:
   valid SQLite/checksum result; and
 - every evidence rejection or integration failure is explicit rather than silently discarded.
 
-Batch result schema `mdmeta.llm-protocol-batch.v5` performs evidence replay at candidate and
+Batch result schema `mdmeta.llm-protocol-batch.v6` performs evidence replay at candidate and
 attribute granularity after the complete response has passed response schema v3. Response v3
 limits one paragraph to 16 candidate events; this exceeds the observed completed-task maximum of
 11 while preventing unbounded event-array generation. A task may be
