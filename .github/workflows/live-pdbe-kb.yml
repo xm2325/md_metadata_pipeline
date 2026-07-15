@@ -56,22 +56,6 @@ jobs:
           import json
           from pathlib import Path
 
-          def shape(value, depth=0):
-              if depth >= 3:
-                  return type(value).__name__
-              if isinstance(value, dict):
-                  return {
-                      key: shape(item, depth + 1)
-                      for key, item in list(value.items())[:12]
-                  }
-              if isinstance(value, list):
-                  return {
-                      "type": "list",
-                      "length": len(value),
-                      "first": shape(value[0], depth + 1) if value else None,
-                  }
-              return type(value).__name__
-
           payload = json.loads(
               Path("results/live_pdbe_kb/enrichment.json").read_text(encoding="utf-8")
           )
@@ -93,15 +77,23 @@ jobs:
                   f"{len(row['annotations'])} | `{digest[:16]}` |"
               )
           print()
-          print("## Payload shape profile")
+          print("## Provider requests")
           print()
-          print("Only keys, container lengths and value types are shown; full upstream records remain in the run file.")
-          print()
+          print("| PDB | Provider | State | Reason | HTTP | Annotations | Response SHA-256 | Message |")
+          print("|---|---|---|---|---:|---:|---|---|")
           for row in payload["enrichments"]:
-              print(f"### {row['pdb_id']}")
-              print("```json")
-              print(json.dumps(shape(row.get("raw_payload")), indent=2, sort_keys=True))
-              print("```")
+              provider_payloads = (row.get("raw_payload") or {}).get("provider_annotations", {})
+              for request in row["provider_requests"]:
+                  provider_payload = provider_payloads.get(request["provider"])
+                  message = ""
+                  if isinstance(provider_payload, dict) and isinstance(provider_payload.get("message"), str):
+                      message = provider_payload["message"].replace("|", "\\|")[:300]
+                  digest = request["response_sha256"] or ""
+                  print(
+                      f"| {row['pdb_id']} | {request['provider']} | {request['state']} | "
+                      f"`{request['reason']}` | {request['http_status'] or ''} | "
+                      f"{request['annotation_count']} | `{digest[:16]}` | {message} |"
+                  )
           PY
 
       - name: Publish live result on the pull request
