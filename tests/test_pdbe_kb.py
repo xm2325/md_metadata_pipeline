@@ -107,6 +107,48 @@ def test_pdbe_kb_provider_response_can_be_valid_and_empty() -> None:
     assert enrichment.provider_requests[0].reason == "provider_response_contains_no_annotations"
 
 
+def test_pdbe_kb_annotations_with_known_provider_404_remain_validated() -> None:
+    catalogue = {
+        "6vsb": [
+            {"origin": "M-CSA", "labels": ["Catalytic residue"]},
+            {"origin": "WEBnma", "labels": ["mobility"]},
+        ]
+    }
+    provider_payload = {
+        "6vsb": [
+            {
+                "origin": "M-CSA",
+                "annotations": [
+                    {
+                        "label": "Catalytic residue",
+                        "site_residues": [{"chain_id": "A", "residue_number": 1}],
+                    }
+                ],
+            }
+        ]
+    }
+
+    def handler(request):
+        url = str(request.url)
+        if "/WEBnma/" in url:
+            return httpx.Response(
+                404,
+                json={"message": "Requested endpoint does not contain any data"},
+            )
+        if "/M-CSA/" in url:
+            return httpx.Response(200, json=provider_payload)
+        return httpx.Response(200, json=catalogue)
+
+    enrichment = fetch_pdbe_kb_annotations(
+        IdentifierValidator(mock_client(handler)),
+        "6VSB",
+    )
+    assert enrichment.state is ValidationState.VALIDATED
+    assert enrichment.reason == "pdbe_kb_annotations_projected_with_provider_conflicts"
+    assert enrichment.provider_state_counts == {"conflict": 1, "validated": 1}
+    assert len(enrichment.annotations) == 1
+
+
 def test_pdbe_kb_malformed_catalogue_success_is_unresolved() -> None:
     enrichment = fetch_pdbe_kb_annotations(
         IdentifierValidator(
