@@ -36,7 +36,7 @@ The adapter currently treats one exact quote as the evidence unit for one event.
 
 ## Prompt rule
 
-The generated prompt instructs the model to extract only explicit MD protocol events, avoid outside knowledge, return exact paragraph-relative offsets, and return an empty list when no supported event is present.
+The generated prompt instructs the model to extract only explicit MD protocol events, avoid outside knowledge, return exact paragraph-relative offsets, and return an empty list when no supported event is present. It also forbids phase-only or duplicate events, requires at least one supported protocol attribute per event, and requires every supported attribute explicitly stated in the chosen quote to be populated instead of silently omitted.
 
 ## Evaluation rule
 
