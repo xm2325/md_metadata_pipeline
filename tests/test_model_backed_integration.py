@@ -1,16 +1,31 @@
 from __future__ import annotations
 
 import hashlib
+from pathlib import Path
 
 import pytest
 
 from mdmeta.benchmark import canonical_sha256
 from mdmeta.llm_adapter import SchemaConstrainedEventExtractor
+from mdmeta.llm_batch import (
+    RESPONSE_SCHEMA_FILENAME,
+    RESPONSE_SCHEMA_VERSION,
+    load_committed_response_schema,
+)
 from mdmeta.protocol_events import Paragraph
 from scripts.run_model_backed_integration import (
     _prediction_commitment,
     _validated_event_map,
 )
+
+
+ROOT = Path(__file__).parents[1]
+
+
+def _response_schema_sha256() -> str:
+    return canonical_sha256(
+        load_committed_response_schema(ROOT / "schemas" / RESPONSE_SCHEMA_FILENAME)
+    )
 
 
 def _committed_prediction(core: dict) -> dict:
@@ -39,9 +54,10 @@ def test_maps_only_exact_task_bound_events_to_the_jats_paragraph() -> None:
         "events": [
             {
                 "event_type": "production",
+                "event_type_raw_text": "Production",
                 "paragraph_id": "p1",
-                "start_char": 0,
-                "end_char": len(text),
+                "start_char": 3,
+                "end_char": 8,
                 "quote": text,
                 "duration": {"raw_text": "100 ns", "value": 100, "unit": "ns"},
                 "confidence": 0.9,
@@ -65,6 +81,8 @@ def test_maps_only_exact_task_bound_events_to_the_jats_paragraph() -> None:
             "tokenizer_revision": revision,
         },
         "batch": {
+            "response_schema_version": RESPONSE_SCHEMA_VERSION,
+            "response_schema_sha256": _response_schema_sha256(),
             "tasks": [
                 {
                     "task_id": task_id,
@@ -92,7 +110,17 @@ def test_maps_only_exact_task_bound_events_to_the_jats_paragraph() -> None:
 
     key = ("PMC1", "Methods", "p1", context_sha256)
     assert [item.event_id for item in events_by_key[key]] == [event["event_id"]]
+    assert events_by_key[key][0].evidence[0].start_char == 0
+    assert events_by_key[key][0].relation_method.endswith(
+        "unique_exact_quote_offset_repair_v1"
+    )
     assert classifications == {"accepted": 1}
+
+    expected_schema_sha256 = prediction["batch"]["response_schema_sha256"]
+    prediction["batch"]["response_schema_sha256"] = "0" * 64
+    with pytest.raises(ValueError, match="response-schema commitment"):
+        _validated_event_map(prediction, {"PMC1": xml_bytes}, {"PMC1": split})
+    prediction["batch"]["response_schema_sha256"] = expected_schema_sha256
 
     prediction["batch"]["tasks"][0]["context_sha256"] = "0" * 64
     with pytest.raises(ValueError, match="task set differs"):
@@ -134,7 +162,11 @@ def test_schema_invalid_response_cannot_be_relabelled_as_evidence_rejected() -> 
             "revision": revision,
             "tokenizer_revision": revision,
         },
-        "batch": {"tasks": [task]},
+        "batch": {
+            "response_schema_version": RESPONSE_SCHEMA_VERSION,
+            "response_schema_sha256": _response_schema_sha256(),
+            "tasks": [task],
+        },
     }
 
     with pytest.raises(ValueError, match="not schema-valid"):

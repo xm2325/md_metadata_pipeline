@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 
 from mdmeta.benchmark import canonical_sha256
-from mdmeta.llm_adapter import SchemaConstrainedEventExtractor
+from mdmeta.llm_adapter import LLMEventResponse, SchemaConstrainedEventExtractor
 from mdmeta.llm_batch import (
     FrozenArticle,
     fetch_frozen_jats,
@@ -115,6 +115,7 @@ def test_model_batch_classifies_every_task_without_silent_dropping() -> None:
             "events": [
                 {
                     "event_type": "production",
+                    "event_type_raw_text": "Production",
                     "paragraph_id": "p1",
                     "start_char": 0,
                     "end_char": len(accepted_text),
@@ -133,6 +134,7 @@ def test_model_batch_classifies_every_task_without_silent_dropping() -> None:
             "events": [
                 {
                     "event_type": "sampling_interval",
+                    "event_type_raw_text": "sampled",
                     "paragraph_id": "p3",
                     "start_char": 0,
                     "end_char": 5,
@@ -156,6 +158,7 @@ def test_model_batch_classifies_every_task_without_silent_dropping() -> None:
         extractor=extractor,
         articles=[article],
         xml_by_document={"PMC7": xml_bytes},
+        response_schema=LLMEventResponse.model_json_schema(),
         batch_size=3,
         determinism_check=False,
         checkpoint=checkpoints.append,
@@ -185,5 +188,52 @@ def test_model_batch_classifies_every_task_without_silent_dropping() -> None:
         "event_bearing_paragraph_count": 1,
     }
     assert len(backend.calls) == 1
+    assert result["response_schema_sha256"] == canonical_sha256(backend.calls[0][1])
     assert checkpoints[-1]["task_count_classified"] == 3
+    assert checkpoints[-1]["response_schema_sha256"] == result["response_schema_sha256"]
     assert checkpoints[-1]["status"] == "running"
+
+
+def test_model_batch_keeps_raw_response_when_unique_quote_offsets_are_repaired() -> None:
+    text = "Production MD simulations were run for 100 ns."
+    xml_bytes = f"""\
+<article><body><sec><title>Methods</title><p id="p1">{text}</p></sec></body></article>
+""".encode()
+    article = FrozenArticle.model_validate(_article("PMC8", xml_bytes))
+    response = {
+        "events": [
+            {
+                "event_type": "production",
+                "event_type_raw_text": "Production",
+                "paragraph_id": "p1",
+                "start_char": 17,
+                "end_char": 25,
+                "quote": text,
+                "duration": {"raw_text": "100 ns", "value": 100, "unit": "ns"},
+                "confidence": 0.9,
+            }
+        ]
+    }
+    backend = _FakeBatchBackend([response])
+    extractor = SchemaConstrainedEventExtractor(backend, "fake-pinned-model")
+
+    result = run_model_batch(
+        backend=backend,
+        extractor=extractor,
+        articles=[article],
+        xml_by_document={"PMC8": xml_bytes},
+        response_schema=LLMEventResponse.model_json_schema(),
+        batch_size=1,
+        determinism_check=False,
+    )
+
+    task = result["tasks"][0]
+    assert task["classification"] == "accepted"
+    assert task["response"] == response
+    assert task["response_sha256"] == canonical_sha256(response)
+    evidence = task["events"][0]["evidence"][0]
+    assert evidence["start_char"] == 0
+    assert evidence["end_char"] == len(text)
+    assert task["events"][0]["relation_method"].endswith(
+        "unique_exact_quote_offset_repair_v1"
+    )

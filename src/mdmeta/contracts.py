@@ -10,12 +10,14 @@ from pydantic import BaseModel
 
 from .file_backed import FileBackedMDReport
 from .integration import IntegratedMDRecord
+from .llm_adapter import LLMEventResponse
 from .release import ReleaseManifest
 
 
 CONTRACTS: dict[str, type[BaseModel]] = {
     "file-backed-md-record-v1.schema.json": FileBackedMDReport,
     "integrated-md-record-v1.schema.json": IntegratedMDRecord,
+    "llm-event-response-v2.schema.json": LLMEventResponse,
     "mdmeta-dataset-release-v1.schema.json": ReleaseManifest,
 }
 

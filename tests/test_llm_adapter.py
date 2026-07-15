@@ -107,6 +107,7 @@ def _payload(paragraph):
         "events": [
             {
                 "event_type": "production",
+                "event_type_raw_text": "production simulation",
                 "paragraph_id": "p1",
                 "start_char": 0,
                 "end_char": len(paragraph.text),
@@ -140,15 +141,240 @@ def test_accepts_exact_evidence_and_normalizes_units():
     assert event.evidence[0].quote == paragraph.text
     assert event.relation_method == "schema_constrained_llm:fake-model:exact_span_v1"
     assert "Do not infer missing values" in backend.prompt
+    assert "event_type_raw_text" in backend.prompt
+    assert "never invent placeholders" in backend.prompt
     assert "events" in backend.schema["properties"]
 
 
-def test_rejects_quote_that_does_not_match_offsets():
+def test_repairs_offsets_for_one_unique_exact_quote_without_mutating_response():
     paragraph = _paragraph()
     payload = _payload(paragraph)
     payload["events"][0]["start_char"] = 1
-    with pytest.raises(EvidenceIntegrityError, match="quote"):
+    payload["events"][0]["end_char"] = 9
+    original = json.loads(json.dumps(payload))
+
+    event = SchemaConstrainedEventExtractor(FakeBackend(payload), "fake").extract([paragraph])[0]
+
+    assert event.evidence[0].start_char == 0
+    assert event.evidence[0].end_char == len(paragraph.text)
+    assert event.relation_method.endswith("unique_exact_quote_offset_repair_v1")
+    assert payload == original
+
+
+def test_rejects_quote_that_is_not_present_in_paragraph():
+    paragraph = _paragraph()
+    payload = _payload(paragraph)
+    payload["events"][0]["quote"] = "Production ran for 100 ns."
+    with pytest.raises(EvidenceIntegrityError, match="not present"):
         SchemaConstrainedEventExtractor(FakeBackend(payload), "fake").extract([paragraph])
+
+
+def test_rejects_ambiguous_quote_when_offsets_do_not_disambiguate():
+    quote = "Production MD ran for 100 ns."
+    paragraph = Paragraph("PMC1", "Methods", "p1", f"{quote} Then {quote}")
+    payload = {
+        "events": [
+            {
+                "event_type": "production",
+                "event_type_raw_text": "Production",
+                "paragraph_id": "p1",
+                "start_char": 1,
+                "end_char": 9,
+                "quote": quote,
+                "duration": {"raw_text": "100 ns", "value": 100, "unit": "ns"},
+                "confidence": 0.9,
+            }
+        ]
+    }
+    with pytest.raises(EvidenceIntegrityError, match="ambiguous"):
+        SchemaConstrainedEventExtractor(FakeBackend(payload), "fake").extract([paragraph])
+
+
+def test_valid_offsets_disambiguate_a_repeated_exact_quote():
+    quote = "Production MD ran for 100 ns."
+    paragraph = Paragraph("PMC1", "Methods", "p1", f"{quote} Then {quote}")
+    start = len(quote) + len(" Then ")
+    payload = {
+        "events": [
+            {
+                "event_type": "production",
+                "event_type_raw_text": "Production",
+                "paragraph_id": "p1",
+                "start_char": start,
+                "end_char": start + len(quote),
+                "quote": quote,
+                "duration": {"raw_text": "100 ns", "value": 100, "unit": "ns"},
+                "confidence": 0.9,
+            }
+        ]
+    }
+
+    event = SchemaConstrainedEventExtractor(FakeBackend(payload), "fake").extract([paragraph])[0]
+
+    assert event.evidence[0].start_char == start
+    assert event.relation_method.endswith("exact_span_v1")
+
+
+def test_rejects_event_type_that_disagrees_with_exact_source_cue():
+    paragraph = _paragraph()
+    payload = _payload(paragraph)
+    payload["events"][0]["event_type"] = "minimisation"
+    with pytest.raises(EvidenceIntegrityError, match="event_type disagrees"):
+        SchemaConstrainedEventExtractor(FakeBackend(payload), "fake").extract([paragraph])
+
+
+@pytest.mark.parametrize(
+    ("event_type", "event_type_raw_text", "text"),
+    [
+        ("production", "reproduction", "Protein reproduction was observed for 100 ns."),
+        ("heating", "wheat", "The wheat model was observed for 100 ns."),
+    ],
+)
+def test_event_type_cues_require_word_boundaries(event_type, event_type_raw_text, text):
+    paragraph = Paragraph("PMC1", "Methods", "p1", text)
+    payload = {
+        "events": [
+            {
+                "event_type": event_type,
+                "event_type_raw_text": event_type_raw_text,
+                "paragraph_id": "p1",
+                "start_char": 0,
+                "end_char": len(text),
+                "quote": text,
+                "duration": {"raw_text": "100 ns", "value": 100, "unit": "ns"},
+                "confidence": 0.9,
+            }
+        ]
+    }
+    with pytest.raises(EvidenceIntegrityError, match="event_type disagrees"):
+        SchemaConstrainedEventExtractor(FakeBackend(payload), "fake").extract([paragraph])
+
+
+def test_generic_production_word_requires_molecular_simulation_context():
+    text = "Protein production continued for 100 ns."
+    paragraph = Paragraph("PMC1", "Methods", "p1", text)
+    payload = {
+        "events": [
+            {
+                "event_type": "production",
+                "event_type_raw_text": "production",
+                "paragraph_id": "p1",
+                "start_char": 0,
+                "end_char": len(text),
+                "quote": text,
+                "duration": {"raw_text": "100 ns", "value": 100, "unit": "ns"},
+                "confidence": 0.9,
+            }
+        ]
+    }
+    with pytest.raises(EvidenceIntegrityError, match="simulation context"):
+        SchemaConstrainedEventExtractor(FakeBackend(payload), "fake").extract([paragraph])
+
+
+def test_generic_md_execution_phrase_does_not_prove_production_phase():
+    text = "Equilibration MD simulations were performed for 100 ns."
+    paragraph = Paragraph("PMC1", "Methods", "p1", text)
+    payload = {
+        "events": [
+            {
+                "event_type": "production",
+                "event_type_raw_text": "MD simulations were performed",
+                "paragraph_id": "p1",
+                "start_char": 0,
+                "end_char": len(text),
+                "quote": text,
+                "duration": {"raw_text": "100 ns", "value": 100, "unit": "ns"},
+                "confidence": 0.9,
+            }
+        ]
+    }
+    with pytest.raises(EvidenceIntegrityError, match="event_type disagrees"):
+        SchemaConstrainedEventExtractor(FakeBackend(payload), "fake").extract([paragraph])
+
+
+@pytest.mark.parametrize(
+    ("event_type", "event_type_raw_text", "text", "raw_duration"),
+    [
+        ("heating", "heat the system", "We heat the system for 100 ps.", "100 ps"),
+        (
+            "equilibration",
+            "equilibrium phase",
+            "The equilibrium phase lasted 100 ps.",
+            "100 ps",
+        ),
+        (
+            "sampling_interval",
+            "stored",
+            "Coordinates were stored every 10 ps.",
+            "10 ps",
+        ),
+        (
+            "sampling_interval",
+            "collected",
+            "Coordinates were collected every 10 ps.",
+            "10 ps",
+        ),
+    ],
+)
+def test_accepts_explicit_conservative_phase_synonyms(
+    event_type,
+    event_type_raw_text,
+    text,
+    raw_duration,
+):
+    paragraph = Paragraph("PMC1", "Methods", "p1", text)
+    value, unit = raw_duration.split()
+    payload = {
+        "events": [
+            {
+                "event_type": event_type,
+                "event_type_raw_text": event_type_raw_text,
+                "paragraph_id": "p1",
+                "start_char": 0,
+                "end_char": len(text),
+                "quote": text,
+                "duration": {"raw_text": raw_duration, "value": int(value), "unit": unit},
+                "confidence": 0.9,
+            }
+        ]
+    }
+
+    event = SchemaConstrainedEventExtractor(FakeBackend(payload), "fake").extract([paragraph])[0]
+
+    assert event.event_type.value == event_type
+
+
+@pytest.mark.parametrize("restraints", ["", "   "])
+def test_rejects_blank_restraints(restraints):
+    paragraph = _paragraph()
+    payload = _payload(paragraph)
+    payload["events"][0]["restraints"] = restraints
+    with pytest.raises(ValueError, match="restraints"):
+        SchemaConstrainedEventExtractor(FakeBackend(payload), "fake").extract([paragraph])
+
+
+def test_accepts_nonblank_restraints_only_when_exactly_present_in_quote():
+    text = "Production MD was run for 100 ns with no restrictions."
+    paragraph = Paragraph("PMC1", "Methods", "p1", text)
+    payload = {
+        "events": [
+            {
+                "event_type": "production",
+                "event_type_raw_text": "Production",
+                "paragraph_id": "p1",
+                "start_char": 0,
+                "end_char": len(text),
+                "quote": text,
+                "duration": {"raw_text": "100 ns", "value": 100, "unit": "ns"},
+                "restraints": "no restrictions",
+                "confidence": 0.9,
+            }
+        ]
+    }
+
+    event = SchemaConstrainedEventExtractor(FakeBackend(payload), "fake").extract([paragraph])[0]
+
+    assert event.restraints == "no restrictions"
 
 
 def test_rejects_quantity_value_inconsistent_with_raw_text():

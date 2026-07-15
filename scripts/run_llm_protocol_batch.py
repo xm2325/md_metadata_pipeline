@@ -20,10 +20,12 @@ from mdmeta import user_agent
 from mdmeta.benchmark import canonical_sha256
 from mdmeta.llm_adapter import SchemaConstrainedEventExtractor, VLLMStructuredBackend
 from mdmeta.llm_batch import (
+    RESPONSE_SCHEMA_FILENAME,
     SCHEMA_VERSION,
     atomic_write_json,
     compact_summary,
     fetch_frozen_jats,
+    load_committed_response_schema,
     run_model_batch,
     select_articles,
     validate_sha256,
@@ -173,6 +175,9 @@ def main() -> int:
     try:
         _validate_source_identity(args.source_commit, args.source_archive_sha256)
         source_payload = json.loads(args.source_manifest.read_text(encoding="utf-8"))
+        response_schema = load_committed_response_schema(
+            Path(__file__).resolve().parents[1] / "schemas" / RESPONSE_SCHEMA_FILENAME
+        )
         all_articles = validate_source_manifest(source_payload)
         articles = select_articles(
             all_articles,
@@ -278,6 +283,7 @@ def main() -> int:
             extractor=extractor,
             articles=articles,
             xml_by_document=xml_by_document,
+            response_schema=response_schema,
             batch_size=args.batch_size,
             determinism_check=not args.no_determinism_check,
             checkpoint=checkpoint,

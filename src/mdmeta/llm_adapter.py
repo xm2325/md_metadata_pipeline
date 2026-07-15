@@ -7,7 +7,7 @@ import math
 import re
 from typing import Any, Protocol
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from .models import EventType, Evidence, ProtocolEvent
 from .protocol_events import Paragraph
@@ -287,7 +287,10 @@ class VLLMStructuredBackend:
 class RawQuantity(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    raw_text: str = Field(min_length=1)
+    raw_text: str = Field(
+        min_length=1,
+        description="Exact numeric-unit substring copied from this event's evidence quote.",
+    )
     value: float
     unit: str = Field(min_length=1)
 
@@ -295,26 +298,65 @@ class RawQuantity(BaseModel):
 class RawCount(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    raw_text: str = Field(min_length=1)
+    raw_text: str = Field(
+        min_length=1,
+        description="Exact count substring copied from this event's evidence quote.",
+    )
     value: int = Field(ge=1)
 
 
 class LLMEventCandidate(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    event_type: EventType
-    paragraph_id: str = Field(min_length=1)
-    start_char: int = Field(ge=0)
-    end_char: int = Field(gt=0)
-    quote: str = Field(min_length=1)
+    event_type: EventType = Field(
+        description="Protocol phase explicitly supported by event_type_raw_text in the quote."
+    )
+    event_type_raw_text: str = Field(
+        min_length=1,
+        description="Exact phrase in the quote that supports the declared protocol phase.",
+    )
+    paragraph_id: str = Field(
+        min_length=1,
+        description="Identifier of the one supplied paragraph containing the quote.",
+    )
+    start_char: int = Field(
+        ge=0,
+        description="Zero-based index of the quote's first character in the paragraph.",
+    )
+    end_char: int = Field(
+        gt=0,
+        description="Exclusive zero-based index immediately after the quote in the paragraph.",
+    )
+    quote: str = Field(
+        min_length=1,
+        description=(
+            "One exact contiguous paragraph substring containing the phase cue and every non-null "
+            "attribute's source text."
+        ),
+    )
     duration: RawQuantity | None = None
     temperature: RawQuantity | None = None
     pressure: RawQuantity | None = None
     timestep: RawQuantity | None = None
-    ensemble: str | None = None
-    restraints: str | None = None
+    ensemble: str | None = Field(
+        default=None,
+        description="Exact supported ensemble token copied from the evidence quote.",
+    )
+    restraints: str | None = Field(
+        default=None,
+        min_length=1,
+        pattern=r"\S",
+        description="Exact non-blank restraint wording copied from the evidence quote.",
+    )
     replicates: RawCount | None = None
     confidence: float = Field(ge=0, le=1)
+
+    @field_validator("restraints")
+    @classmethod
+    def reject_blank_restraints(cls, value: str | None) -> str | None:
+        if value is not None and not value.strip():
+            raise ValueError("restraints must be null or non-blank exact source text")
+        return value
 
 
 class LLMEventResponse(BaseModel):
@@ -345,6 +387,45 @@ _COUNT_WORDS = {
     "ten": 10,
 }
 _ALLOWED_ENSEMBLES = {"NVE", "NVT", "NPT", "NPAT", "NPH"}
+_EVENT_TYPE_CUES = {
+    EventType.MINIMISATION: re.compile(
+        r"\bminimi[sz](?:e|ed|ation|ing)?\b",
+        re.IGNORECASE,
+    ),
+    EventType.HEATING: re.compile(
+        r"\bheat(?:ed|ing)\b|\bheat\s+(?:the\s+)?(?:system|structure|model|sample)\b|"
+        r"\btemperature\s+ramp(?:ed|ing)?\b",
+        re.IGNORECASE,
+    ),
+    EventType.EQUILIBRATION: re.compile(
+        r"\bequilibrat(?:e|ed|ion|ing)\b|\bequilibrium(?:\s+phase)?\b",
+        re.IGNORECASE,
+    ),
+    EventType.PRODUCTION: re.compile(
+        r"\bproduction(?:\s+(?:phase|run|simulation))?\b",
+        re.IGNORECASE,
+    ),
+    EventType.ANALYSIS_WINDOW: re.compile(
+        r"\b(?:last|final)\s+\d+(?:\.\d+)?\s*(?:fs|ps|ns|us|µs|μs|ms)\b|"
+        r"\bused\s+for\s+(?:further\s+)?analys(?:is|es)\b",
+        re.IGNORECASE,
+    ),
+    EventType.SAMPLING_INTERVAL: re.compile(
+        r"\b(?:saved|written|recorded|sampled|stored|collected|output)\b",
+        re.IGNORECASE,
+    ),
+    EventType.UNKNOWN: re.compile(
+        r"\bmolecular\s+dynamics\b|\bMD\b|\bsimulations?\b|\btrajector(?:y|ies)\b",
+        re.IGNORECASE,
+    ),
+}
+_EVENT_TYPE_QUOTE_CONTEXT = {
+    EventType.PRODUCTION: re.compile(
+        r"\b(?:molecular\s+dynamics|MD|simulations?|trajector(?:y|ies))\b|"
+        r"\bproduction\s+(?:phase|run|simulation)\b",
+        re.IGNORECASE,
+    ),
+}
 
 
 def _canonical_unit(unit: str) -> str:
@@ -418,6 +499,42 @@ def _replicate_count(count: RawCount, quote: str) -> int:
     return parsed
 
 
+def _resolve_exact_quote_span(
+    text: str,
+    *,
+    start_char: int,
+    end_char: int,
+    quote: str,
+) -> tuple[int, int, bool]:
+    """Return a source-exact span, repairing only a unique exact quote occurrence.
+
+    Model-supplied offsets are retained when they already identify the quote exactly. Otherwise,
+    the quote must occur exactly once in the referenced paragraph. No case, whitespace, Unicode or
+    fuzzy normalization is allowed, and an ambiguous repeated quote is rejected.
+    """
+
+    if (
+        start_char < end_char <= len(text)
+        and end_char - start_char == len(quote)
+        and text[start_char:end_char] == quote
+    ):
+        return start_char, end_char, False
+
+    occurrences: list[int] = []
+    offset = text.find(quote)
+    while offset != -1:
+        occurrences.append(offset)
+        if len(occurrences) > 1:
+            raise EvidenceIntegrityError(
+                "evidence quote has ambiguous exact occurrences in the paragraph"
+            )
+        offset = text.find(quote, offset + 1)
+    if not occurrences:
+        raise EvidenceIntegrityError("evidence quote is not present in the paragraph")
+    resolved_start = occurrences[0]
+    return resolved_start, resolved_start + len(quote), True
+
+
 class SchemaConstrainedEventExtractor:
     """Accept only model events that pass exact evidence and deterministic unit checks."""
 
@@ -434,10 +551,23 @@ class SchemaConstrainedEventExtractor:
         return (
             "Extract only explicitly stated molecular-dynamics protocol events. "
             "Do not infer missing values and do not use outside knowledge. "
-            "For each event, copy one exact evidence quote from one supplied paragraph and provide "
-            "zero-based character offsets relative to that paragraph. For every numeric field, "
-            "copy the exact numeric-unit expression into raw_text and also return its parsed value "
-            "and unit. Return an empty events list when no supported event is present.\n\n"
+            "For each event, copy event_type_raw_text as the exact phrase that supports the "
+            "declared event_type; the phase label must match that phrase. Group attributes that "
+            "explicitly describe the same phase into one event. If a quote states MD or simulation "
+            "details but does not name a supported phase, use unknown and copy the exact MD or "
+            "simulation phrase as event_type_raw_text. "
+            "For each event, copy one exact, contiguous evidence quote from one supplied paragraph. "
+            "The quote itself must contain every non-null numeric raw_text, ensemble and restraints "
+            "value returned for that event; use the shortest exact source span that contains them. "
+            "Provide zero-based character offsets relative to that paragraph: start_char is the "
+            "index of the quote's first character and end_char is the exclusive index immediately "
+            "after its last character. Do not return offsets for only an attribute or a fragment of "
+            "the quote. For every numeric field, copy the exact numeric-unit expression into "
+            "raw_text and also return its parsed value and unit. Set every unstated or unsupported "
+            "attribute to null; never invent placeholders such as 'none'. Do not attach an attribute "
+            "from another sentence unless the single contiguous quote contains both statements and "
+            "the wording explicitly links them to the same phase. Return an empty events list when "
+            "no supported event is present.\n\n"
             f"SOURCE PARAGRAPHS\n{blocks}"
         )
 
@@ -463,10 +593,27 @@ class SchemaConstrainedEventExtractor:
             paragraph = by_id.get(candidate.paragraph_id)
             if paragraph is None:
                 raise EvidenceIntegrityError(f"unknown paragraph_id: {candidate.paragraph_id}")
-            if candidate.end_char > len(paragraph.text):
-                raise EvidenceIntegrityError("evidence range exceeds paragraph length")
-            if paragraph.text[candidate.start_char : candidate.end_char] != candidate.quote:
-                raise EvidenceIntegrityError("evidence quote does not match source offsets")
+            start_char, end_char, offset_repaired = _resolve_exact_quote_span(
+                paragraph.text,
+                start_char=candidate.start_char,
+                end_char=candidate.end_char,
+                quote=candidate.quote,
+            )
+            if candidate.event_type_raw_text not in candidate.quote:
+                raise EvidenceIntegrityError(
+                    "event_type_raw_text is not present in the evidence quote"
+                )
+            if _EVENT_TYPE_CUES[candidate.event_type].search(
+                candidate.event_type_raw_text
+            ) is None:
+                raise EvidenceIntegrityError(
+                    "event_type disagrees with its exact source cue"
+                )
+            required_context = _EVENT_TYPE_QUOTE_CONTEXT.get(candidate.event_type)
+            if required_context is not None and required_context.search(candidate.quote) is None:
+                raise EvidenceIntegrityError(
+                    "event_type cue lacks explicit molecular-simulation context"
+                )
 
             attributes_present = any(
                 value is not None
@@ -513,8 +660,8 @@ class SchemaConstrainedEventExtractor:
                 [
                     paragraph.document_id,
                     paragraph.paragraph_id,
-                    str(candidate.start_char),
-                    str(candidate.end_char),
+                    str(start_char),
+                    str(end_char),
                     candidate.event_type.value,
                     repr(sorted(normalized.items())),
                     ensemble or "",
@@ -530,8 +677,8 @@ class SchemaConstrainedEventExtractor:
                 section=paragraph.section,
                 paragraph_id=paragraph.paragraph_id,
                 quote=candidate.quote,
-                start_char=candidate.start_char,
-                end_char=candidate.end_char,
+                start_char=start_char,
+                end_char=end_char,
                 context_sha256=hashlib.sha256(paragraph.text.encode("utf-8")).hexdigest(),
             )
             events.append(
@@ -546,7 +693,14 @@ class SchemaConstrainedEventExtractor:
                     restraints=candidate.restraints,
                     replicates=normalized["replicates"],
                     evidence=[evidence],
-                    relation_method=f"schema_constrained_llm:{self.model_id}:exact_span_v1",
+                    relation_method=(
+                        f"schema_constrained_llm:{self.model_id}:"
+                        + (
+                            "unique_exact_quote_offset_repair_v1"
+                            if offset_repaired
+                            else "exact_span_v1"
+                        )
+                    ),
                     confidence=candidate.confidence,
                 )
             )

@@ -23,6 +23,16 @@ def test_committed_contract_schemas_are_current_and_strict() -> None:
         "integrated-md-record-v1"
     )
     assert integrated["$defs"]["Evidence"]["additionalProperties"] is False
+    llm_response = json.loads(
+        (ROOT / "schemas" / "llm-event-response-v2.schema.json").read_text()
+    )
+    candidate = llm_response["$defs"]["LLMEventCandidate"]
+    assert candidate["additionalProperties"] is False
+    assert "event_type_raw_text" in candidate["required"]
+    assert any(
+        option.get("pattern") == r"\S"
+        for option in candidate["properties"]["restraints"]["anyOf"]
+    )
     release = json.loads(
         (ROOT / "schemas" / "mdmeta-dataset-release-v1.schema.json").read_text()
     )

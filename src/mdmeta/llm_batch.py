@@ -25,11 +25,31 @@ from .models import ProtocolEvent
 from .protocol_events import Paragraph
 
 
-SCHEMA_VERSION = "mdmeta.llm-protocol-batch.v1"
+SCHEMA_VERSION = "mdmeta.llm-protocol-batch.v2"
+RESPONSE_SCHEMA_VERSION = "mdmeta.llm-event-response.v2"
+RESPONSE_SCHEMA_FILENAME = "llm-event-response-v2.schema.json"
 FULLTEXT_URL = "https://www.ebi.ac.uk/europepmc/webservices/rest/{document_id}/fullTextXML"
 RETRYABLE_STATUS_CODES = {429, 500, 502, 503, 504}
 _DOCUMENT_ID = re.compile(r"PMC\d+", re.IGNORECASE)
 _SHA256 = re.compile(r"[0-9a-f]{64}")
+
+
+def load_committed_response_schema(path: Path) -> dict[str, Any]:
+    """Load the one source-controlled schema used by GPU generation and CPU replay."""
+
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(payload, dict) or payload.get("type") != "object":
+        raise ValueError("committed LLM response schema is not an object schema")
+    if payload.get("additionalProperties") is not False:
+        raise ValueError("committed LLM response schema permits unknown top-level fields")
+    candidate = payload.get("$defs", {}).get("LLMEventCandidate", {})
+    if (
+        not isinstance(candidate, dict)
+        or candidate.get("additionalProperties") is not False
+        or "event_type_raw_text" not in candidate.get("required", [])
+    ):
+        raise ValueError("committed LLM response schema lacks the v2 evidence contract")
+    return payload
 
 
 class FrozenArticle(BaseModel):
@@ -300,6 +320,7 @@ def run_model_batch(
     extractor: SchemaConstrainedEventExtractor,
     articles: list[FrozenArticle],
     xml_by_document: dict[str, bytes],
+    response_schema: dict[str, Any],
     batch_size: int,
     determinism_check: bool,
     checkpoint: Callable[[dict[str, Any]], None] | None = None,
@@ -313,7 +334,7 @@ def run_model_batch(
         for article in articles
         for task in build_tasks(article, xml_by_document[article.document_id], extractor)
     ]
-    response_schema = LLMEventResponse.model_json_schema()
+    response_schema_sha256 = canonical_sha256(response_schema)
     deterministic: dict[str, Any] = {
         "requested": determinism_check,
         "performed": False,
@@ -400,6 +421,8 @@ def run_model_batch(
             checkpoint(
                 {
                     "schema_version": SCHEMA_VERSION,
+                    "response_schema_version": RESPONSE_SCHEMA_VERSION,
+                    "response_schema_sha256": response_schema_sha256,
                     "status": "running",
                     "task_count_total": len(tasks),
                     "task_count_classified": len(task_results),
@@ -440,6 +463,8 @@ def run_model_batch(
         int(item["usage"].get("completion_tokens", 0) or 0) for item in task_results
     )
     return {
+        "response_schema_version": RESPONSE_SCHEMA_VERSION,
+        "response_schema_sha256": response_schema_sha256,
         "task_count": len(tasks),
         "task_count_classified": len(task_results),
         "classification_counts": dict(sorted(classifications.items())),
@@ -494,6 +519,8 @@ def compact_summary(result: dict[str, Any]) -> dict[str, Any]:
                 "per_article",
                 "usage",
                 "determinism_check",
+                "response_schema_version",
+                "response_schema_sha256",
             )
         },
         "result_sha256": result.get("result_sha256"),

@@ -29,8 +29,11 @@ from mdmeta.llm_adapter import (
     SchemaConstrainedEventExtractor,
 )
 from mdmeta.llm_batch import (
+    RESPONSE_SCHEMA_FILENAME,
+    RESPONSE_SCHEMA_VERSION,
     SCHEMA_VERSION as MODEL_BATCH_SCHEMA_VERSION,
     atomic_write_json,
+    load_committed_response_schema,
     select_articles,
     validate_source_manifest,
 )
@@ -76,7 +79,17 @@ def _validated_event_map(
     xml_by_document: dict[str, bytes],
     split_by_document: dict[str, str],
 ) -> tuple[dict[tuple[str, str, str, str], list[ProtocolEvent]], Counter[str]]:
-    tasks = prediction.get("batch", {}).get("tasks")
+    batch = prediction.get("batch", {})
+    committed_response_schema = load_committed_response_schema(
+        Path(__file__).resolve().parents[1] / "schemas" / RESPONSE_SCHEMA_FILENAME
+    )
+    if batch.get("response_schema_version") != RESPONSE_SCHEMA_VERSION:
+        raise ValueError("model result response-schema version is unsupported")
+    if batch.get("response_schema_sha256") != canonical_sha256(
+        committed_response_schema
+    ):
+        raise ValueError("model result response-schema commitment is invalid")
+    tasks = batch.get("tasks")
     if not isinstance(tasks, list):
         raise ValueError("model result does not contain task-level predictions")
     model = prediction.get("model", {})
