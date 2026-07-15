@@ -58,11 +58,14 @@ def run(
         raise ValueError("provide --record or at least one --pdb-id")
 
     enrichments: list[PDBeKBEnrichment] = []
-    with IdentifierValidator(cache_dir=cache_dir) as validator:
+    validator = IdentifierValidator(cache_dir=cache_dir)
+    try:
         for pdb_id in sorted(identifiers):
             enrichments.append(
                 fetch_pdbe_kb_annotations(validator, pdb_id, retain_payload=retain_payload)
             )
+    finally:
+        validator.client.close()
 
     payload = {
         "schema_version": "pdbe-kb-enrichment-run-v1",
