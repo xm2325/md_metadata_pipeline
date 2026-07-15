@@ -7,6 +7,11 @@ on:
       - .github/workflows/live-pdbe-kb.yml
       - src/mdmeta/pdbe_kb.py
       - scripts/run_pdbe_kb_enrichment.py
+  pull_request:
+    paths:
+      - .github/workflows/live-pdbe-kb.yml
+      - src/mdmeta/pdbe_kb.py
+      - scripts/run_pdbe_kb_enrichment.py
   workflow_dispatch:
 
 permissions:
