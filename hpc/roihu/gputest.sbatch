@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/bash -l
 #SBATCH --job-name=mdmeta-gh200-smoke
 #SBATCH --partition=gputest
 #SBATCH --nodes=1
@@ -7,8 +7,13 @@
 #SBATCH --gres=gpu:gh200:1
 #SBATCH --time=00:15:00
 
-set -Eeuo pipefail
 umask 077
+
+if ! module load python-pytorch/2.10; then
+    printf 'failed to load python-pytorch/2.10\n' >&2
+    exit 69
+fi
+set -Eeuo pipefail
 
 RUN_DIR=${1:?run directory required}
 SOURCE_DIR=${2:?source directory required}
@@ -38,11 +43,6 @@ if [[ ! "$SOURCE_ARCHIVE_SHA256" =~ ^[0-9a-f]{64}$ ]]; then
 fi
 
 mkdir -p "$RUN_DIR/logs"
-
-export CSC_ENV_INIT_NON_INTERACTIVE=yes
-# shellcheck source=/etc/profile
-source /etc/profile
-module load python-pytorch/2.10
 
 ACTUAL_ARCHIVE_SHA256=$(sha256sum "$SOURCE_ARCHIVE" | awk '{print $1}')
 if [[ "$ACTUAL_ARCHIVE_SHA256" != "$SOURCE_ARCHIVE_SHA256" ]]; then

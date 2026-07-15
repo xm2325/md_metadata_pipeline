@@ -30,13 +30,13 @@ the aarch64 GPU nodes.
 ## Submission contract
 
 Create and checksum a source archive from a clean committed revision. After copying and extracting
-it into the private project directory, submit with explicit paths and an empty exported login
-environment:
+it into the private project directory, submit with explicit paths, and export only CSC's
+non-interactive environment switch rather than the caller's login environment:
 
 ```bash
 sbatch --parsable \
   --account="$PROJECT" \
-  --export=NONE \
+  --export=CSC_ENV_INIT_NON_INTERACTIVE=yes \
   --output="$RUN_DIR/logs/slurm-%j.out" \
   --error="$RUN_DIR/logs/slurm-%j.err" \
   "$SOURCE_DIR/hpc/roihu/gputest.sbatch" \
