@@ -24,9 +24,10 @@ layout after a complete current-source audit and deterministic two-row rebuild. 
 `provisional_operational_multi_rebuild_not_accuracy`. In particular, the 20 rows whose split label
 is `locked_test` are placeholders and must not be described as an independent locked test set.
 
-The independent 100-article study described later is a future study, not part of the immediate
-1 → 5 → 60 execution and not a current accuracy result. Its total is 100: 80 scale articles plus
-a sealed, independently human-annotated 20-article gold subset.
+The independent 100-article study described later is separate from the immediate 1 → 5 → 60
+execution and is not a current accuracy result. Its corpus selection is complete: 80 scale articles
+plus a sealed 20-article gold subset. Scale inference, independent human annotation and gold
+evaluation remain pending.
 
 ## Frozen model candidate
 
@@ -350,14 +351,14 @@ resubmitted with the same scientific configuration but still receives a new run 
 | one current article | Can the pinned model load, produce constrained output and pass the CPU integration contract? | no pilot, robustness or accuracy claim |
 | five current articles | Does the real model/runtime/schema/integration path work end to end within a bounded pilot? | no robustness or accuracy estimate |
 | 60 current articles | What are throughput, schema/evidence rejection, provenance and integration-completeness characteristics on the existing provisional corpus? | not independent, not human gold, not confirmatory accuracy |
-| future independent 100 | Does the frozen pipeline scale to a new, predeclared literature cohort with complete failure accounting? | the 80 non-gold articles do not provide accuracy labels |
+| selected independent 100 after scale execution | Does the frozen pipeline scale to a new, predeclared literature cohort with complete failure accounting? | the 80 non-gold articles do not provide accuracy labels |
 | future human-gold 20 | What precision, recall, F1, exact-span accuracy and agreement does the frozen extractor achieve? | confidence remains limited by 20 articles and their strata |
 | future three MDDB projects | Can three preselected real projects pass topology/trajectory and MD→PDB→UniProt mapping gates? | not proof of universal MDDB coverage |
 
 Schema conformance, deterministic decoding and exact-span reproduction are necessary integrity
 checks. None is evidence that the extracted scientific statement is semantically correct.
 
-## Future independent 100 / gold 20 / MDDB 3 study
+## Independent 100 / gold 20 / future MDDB 3 study
 
 The implemented selection and sealing protocol is tracked in
 [`study/independent_100/README.md`](../study/independent_100/README.md) and
@@ -365,12 +366,12 @@ The implemented selection and sealing protocol is tracked in
 new-article exclusion registry, rule-screened 80/20 plan and prediction-free human workpacks before
 any Roihu inference.
 
-The later independent study should use **100 total new literature articles**, of which 20 are a
+The frozen independent plan uses **100 total new literature articles**, of which 20 are a
 preselected, sealed human-gold subset: 80 scale articles plus 20 gold articles, not 120 and not the
-current 60. It is not a current accuracy claim. Freeze the query, collection date, eligibility
-rules, software/scientific strata, negative-control policy, randomisation seed, article licences
-and all PMC/DOI identifiers. Exclude every article in the current 60 and every recovered
-development or held-out identifier, and verify overlap mechanically before inference.
+current 60. It is not a current accuracy claim. The query, collection date, eligibility rules,
+software strata, negative-control policy, randomisation seed, article licences and PMC/DOI
+identifiers were frozen in Actions run `29457386366`. The audit excluded 93 known prior identifiers
+and verified zero overlap before inference.
 
 Select the 20 gold articles by a predeclared stratified rule before inspecting model output. Two
 domain annotators independently record exact evidence spans and normalized event attributes, then
@@ -397,8 +398,8 @@ interoperability are three different claims and need three different denominator
 
 The [JR3997 vacancy](https://embl.wd103.myworkdayjobs.com/en-US/EMBL/job/Bioinformatician_JR3997)
 lists a closing time of **2026-07-19 23:59 CET** and says applications may be reviewed on a rolling
-basis. Do not delay the application for the future 100/20/3 study. Use only evidence that has a
-committed run report by submission time.
+basis. Do not delay the application for the unfinished scale80/gold20/MDDB3 execution. Use only
+evidence that has a committed run report by submission time.
 
 Safe progression of application wording is:
 

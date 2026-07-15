@@ -32,6 +32,8 @@ the study status is `independent_100_machine_screened_unreviewed`.
 
 ## Current progress
 
-The selection infrastructure is implemented. A selected article does not count toward the future
-independent 100 until the GitHub Actions artifact exists and passes the non-overlap/seal audit;
-human-gold progress remains zero until two independent annotations and adjudication are frozen.
+The live GitHub Actions run completed corpus construction **100/100** on 2026-07-15: 80 scale
+articles and a sealed gold20 passed the non-overlap/seal audit. This does not mean that the whole
+scientific study is complete. Human eligibility review is 0/100, Roihu scale inference is 0/80,
+gold dual annotation/adjudication is 0/20, and gold prediction/evaluation is 0/20. See
+[`RUN_2026-07-15.md`](RUN_2026-07-15.md).

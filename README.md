@@ -18,15 +18,18 @@ full batch classified 740/740 paragraph tasks with zero generation rejection and
 evidence-gated model events; CPU integration wrote 60/60 records with zero failures, 62 unique PDB
 identifiers, 69 unique UniProt accessions and 274 residue-mapping segments. These are operational
 coverage and throughput results, not accuracy. Cross-job temperature-zero inference was not
-bitwise deterministic, and the independent dual-human 100-article study remains 0/100. See
+bitwise deterministic. See
 [`study/roihu_llm_60/RUN_2026-07-15.md`](study/roihu_llm_60/RUN_2026-07-15.md).
 
 The next-study infrastructure is now explicit: the independent-100 Actions workflow builds a
 conservative prior-article exclusion registry, rule-screens an oversampled source pool, freezes an
 80-article scale split plus a software-stratified sealed gold20 before inference, and emits separate
 metadata, eligibility and prediction-free gold workpacks. The protocol and leakage boundary are in
-[`study/independent_100/README.md`](study/independent_100/README.md). Infrastructure alone does not
-advance the 0/100 count; only a successful audited cloud artifact does.
+[`study/independent_100/README.md`](study/independent_100/README.md). The audited cloud run has now
+completed corpus construction 100/100 with zero prior-article overlap: 80 scale articles plus a
+sealed gold20. Human eligibility is still 0/100, Roihu scale inference 0/80, gold dual
+annotation/adjudication 0/20 and gold prediction/evaluation 0/20; no new accuracy result exists.
+See [`study/independent_100/RUN_2026-07-15.md`](study/independent_100/RUN_2026-07-15.md).
 
 Version 0.3 added a phase-aware protocol-event schema and PDBe, UniProt, and SIFTS-derived validation states.
 
