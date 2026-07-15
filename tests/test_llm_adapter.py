@@ -383,20 +383,119 @@ def test_accepts_nonblank_restraints_only_when_exactly_present_in_quote():
     assert event.restraints == "no restrictions"
 
 
-def test_rejects_quantity_value_inconsistent_with_raw_text():
+def test_filters_unsupported_attributes_but_keeps_exact_supported_duration():
+    production_quote = (
+        "The production run was performed in NPT ensemble (constant number of particles, "
+        "pressure, and temperature) with no restrictions for 80 ns."
+    )
+    equilibration_quote = (
+        "MD simulation of all complexes was performed in a solvent environment to reach an "
+        "equilibrate state."
+    )
+    text = f"{production_quote} {equilibration_quote} The temperature was set to 310 K."
+    paragraph = Paragraph("PMC1", "Methods", "p1", text)
+    response = {
+        "events": [
+            {
+                "event_type": "production",
+                "event_type_raw_text": "with no restrictions for 80 ns",
+                "paragraph_id": "p1",
+                "start_char": 100,
+                "end_char": 101,
+                "quote": production_quote,
+                "duration": {"raw_text": "80 ns", "value": 80, "unit": "ns"},
+                "temperature": {"raw_text": "310 K", "value": 310, "unit": "K"},
+                "restraints": "N",
+                "confidence": 1,
+            },
+            {
+                "event_type": "unknown",
+                "event_type_raw_text": "MD simulation",
+                "paragraph_id": "p1",
+                "start_char": len(production_quote) + 1,
+                "end_char": len(production_quote) + 1 + len(equilibration_quote),
+                "quote": equilibration_quote,
+                "restraints": "N",
+                "confidence": 1,
+            },
+        ]
+    }
+
+    extractor = SchemaConstrainedEventExtractor(FakeBackend(response), "fake")
+    audit = extractor.validate_response_with_audit([paragraph], response)
+
+    assert len(audit.events) == 1
+    event = audit.events[0]
+    assert event.event_type is EventType.PRODUCTION
+    assert event.duration_ps == 80_000
+    assert event.temperature_k is None
+    assert event.restraints is None
+    assert {row["field"] for row in audit.attribute_rejections} == {
+        "temperature",
+        "restraints",
+    }
+    assert [row["reason_code"] for row in audit.candidate_rejections] == [
+        "unknown_phase_conflicts_with_explicit_cue"
+    ]
+    assert {row["reason_code"] for row in audit.repairs} == {
+        "unique_exact_quote_offset_repair_v1",
+        "unique_quote_phase_cue_repair_v1",
+    }
+    assert extractor.validate_response([paragraph], response) == audit.events
+
+
+def test_one_character_restraint_cue_cannot_create_an_event():
+    text = "MD simulation was performed using NAMD."
+    paragraph = Paragraph("PMC1", "Methods", "p1", text)
+    response = {
+        "events": [
+            {
+                "event_type": "unknown",
+                "event_type_raw_text": "MD simulation",
+                "paragraph_id": "p1",
+                "start_char": 0,
+                "end_char": len(text),
+                "quote": text,
+                "restraints": "N",
+                "confidence": 1,
+            }
+        ]
+    }
+
+    extractor = SchemaConstrainedEventExtractor(FakeBackend(response), "fake")
+    audit = extractor.validate_response_with_audit([paragraph], response)
+
+    assert audit.events == []
+    assert audit.attribute_rejections[0]["reason_code"] == "restraints_evidence_rejected"
+    assert audit.candidate_rejections[0]["reason_code"] == "no_valid_protocol_attribute"
+    with pytest.raises(EvidenceIntegrityError, match="no protocol attribute"):
+        extractor.validate_response([paragraph], response)
+
+
+def test_filters_quantity_value_inconsistent_with_raw_text():
     paragraph = _paragraph()
     payload = _payload(paragraph)
     payload["events"][0]["duration"]["value"] = 200
-    with pytest.raises(EvidenceIntegrityError, match="value disagrees"):
-        SchemaConstrainedEventExtractor(FakeBackend(payload), "fake").extract([paragraph])
+    audit = SchemaConstrainedEventExtractor(
+        FakeBackend(payload), "fake"
+    ).validate_response_with_audit([paragraph], payload)
+
+    assert audit.events[0].duration_ps is None
+    assert audit.attribute_rejections[0]["reason_code"] == "duration_evidence_rejected"
+    assert "value disagrees" in audit.attribute_rejections[0]["message"]
 
 
-def test_rejects_quantity_not_present_in_quote():
+def test_filters_quantity_not_present_in_quote():
     paragraph = _paragraph()
     payload = _payload(paragraph)
     payload["events"][0]["pressure"] = {"raw_text": "2 bar", "value": 2, "unit": "bar"}
-    with pytest.raises(EvidenceIntegrityError, match="not present"):
-        SchemaConstrainedEventExtractor(FakeBackend(payload), "fake").extract([paragraph])
+    audit = SchemaConstrainedEventExtractor(
+        FakeBackend(payload), "fake"
+    ).validate_response_with_audit([paragraph], payload)
+
+    assert audit.events[0].pressure_bar is None
+    assert audit.attribute_rejections[0]["reason_code"] == "pressure_evidence_rejected"
+    assert "not present" in audit.attribute_rejections[0]["message"]
 
 
 def test_rejects_unknown_paragraph():

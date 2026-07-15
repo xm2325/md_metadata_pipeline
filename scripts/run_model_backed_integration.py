@@ -24,7 +24,6 @@ from mdmeta.integration import (
     summarize_integrated_records,
 )
 from mdmeta.llm_adapter import (
-    EvidenceIntegrityError,
     LLMEventResponse,
     SchemaConstrainedEventExtractor,
 )
@@ -33,8 +32,10 @@ from mdmeta.llm_batch import (
     RESPONSE_SCHEMA_VERSION,
     SCHEMA_VERSION as MODEL_BATCH_SCHEMA_VERSION,
     atomic_write_json,
+    classify_evidence_audit,
     load_committed_response_schema,
     select_articles,
+    serialize_evidence_audit,
     validate_source_manifest,
 )
 from mdmeta.models import ProtocolEvent
@@ -117,12 +118,18 @@ def _validated_event_map(
         if expected_split is None or task.get("split") != expected_split:
             raise ValueError("model task split differs from the frozen source manifest")
         classification = task.get("classification")
-        if classification not in {"accepted", "evidence_rejected"}:
+        if classification not in {
+            "accepted",
+            "accepted_with_evidence_rejections",
+            "evidence_rejected",
+        }:
             raise ValueError(f"model task has an unusable classification: {classification!r}")
         classifications[classification] += 1
         stored_events = [ProtocolEvent.model_validate(row) for row in task.get("events", [])]
-        if classification != "accepted" and stored_events:
+        if classification == "evidence_rejected" and stored_events:
             raise ValueError("a rejected model task must not contain accepted events")
+        if classification == "accepted_with_evidence_rejections" and not stored_events:
+            raise ValueError("an accepted-with-rejections task must retain an accepted event")
         by_key[key] = stored_events
         tasks_by_key[key] = task
 
@@ -169,15 +176,15 @@ def _validated_event_map(
             LLMEventResponse.model_validate(response)
         except ValueError as error:
             raise ValueError("model task raw response is not schema-valid") from error
-        try:
-            replayed_events = extractor.validate_response([paragraph], response)
-        except EvidenceIntegrityError:
-            if task["classification"] != "evidence_rejected":
-                raise ValueError("accepted model task fails independent evidence replay")
-            replayed_events = []
-        else:
-            if task["classification"] != "accepted":
-                raise ValueError("rejected model task passes independent evidence replay")
+        audit = extractor.validate_response_with_audit([paragraph], response)
+        expected_classification = classify_evidence_audit(audit)
+        if task["classification"] != expected_classification:
+            raise ValueError("model task classification differs from evidence replay")
+        expected_audit = serialize_evidence_audit(audit, response)
+        for field, expected_value in expected_audit.items():
+            if task.get(field) != expected_value:
+                raise ValueError(f"model task {field} differs from evidence replay")
+        replayed_events = audit.events
         if canonical_sha256([event.model_dump(mode="json") for event in replayed_events]) != (
             canonical_sha256([event.model_dump(mode="json") for event in stored_events])
         ):
@@ -268,6 +275,19 @@ def main() -> int:
         raise SystemExit("model result task counts are inconsistent")
     if batch.get("classification_counts") != dict(sorted(classifications.items())):
         raise SystemExit("model result classification counts are inconsistent")
+    audit_aggregates = {
+        "candidate_rejection_reason_counts": "candidate_rejections",
+        "attribute_rejection_reason_counts": "attribute_rejections",
+        "repair_reason_counts": "repairs",
+    }
+    for aggregate_field, task_field in audit_aggregates.items():
+        counts = Counter(
+            row["reason_code"]
+            for task in batch["tasks"]
+            for row in task.get(task_field, [])
+        )
+        if batch.get(aggregate_field) != dict(sorted(counts.items())):
+            raise SystemExit(f"model result {aggregate_field} is inconsistent")
     if batch.get("event_count") != event_count:
         raise SystemExit("model result event count is inconsistent")
 
@@ -306,7 +326,8 @@ def main() -> int:
                     if task["document_id"] == article.document_id
                 ]
                 rejected = sum(
-                    task["classification"] == "evidence_rejected"
+                    task["classification"]
+                    in {"evidence_rejected", "accepted_with_evidence_rejections"}
                     for task in document_tasks
                 )
                 completeness = dict(record.completeness)

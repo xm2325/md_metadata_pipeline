@@ -184,6 +184,7 @@ def test_model_batch_classifies_every_task_without_silent_dropping() -> None:
         "paragraph_count": 3,
         "accepted_paragraph_count": 1,
         "rejected_paragraph_count": 2,
+        "accepted_with_evidence_rejections_count": 0,
         "event_count": 1,
         "event_bearing_paragraph_count": 1,
     }
@@ -192,6 +193,73 @@ def test_model_batch_classifies_every_task_without_silent_dropping() -> None:
     assert checkpoints[-1]["task_count_classified"] == 3
     assert checkpoints[-1]["response_schema_sha256"] == result["response_schema_sha256"]
     assert checkpoints[-1]["status"] == "running"
+
+
+def test_model_batch_audits_mixed_candidate_acceptance_without_dropping_event() -> None:
+    production_quote = "Production MD simulations were run for 100 ns."
+    conflicting_quote = "MD simulation continued to reach an equilibrate state."
+    text = f"{production_quote} {conflicting_quote}"
+    xml_bytes = (
+        f"<article><body><sec><title>Methods</title><p id='p1'>{text}</p>"
+        "</sec></body></article>"
+    ).encode()
+    article = FrozenArticle.model_validate(_article("PMC9", xml_bytes))
+    response = {
+        "events": [
+            {
+                "event_type": "production",
+                "event_type_raw_text": "Production",
+                "paragraph_id": "p1",
+                "start_char": 0,
+                "end_char": len(production_quote),
+                "quote": production_quote,
+                "duration": {"raw_text": "100 ns", "value": 100, "unit": "ns"},
+                "confidence": 0.9,
+            },
+            {
+                "event_type": "unknown",
+                "event_type_raw_text": "MD simulation",
+                "paragraph_id": "p1",
+                "start_char": len(production_quote) + 1,
+                "end_char": len(text),
+                "quote": conflicting_quote,
+                "duration": None,
+                "confidence": 0.8,
+            },
+        ]
+    }
+    backend = _FakeBatchBackend([response])
+    extractor = SchemaConstrainedEventExtractor(backend, "fake-pinned-model")
+
+    result = run_model_batch(
+        backend=backend,
+        extractor=extractor,
+        articles=[article],
+        xml_by_document={"PMC9": xml_bytes},
+        response_schema=LLMEventResponse.model_json_schema(),
+        batch_size=1,
+        determinism_check=False,
+    )
+
+    task = result["tasks"][0]
+    assert task["classification"] == "accepted_with_evidence_rejections"
+    assert task["event_count"] == 1
+    assert task["candidate_count"] == 2
+    assert task["candidate_rejection_count"] == 1
+    assert task["candidate_rejections"][0]["candidate_index"] == 1
+    assert task["candidate_rejections"][0]["candidate_sha256"] == canonical_sha256(
+        response["events"][1]
+    )
+    assert result["classification_counts"] == {
+        "accepted_with_evidence_rejections": 1
+    }
+    assert result["candidate_rejection_reason_counts"] == {
+        "unknown_phase_conflicts_with_explicit_cue": 1
+    }
+    assert result["per_article"]["PMC9"]["accepted_paragraph_count"] == 1
+    assert result["per_article"]["PMC9"][
+        "accepted_with_evidence_rejections_count"
+    ] == 1
 
 
 def test_model_batch_keeps_raw_response_when_unique_quote_offsets_are_repaired() -> None:

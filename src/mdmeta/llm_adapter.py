@@ -5,9 +5,10 @@ import importlib.metadata
 import json
 import math
 import re
+from dataclasses import dataclass
 from typing import Any, Protocol
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator
 
 from .models import EventType, Evidence, ProtocolEvent
 from .protocol_events import Paragraph
@@ -368,6 +369,21 @@ class LLMEventResponse(BaseModel):
 class EvidenceIntegrityError(ValueError):
     """Raised when a proposed event is not exactly supported by supplied text."""
 
+    def __init__(self, message: str, *, reason_code: str = "evidence_integrity_error") -> None:
+        super().__init__(message)
+        self.reason_code = reason_code
+
+
+@dataclass(frozen=True)
+class EvidenceValidationAudit:
+    """Normalized events plus source-free audit metadata for every proposed candidate."""
+
+    candidate_count: int
+    events: list[ProtocolEvent]
+    candidate_rejections: list[dict[str, Any]]
+    attribute_rejections: list[dict[str, Any]]
+    repairs: list[dict[str, Any]]
+
 
 _QUANTITY = re.compile(
     r"\s*(?P<value>[+-]?\d+(?:\.\d+)?)\s*"
@@ -426,6 +442,12 @@ _EVENT_TYPE_QUOTE_CONTEXT = {
         re.IGNORECASE,
     ),
 }
+_RESTRAINT_CUE = re.compile(
+    r"\b(?:unrestrained|restrain(?:ed|ing|t|ts)?|constraint(?:s)?|constrain(?:ed|ing)?|"
+    r"restrictions?|fixed|harmonic|positional|position[- ]restrained|SHAKE|LINCS|"
+    r"force\s+constant)\b",
+    re.IGNORECASE,
+)
 
 
 def _canonical_unit(unit: str) -> str:
@@ -526,11 +548,15 @@ def _resolve_exact_quote_span(
         occurrences.append(offset)
         if len(occurrences) > 1:
             raise EvidenceIntegrityError(
-                "evidence quote has ambiguous exact occurrences in the paragraph"
+                "evidence quote has ambiguous exact occurrences in the paragraph",
+                reason_code="ambiguous_quote",
             )
         offset = text.find(quote, offset + 1)
     if not occurrences:
-        raise EvidenceIntegrityError("evidence quote is not present in the paragraph")
+        raise EvidenceIntegrityError(
+            "evidence quote is not present in the paragraph",
+            reason_code="quote_not_found",
+        )
     resolved_start = occurrences[0]
     return resolved_start, resolved_start + len(quote), True
 
@@ -589,129 +615,280 @@ class SchemaConstrainedEventExtractor:
         paragraphs: list[Paragraph],
         response: dict[str, Any],
     ) -> list[ProtocolEvent]:
-        """Validate one decoded response against its exact source paragraphs."""
+        """Return supported events, while refusing a response whose candidates all fail."""
+
+        audit = self.validate_response_with_audit(paragraphs, response)
+        if audit.candidate_count and not audit.events:
+            first = audit.candidate_rejections[0]
+            raise EvidenceIntegrityError(
+                first["message"],
+                reason_code=first["reason_code"],
+            )
+        return audit.events
+
+    def validate_response_with_audit(
+        self,
+        paragraphs: list[Paragraph],
+        response: dict[str, Any],
+    ) -> EvidenceValidationAudit:
+        """Validate candidates independently and retain every conservative repair/rejection."""
 
         parsed = LLMEventResponse.model_validate(response)
         by_id = {paragraph.paragraph_id: paragraph for paragraph in paragraphs}
         events: list[ProtocolEvent] = []
+        candidate_rejections: list[dict[str, Any]] = []
+        attribute_rejections: list[dict[str, Any]] = []
+        repairs: list[dict[str, Any]] = []
         seen: set[str] = set()
 
-        for candidate in parsed.events:
-            paragraph = by_id.get(candidate.paragraph_id)
-            if paragraph is None:
-                raise EvidenceIntegrityError(f"unknown paragraph_id: {candidate.paragraph_id}")
-            start_char, end_char, offset_repaired = _resolve_exact_quote_span(
-                paragraph.text,
-                start_char=candidate.start_char,
-                end_char=candidate.end_char,
-                quote=candidate.quote,
-            )
-            if candidate.event_type_raw_text not in candidate.quote:
-                raise EvidenceIntegrityError(
-                    "event_type_raw_text is not present in the evidence quote"
+        for candidate_index, candidate in enumerate(parsed.events):
+            candidate_attribute_rejections: list[dict[str, Any]] = []
+            candidate_repairs: list[dict[str, Any]] = []
+            try:
+                paragraph = by_id.get(candidate.paragraph_id)
+                if paragraph is None:
+                    raise EvidenceIntegrityError(
+                        f"unknown paragraph_id: {candidate.paragraph_id}",
+                        reason_code="unknown_paragraph",
+                    )
+                start_char, end_char, offset_repaired = _resolve_exact_quote_span(
+                    paragraph.text,
+                    start_char=candidate.start_char,
+                    end_char=candidate.end_char,
+                    quote=candidate.quote,
                 )
-            if _EVENT_TYPE_CUES[candidate.event_type].search(
-                candidate.event_type_raw_text
-            ) is None:
-                raise EvidenceIntegrityError(
-                    "event_type disagrees with its exact source cue"
-                )
-            required_context = _EVENT_TYPE_QUOTE_CONTEXT.get(candidate.event_type)
-            if required_context is not None and required_context.search(candidate.quote) is None:
-                raise EvidenceIntegrityError(
-                    "event_type cue lacks explicit molecular-simulation context"
-                )
+                if offset_repaired:
+                    candidate_repairs.append(
+                        {
+                            "candidate_index": candidate_index,
+                            "reason_code": "unique_exact_quote_offset_repair_v1",
+                        }
+                    )
+                if candidate.event_type_raw_text not in candidate.quote:
+                    raise EvidenceIntegrityError(
+                        "event_type_raw_text is not present in the evidence quote",
+                        reason_code="phase_raw_text_not_in_quote",
+                    )
 
-            attributes_present = any(
-                value is not None
-                for value in (
-                    candidate.duration,
-                    candidate.temperature,
-                    candidate.pressure,
-                    candidate.timestep,
-                    candidate.ensemble,
-                    candidate.restraints,
-                    candidate.replicates,
+                explicit_quote_cues = {
+                    event_type
+                    for event_type, pattern in _EVENT_TYPE_CUES.items()
+                    if event_type is not EventType.UNKNOWN and pattern.search(candidate.quote)
+                }
+                raw_supports_declared = (
+                    _EVENT_TYPE_CUES[candidate.event_type].search(
+                        candidate.event_type_raw_text
+                    )
+                    is not None
                 )
-            )
-            if not attributes_present:
-                raise EvidenceIntegrityError("event has no protocol attribute")
-
-            ensemble = candidate.ensemble.upper() if candidate.ensemble is not None else None
-            if ensemble is not None:
-                if candidate.ensemble not in candidate.quote:
-                    raise EvidenceIntegrityError("ensemble text is not present in the evidence quote")
-                if ensemble not in _ALLOWED_ENSEMBLES:
-                    raise EvidenceIntegrityError("unsupported ensemble")
-            if candidate.restraints is not None and candidate.restraints not in candidate.quote:
-                raise EvidenceIntegrityError("restraints text is not present in the evidence quote")
-
-            normalized = {
-                "duration_ps": _duration_ps(candidate.duration, candidate.quote)
-                if candidate.duration is not None
-                else None,
-                "temperature_k": _temperature_k(candidate.temperature, candidate.quote)
-                if candidate.temperature is not None
-                else None,
-                "pressure_bar": _pressure_bar(candidate.pressure, candidate.quote)
-                if candidate.pressure is not None
-                else None,
-                "timestep_fs": _timestep_fs(candidate.timestep, candidate.quote)
-                if candidate.timestep is not None
-                else None,
-                "replicates": _replicate_count(candidate.replicates, candidate.quote)
-                if candidate.replicates is not None
-                else None,
-            }
-            stable_payload = "|".join(
-                [
-                    paragraph.document_id,
-                    paragraph.paragraph_id,
-                    str(start_char),
-                    str(end_char),
-                    candidate.event_type.value,
-                    repr(sorted(normalized.items())),
-                    ensemble or "",
-                    candidate.restraints or "",
-                ]
-            )
-            event_id = f"llm-event-{hashlib.sha256(stable_payload.encode('utf-8')).hexdigest()[:16]}"
-            if event_id in seen:
-                continue
-            seen.add(event_id)
-            evidence = Evidence(
-                document_id=paragraph.document_id,
-                section=paragraph.section,
-                paragraph_id=paragraph.paragraph_id,
-                quote=candidate.quote,
-                start_char=start_char,
-                end_char=end_char,
-                context_sha256=hashlib.sha256(paragraph.text.encode("utf-8")).hexdigest(),
-            )
-            events.append(
-                ProtocolEvent(
-                    event_id=event_id,
-                    event_type=candidate.event_type,
-                    duration_ps=normalized["duration_ps"],
-                    temperature_k=normalized["temperature_k"],
-                    pressure_bar=normalized["pressure_bar"],
-                    timestep_fs=normalized["timestep_fs"],
-                    ensemble=ensemble,
-                    restraints=candidate.restraints,
-                    replicates=normalized["replicates"],
-                    evidence=[evidence],
-                    relation_method=(
-                        f"schema_constrained_llm:{self.model_id}:"
-                        + (
-                            "unique_exact_quote_offset_repair_v1"
-                            if offset_repaired
-                            else "exact_span_v1"
+                if candidate.event_type is EventType.UNKNOWN:
+                    if explicit_quote_cues:
+                        raise EvidenceIntegrityError(
+                            "unknown phase conflicts with an explicit phase cue in the quote",
+                            reason_code="unknown_phase_conflicts_with_explicit_cue",
                         )
+                    if not raw_supports_declared:
+                        raise EvidenceIntegrityError(
+                            "event_type disagrees with its exact source cue",
+                            reason_code="phase_cue_mismatch",
+                        )
+                elif not raw_supports_declared:
+                    if explicit_quote_cues != {candidate.event_type}:
+                        raise EvidenceIntegrityError(
+                            "event_type disagrees with its exact source cue",
+                            reason_code="phase_cue_mismatch",
+                        )
+                    candidate_repairs.append(
+                        {
+                            "candidate_index": candidate_index,
+                            "reason_code": "unique_quote_phase_cue_repair_v1",
+                        }
+                    )
+                required_context = _EVENT_TYPE_QUOTE_CONTEXT.get(candidate.event_type)
+                if required_context is not None and required_context.search(candidate.quote) is None:
+                    raise EvidenceIntegrityError(
+                        "event_type cue lacks explicit molecular-simulation context",
+                        reason_code="phase_context_missing",
+                    )
+
+                normalized: dict[str, float | int | None] = {
+                    "duration_ps": None,
+                    "temperature_k": None,
+                    "pressure_bar": None,
+                    "timestep_fs": None,
+                    "replicates": None,
+                }
+                quantities = (
+                    ("duration", "duration_ps", candidate.duration, _duration_ps, lambda x: x > 0),
+                    (
+                        "temperature",
+                        "temperature_k",
+                        candidate.temperature,
+                        _temperature_k,
+                        lambda x: x >= 0,
                     ),
-                    confidence=candidate.confidence,
+                    ("pressure", "pressure_bar", candidate.pressure, _pressure_bar, lambda x: x > 0),
+                    ("timestep", "timestep_fs", candidate.timestep, _timestep_fs, lambda x: x > 0),
+                    (
+                        "replicates",
+                        "replicates",
+                        candidate.replicates,
+                        _replicate_count,
+                        lambda x: x >= 1,
+                    ),
                 )
-            )
-        return events
+                for field, normalized_field, raw_value, converter, physical_check in quantities:
+                    if raw_value is None:
+                        continue
+                    try:
+                        converted = converter(raw_value, candidate.quote)
+                        if not physical_check(converted):
+                            raise EvidenceIntegrityError(
+                                f"{field} is outside the accepted physical domain"
+                            )
+                    except EvidenceIntegrityError as error:
+                        candidate_attribute_rejections.append(
+                            {
+                                "candidate_index": candidate_index,
+                                "field": field,
+                                "reason_code": f"{field}_evidence_rejected",
+                                "message": str(error),
+                            }
+                        )
+                    else:
+                        normalized[normalized_field] = converted
+
+                ensemble: str | None = None
+                if candidate.ensemble is not None:
+                    proposed_ensemble = candidate.ensemble.upper()
+                    if candidate.ensemble not in candidate.quote:
+                        candidate_attribute_rejections.append(
+                            {
+                                "candidate_index": candidate_index,
+                                "field": "ensemble",
+                                "reason_code": "ensemble_evidence_rejected",
+                                "message": "ensemble text is not present in the evidence quote",
+                            }
+                        )
+                    elif proposed_ensemble not in _ALLOWED_ENSEMBLES:
+                        candidate_attribute_rejections.append(
+                            {
+                                "candidate_index": candidate_index,
+                                "field": "ensemble",
+                                "reason_code": "ensemble_evidence_rejected",
+                                "message": "unsupported ensemble",
+                            }
+                        )
+                    else:
+                        ensemble = proposed_ensemble
+
+                restraints: str | None = None
+                if candidate.restraints is not None:
+                    if candidate.restraints not in candidate.quote:
+                        restraint_error = "restraints text is not present in the evidence quote"
+                    elif _RESTRAINT_CUE.search(candidate.restraints) is None:
+                        restraint_error = "restraints text has no explicit restraint cue"
+                    else:
+                        restraint_error = None
+                        restraints = candidate.restraints
+                    if restraint_error is not None:
+                        candidate_attribute_rejections.append(
+                            {
+                                "candidate_index": candidate_index,
+                                "field": "restraints",
+                                "reason_code": "restraints_evidence_rejected",
+                                "message": restraint_error,
+                            }
+                        )
+
+                if not any(value is not None for value in (*normalized.values(), ensemble, restraints)):
+                    raise EvidenceIntegrityError(
+                        "event has no protocol attribute that passes evidence validation",
+                        reason_code="no_valid_protocol_attribute",
+                    )
+
+                stable_payload = "|".join(
+                    [
+                        paragraph.document_id,
+                        paragraph.paragraph_id,
+                        str(start_char),
+                        str(end_char),
+                        candidate.event_type.value,
+                        repr(sorted(normalized.items())),
+                        ensemble or "",
+                        restraints or "",
+                    ]
+                )
+                event_id = (
+                    "llm-event-"
+                    + hashlib.sha256(stable_payload.encode("utf-8")).hexdigest()[:16]
+                )
+                if event_id in seen:
+                    raise EvidenceIntegrityError(
+                        "candidate normalizes to a duplicate event",
+                        reason_code="duplicate_event",
+                    )
+                evidence = Evidence(
+                    document_id=paragraph.document_id,
+                    section=paragraph.section,
+                    paragraph_id=paragraph.paragraph_id,
+                    quote=candidate.quote,
+                    start_char=start_char,
+                    end_char=end_char,
+                    context_sha256=hashlib.sha256(paragraph.text.encode("utf-8")).hexdigest(),
+                )
+                methods = [
+                    row["reason_code"]
+                    for row in candidate_repairs
+                ] or ["exact_span_v1"]
+                if candidate_attribute_rejections:
+                    methods.append("unsupported_attribute_rejection_v1")
+                try:
+                    event = ProtocolEvent(
+                        event_id=event_id,
+                        event_type=candidate.event_type,
+                        duration_ps=normalized["duration_ps"],
+                        temperature_k=normalized["temperature_k"],
+                        pressure_bar=normalized["pressure_bar"],
+                        timestep_fs=normalized["timestep_fs"],
+                        ensemble=ensemble,
+                        restraints=restraints,
+                        replicates=normalized["replicates"],
+                        evidence=[evidence],
+                        relation_method=(
+                            f"schema_constrained_llm:{self.model_id}:" + "+".join(methods)
+                        ),
+                        confidence=candidate.confidence,
+                    )
+                except ValidationError as error:
+                    raise EvidenceIntegrityError(
+                        "normalized event violates the protocol event schema",
+                        reason_code="normalized_event_invalid",
+                    ) from error
+            except EvidenceIntegrityError as error:
+                attribute_rejections.extend(candidate_attribute_rejections)
+                repairs.extend(candidate_repairs)
+                candidate_rejections.append(
+                    {
+                        "candidate_index": candidate_index,
+                        "reason_code": error.reason_code,
+                        "message": str(error),
+                    }
+                )
+                continue
+
+            seen.add(event.event_id)
+            events.append(event)
+            attribute_rejections.extend(candidate_attribute_rejections)
+            repairs.extend(candidate_repairs)
+
+        return EvidenceValidationAudit(
+            candidate_count=len(parsed.events),
+            events=events,
+            candidate_rejections=candidate_rejections,
+            attribute_rejections=attribute_rejections,
+            repairs=repairs,
+        )
 
     def extract(self, paragraphs: list[Paragraph]) -> list[ProtocolEvent]:
         response = self.backend.complete(

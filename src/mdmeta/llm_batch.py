@@ -17,7 +17,7 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError
 from .benchmark import canonical_sha256
 from .integration import parse_jats_paragraphs, protocol_paragraphs
 from .llm_adapter import (
-    EvidenceIntegrityError,
+    EvidenceValidationAudit,
     LLMEventResponse,
     SchemaConstrainedEventExtractor,
 )
@@ -25,7 +25,7 @@ from .models import ProtocolEvent
 from .protocol_events import Paragraph
 
 
-SCHEMA_VERSION = "mdmeta.llm-protocol-batch.v2"
+SCHEMA_VERSION = "mdmeta.llm-protocol-batch.v3"
 RESPONSE_SCHEMA_VERSION = "mdmeta.llm-event-response.v2"
 RESPONSE_SCHEMA_FILENAME = "llm-event-response-v2.schema.json"
 FULLTEXT_URL = "https://www.ebi.ac.uk/europepmc/webservices/rest/{document_id}/fullTextXML"
@@ -314,6 +314,56 @@ def _metadata_at(backend: Any, index: int) -> dict[str, Any]:
     return rows[index]
 
 
+def serialize_evidence_audit(
+    audit: EvidenceValidationAudit,
+    response: dict[str, Any],
+) -> dict[str, Any]:
+    """Bind source-free rejection/repair rows to immutable raw model candidates."""
+
+    candidates = response.get("events")
+    if not isinstance(candidates, list) or len(candidates) != audit.candidate_count:
+        raise ValueError("evidence audit candidate count differs from the structured response")
+
+    def bind(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        bound: list[dict[str, Any]] = []
+        for row in rows:
+            candidate_index = row.get("candidate_index")
+            if not isinstance(candidate_index, int) or not 0 <= candidate_index < len(candidates):
+                raise ValueError("evidence audit contains an invalid candidate index")
+            bound.append(
+                {
+                    **row,
+                    "candidate_sha256": canonical_sha256(candidates[candidate_index]),
+                }
+            )
+        return bound
+
+    candidate_rejections = bind(audit.candidate_rejections)
+    attribute_rejections = bind(audit.attribute_rejections)
+    repairs = bind(audit.repairs)
+    return {
+        "candidate_count": audit.candidate_count,
+        "candidate_rejection_count": len(candidate_rejections),
+        "candidate_rejections": candidate_rejections,
+        "attribute_rejection_count": len(attribute_rejections),
+        "attribute_rejections": attribute_rejections,
+        "repair_count": len(repairs),
+        "repairs": repairs,
+    }
+
+
+def classify_evidence_audit(audit: EvidenceValidationAudit) -> str:
+    """Return a task classification without hiding accepted-but-filtered candidates."""
+
+    if audit.events:
+        if audit.candidate_rejections or audit.attribute_rejections:
+            return "accepted_with_evidence_rejections"
+        return "accepted"
+    if audit.candidate_count:
+        return "evidence_rejected"
+    return "accepted"
+
+
 def run_model_batch(
     *,
     backend: Any,
@@ -394,28 +444,17 @@ def run_model_batch(
                     }
                 )
             else:
-                try:
-                    events = extractor.validate_response([task.paragraph], response)
-                except (EvidenceIntegrityError, ValueError) as error:
-                    record.update(
-                        {
-                            "classification": "evidence_rejected",
-                            "event_count": 0,
-                            "events": [],
-                            "rejection": {
-                                "type": type(error).__name__,
-                                "message": str(error),
-                            },
-                        }
-                    )
-                else:
-                    record.update(
-                        {
-                            "classification": "accepted",
-                            "event_count": len(events),
-                            "events": [event.model_dump(mode="json") for event in events],
-                        }
-                    )
+                audit = extractor.validate_response_with_audit([task.paragraph], response)
+                record.update(serialize_evidence_audit(audit, response))
+                record.update(
+                    {
+                        "classification": classify_evidence_audit(audit),
+                        "event_count": len(audit.events),
+                        "events": [
+                            event.model_dump(mode="json") for event in audit.events
+                        ],
+                    }
+                )
             task_results.append(record)
         if checkpoint is not None:
             checkpoint(
@@ -432,6 +471,21 @@ def run_model_batch(
     elapsed = time.perf_counter() - started
 
     classifications = Counter(item["classification"] for item in task_results)
+    candidate_rejection_reasons = Counter(
+        row["reason_code"]
+        for item in task_results
+        for row in item.get("candidate_rejections", [])
+    )
+    attribute_rejection_reasons = Counter(
+        row["reason_code"]
+        for item in task_results
+        for row in item.get("attribute_rejections", [])
+    )
+    repair_reasons = Counter(
+        row["reason_code"]
+        for item in task_results
+        for row in item.get("repairs", [])
+    )
     events = [
         ProtocolEvent.model_validate(event)
         for item in task_results
@@ -444,14 +498,19 @@ def run_model_batch(
         grouped[item["document_id"]].append(item)
     for article in articles:
         rows = grouped.get(article.document_id, [])
+        accepted_classifications = {"accepted", "accepted_with_evidence_rejections"}
         per_article[article.document_id] = {
             "split": article.split,
             "paragraph_count": len(rows),
             "accepted_paragraph_count": sum(
-                item["classification"] == "accepted" for item in rows
+                item["classification"] in accepted_classifications for item in rows
             ),
             "rejected_paragraph_count": sum(
-                item["classification"] != "accepted" for item in rows
+                item["classification"] not in accepted_classifications for item in rows
+            ),
+            "accepted_with_evidence_rejections_count": sum(
+                item["classification"] == "accepted_with_evidence_rejections"
+                for item in rows
             ),
             "event_count": sum(item["event_count"] for item in rows),
             "event_bearing_paragraph_count": sum(item["event_count"] > 0 for item in rows),
@@ -468,6 +527,13 @@ def run_model_batch(
         "task_count": len(tasks),
         "task_count_classified": len(task_results),
         "classification_counts": dict(sorted(classifications.items())),
+        "candidate_rejection_reason_counts": dict(
+            sorted(candidate_rejection_reasons.items())
+        ),
+        "attribute_rejection_reason_counts": dict(
+            sorted(attribute_rejection_reasons.items())
+        ),
+        "repair_reason_counts": dict(sorted(repair_reasons.items())),
         "event_count": len(events),
         "phase_counts": dict(sorted(phase_counts.items())),
         "attribute_counts": dict(sorted(attribute_counts.items())),
@@ -513,6 +579,9 @@ def compact_summary(result: dict[str, Any]) -> dict[str, Any]:
                 "task_count",
                 "task_count_classified",
                 "classification_counts",
+                "candidate_rejection_reason_counts",
+                "attribute_rejection_reason_counts",
+                "repair_reason_counts",
                 "event_count",
                 "phase_counts",
                 "attribute_counts",

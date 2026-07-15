@@ -235,6 +235,13 @@ Proceed to five only when all of the following hold:
   valid SQLite/checksum result; and
 - every evidence rejection or integration failure is explicit rather than silently discarded.
 
+Batch result schema `mdmeta.llm-protocol-batch.v3` performs evidence replay at candidate and
+attribute granularity after the complete response has passed response schema v2. A task may be
+`accepted_with_evidence_rejections` only when at least one normalized event remains; every removed
+candidate or attribute is bound to its candidate index and SHA-256 with a stable reason code. The
+raw response and its commitment are never rewritten. Compact summaries expose aggregate reason
+counts, not source text or model responses.
+
 This is a technical integration gate only. It is not an extraction-quality or accuracy estimate.
 
 ### Five-article pilot acceptance

@@ -10,7 +10,9 @@ from mdmeta.llm_adapter import SchemaConstrainedEventExtractor
 from mdmeta.llm_batch import (
     RESPONSE_SCHEMA_FILENAME,
     RESPONSE_SCHEMA_VERSION,
+    classify_evidence_audit,
     load_committed_response_schema,
+    serialize_evidence_audit,
 )
 from mdmeta.protocol_events import Paragraph
 from scripts.run_model_backed_integration import (
@@ -65,10 +67,13 @@ def test_maps_only_exact_task_bound_events_to_the_jats_paragraph() -> None:
         ]
     }
     paragraph = Paragraph("PMC1", "Methods", "p1", text)
-    event = SchemaConstrainedEventExtractor(  # type: ignore[arg-type]
+    extractor = SchemaConstrainedEventExtractor(  # type: ignore[arg-type]
         None,
         model_label,
-    ).validate_response([paragraph], response)[0].model_dump(mode="json")
+    )
+    audit = extractor.validate_response_with_audit([paragraph], response)
+    event = audit.events[0].model_dump(mode="json")
+    audit_payload = serialize_evidence_audit(audit, response)
     prompt = SchemaConstrainedEventExtractor.build_prompt([paragraph])
     split = "development"
     task_id = hashlib.sha256(
@@ -94,9 +99,10 @@ def test_maps_only_exact_task_bound_events_to_the_jats_paragraph() -> None:
                     "prompt_sha256": hashlib.sha256(prompt.encode()).hexdigest(),
                     "response_sha256": canonical_sha256(response),
                     "response": response,
-                    "classification": "accepted",
+                    "classification": classify_evidence_audit(audit),
                     "event_count": 1,
                     "events": [event],
+                    **audit_payload,
                 }
             ]
         }
@@ -121,6 +127,13 @@ def test_maps_only_exact_task_bound_events_to_the_jats_paragraph() -> None:
     with pytest.raises(ValueError, match="response-schema commitment"):
         _validated_event_map(prediction, {"PMC1": xml_bytes}, {"PMC1": split})
     prediction["batch"]["response_schema_sha256"] = expected_schema_sha256
+
+    task = prediction["batch"]["tasks"][0]
+    expected_candidate_sha256 = task["repairs"][0]["candidate_sha256"]
+    task["repairs"][0]["candidate_sha256"] = "0" * 64
+    with pytest.raises(ValueError, match="repairs differs from evidence replay"):
+        _validated_event_map(prediction, {"PMC1": xml_bytes}, {"PMC1": split})
+    task["repairs"][0]["candidate_sha256"] = expected_candidate_sha256
 
     prediction["batch"]["tasks"][0]["context_sha256"] = "0" * 64
     with pytest.raises(ValueError, match="task set differs"):

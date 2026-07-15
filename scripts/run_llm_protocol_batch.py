@@ -304,7 +304,11 @@ def main() -> int:
                 "selected articles produced no protocol tasks: "
                 + ", ".join(articles_without_tasks)
             )
-        if batch_result["classification_counts"].get("accepted", 0) < 1:
+        evidence_valid_responses = sum(
+            batch_result["classification_counts"].get(name, 0)
+            for name in ("accepted", "accepted_with_evidence_rejections")
+        )
+        if evidence_valid_responses < 1:
             raise RuntimeError("model produced no evidence-valid paragraph response")
         if batch_result["event_count"] < args.minimum_event_count:
             raise RuntimeError(
