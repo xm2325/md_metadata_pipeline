@@ -1,0 +1,44 @@
+name: scientific-ai-decision
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  decision-demo:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Install package and test dependencies
+        run: python -m pip install -e '.[dev]'
+      - name: Run decision-layer tests
+        run: pytest tests/test_decision.py
+      - name: Build machine and client-facing reports
+        run: |
+          python scripts/run_scientific_ai_decision_demo.py \
+            --candidates examples/scientific_ai/candidates.json \
+            --experiments examples/scientific_ai/experiments.json \
+            --json-output results/scientific_ai/decision_report.json \
+            --html-output results/scientific_ai/index.html
+      - name: Check generated report contract
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          payload = json.loads(Path('results/scientific_ai/decision_report.json').read_text())
+          assert payload['decision_summary']['candidate_count'] == 4
+          assert payload['decision_summary']['abstention_count'] >= 1
+          assert payload['recommended_experiments']
+          assert Path('results/scientific_ai/index.html').stat().st_size > 1000
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: scientific-ai-decision-report
+          path: results/scientific_ai/
