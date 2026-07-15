@@ -225,6 +225,7 @@ payload = {
             "tests/test_model_backed_integration.py",
             "tests/test_substitute_frozen_article.py",
             "tests/test_audit_frozen_source_pool.py",
+            "tests/test_rebuild_frozen_source_pool.py",
         ],
         "junit": junit,
         "log_path": "pytest.log",
@@ -389,6 +390,7 @@ TEST_FILES=(
     tests/test_model_backed_integration.py
     tests/test_substitute_frozen_article.py
     tests/test_audit_frozen_source_pool.py
+    tests/test_rebuild_frozen_source_pool.py
 )
 
 STAGE=pytest
