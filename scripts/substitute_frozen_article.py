@@ -154,11 +154,22 @@ def _workflow_identity(parent: dict[str, Any]) -> tuple[int, int, str]:
     return run_id, artifact_id, artifact_digest
 
 
-def _cached_xml(cache_dir: Path, document_id: str, *, role: str) -> bytes:
+def _cached_xml(
+    cache_dir: Path,
+    document_id: str,
+    *,
+    role: str,
+    expected_size: int | None = None,
+    expected_sha256: str | None = None,
+) -> bytes:
     path = cache_dir / f"{document_id}.xml"
     if path.is_symlink() or not path.is_file():
         raise FileNotFoundError(f"{role} cached JATS is missing or is a symlink: {path.name}")
     payload = path.read_bytes()
+    if expected_size is not None and len(payload) != expected_size:
+        raise ValueError(f"cached {role} JATS size differs from the original screen")
+    if expected_sha256 is not None and _sha256_bytes(payload) != expected_sha256:
+        raise ValueError(f"cached {role} JATS SHA-256 differs from the original screen")
     root = safe_xml_fromstring(payload)
     observed_ids = {
         " ".join("".join(node.itertext()).split()).upper()
@@ -297,11 +308,9 @@ def substitute_frozen_article(
         jats_cache_dir,
         replacement_document_id,
         role="replacement",
+        expected_size=replacement_size,
+        expected_sha256=replacement_sha256,
     )
-    if len(replacement_xml) != replacement_size:
-        raise ValueError("cached replacement JATS size differs from the original screen")
-    if _sha256_bytes(replacement_xml) != replacement_sha256:
-        raise ValueError("cached replacement JATS SHA-256 differs from the original screen")
 
     replace_index = parent_ids.index(replace_document_id)
     old_row = parent_rows[replace_index]
