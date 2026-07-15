@@ -1,0 +1,86 @@
+name: Live PDBe-KB enrichment smoke
+
+on:
+  push:
+    branches: [agent/jr3997-full-alignment]
+    paths:
+      - .github/workflows/live-pdbe-kb.yml
+      - src/mdmeta/pdbe_kb.py
+      - scripts/run_pdbe_kb_enrichment.py
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: live-pdbe-kb-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  live-pdbe-kb:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: "3.12.13"
+          cache: pip
+          cache-dependency-path: pyproject.toml
+
+      - name: Install project
+        run: python -m pip install -e .
+
+      - name: Fetch and project live PDBe-KB annotations
+        run: |
+          mkdir -p results/live_pdbe_kb
+          python scripts/run_pdbe_kb_enrichment.py \
+            --pdb-id 6VSB \
+            --pdb-id 6VXX \
+            --output results/live_pdbe_kb/enrichment.json \
+            --cache-dir results/live_pdbe_kb/cache \
+            --retain-payload
+
+      - name: Summarize live response
+        run: |
+          python - <<'PY' | tee results/live_pdbe_kb/summary.md >> "$GITHUB_STEP_SUMMARY"
+          import json
+          from pathlib import Path
+
+          payload = json.loads(
+              Path("results/live_pdbe_kb/enrichment.json").read_text(encoding="utf-8")
+          )
+          print("# Live PDBe-KB enrichment smoke")
+          print()
+          print(f"- PDB identifiers: {payload['pdb_id_count']}")
+          print(f"- Projected annotations: {payload['annotation_count']}")
+          print()
+          print("| PDB | State | Reason | HTTP | Providers | Annotations | Response SHA-256 |")
+          print("|---|---|---|---:|---|---:|---|")
+          for row in payload["enrichments"]:
+              providers = ", ".join(
+                  f"{name}:{count}" for name, count in row["provider_counts"].items()
+              )
+              digest = row["response_sha256"] or ""
+              print(
+                  f"| {row['pdb_id']} | {row['state']} | `{row['reason']}` | "
+                  f"{row['http_status'] or ''} | {providers} | "
+                  f"{len(row['annotations'])} | `{digest[:16]}` |"
+              )
+          PY
+          cat results/live_pdbe_kb/enrichment.json
+
+      - name: Upload compact live evidence
+        if: always()
+        continue-on-error: true
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: live-pdbe-kb-${{ github.sha }}
+          path: |
+            results/live_pdbe_kb/enrichment.json
+            results/live_pdbe_kb/summary.md
+          retention-days: 7
+          if-no-files-found: warn
