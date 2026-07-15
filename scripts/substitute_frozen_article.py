@@ -31,6 +31,8 @@ _RESERVED_OUTPUT_KEYS = {
     "fulltext_screen_file_sha256",
     "substitution_reason",
     "substitution_policy",
+    "failed_stage_job_id",
+    "substitution_job_id",
     "substitution_old",
     "substitution_new",
     "model_output_used_for_substitution",
@@ -161,15 +163,16 @@ def _cached_xml(
     role: str,
     expected_size: int | None = None,
     expected_sha256: str | None = None,
+    commitment_label: str = "the expected commitment",
 ) -> bytes:
     path = cache_dir / f"{document_id}.xml"
     if path.is_symlink() or not path.is_file():
         raise FileNotFoundError(f"{role} cached JATS is missing or is a symlink: {path.name}")
     payload = path.read_bytes()
     if expected_size is not None and len(payload) != expected_size:
-        raise ValueError(f"cached {role} JATS size differs from the original screen")
+        raise ValueError(f"cached {role} JATS size differs from {commitment_label}")
     if expected_sha256 is not None and _sha256_bytes(payload) != expected_sha256:
-        raise ValueError(f"cached {role} JATS SHA-256 differs from the original screen")
+        raise ValueError(f"cached {role} JATS SHA-256 differs from {commitment_label}")
     root = safe_xml_fromstring(payload)
     observed_ids = {
         " ".join("".join(node.itertext()).split()).upper()
@@ -191,6 +194,10 @@ def substitute_frozen_article(
     jats_cache_dir: Path,
     replace_document_id: str,
     replacement_document_id: str,
+    failed_stage_job_id: int,
+    substitution_job_id: int,
+    expected_observed_old_sha256: str,
+    expected_observed_old_size: int,
     generated_at: str | None = None,
 ) -> tuple[dict[str, Any], dict[str, Any]]:
     """Build a one-source substitution manifest after strict offline provenance checks."""
@@ -205,6 +212,28 @@ def substitute_frozen_article(
     )
     if replace_document_id == replacement_document_id:
         raise ValueError("replacement article must differ from the replaced article")
+    if (
+        not isinstance(failed_stage_job_id, int)
+        or isinstance(failed_stage_job_id, bool)
+        or failed_stage_job_id < 1
+    ):
+        raise ValueError("failed_stage_job_id must be a positive integer")
+    if (
+        not isinstance(substitution_job_id, int)
+        or isinstance(substitution_job_id, bool)
+        or substitution_job_id < 1
+    ):
+        raise ValueError("substitution_job_id must be a positive integer")
+    validate_sha256(
+        expected_observed_old_sha256,
+        field="expected observed drifted JATS digest",
+    )
+    if (
+        not isinstance(expected_observed_old_size, int)
+        or isinstance(expected_observed_old_size, bool)
+        or expected_observed_old_size < 1
+    ):
+        raise ValueError("expected_observed_old_size must be a positive integer")
 
     parent, parent_file_sha256 = _load_expected_json(
         parent_manifest_path,
@@ -304,12 +333,13 @@ def substitute_frozen_article(
     ):
         raise ValueError("replacement screen record has no valid XML size")
 
-    replacement_xml = _cached_xml(
+    _cached_xml(
         jats_cache_dir,
         replacement_document_id,
         role="replacement",
         expected_size=replacement_size,
         expected_sha256=replacement_sha256,
+        commitment_label="the original screen",
     )
 
     replace_index = parent_ids.index(replace_document_id)
@@ -322,7 +352,14 @@ def substitute_frozen_article(
         or old_frozen_size < 1
     ):
         raise ValueError("replaced screen record has no valid original XML size")
-    observed_old_xml = _cached_xml(jats_cache_dir, replace_document_id, role="replaced")
+    observed_old_xml = _cached_xml(
+        jats_cache_dir,
+        replace_document_id,
+        role="replaced",
+        expected_size=expected_observed_old_size,
+        expected_sha256=expected_observed_old_sha256,
+        commitment_label="the recorded failed-stage observation",
+    )
     observed_old_sha256 = _sha256_bytes(observed_old_xml)
     if observed_old_sha256 == old_row["full_text_sha256"]:
         raise ValueError("parent frozen source has not drifted and must not be substituted")
@@ -381,6 +418,8 @@ def substitute_frozen_article(
         "fulltext_screen_file_sha256": screen_file_sha256,
         "substitution_reason": SUBSTITUTION_REASON,
         "substitution_policy": "first_original_plan_eligible_reserve_not_selected",
+        "failed_stage_job_id": failed_stage_job_id,
+        "substitution_job_id": substitution_job_id,
         "substitution_old": old_metadata,
         "substitution_new": new_metadata,
         "model_output_used_for_substitution": False,
@@ -410,6 +449,8 @@ def substitute_frozen_article(
         "fulltext_screen_file_sha256": screen_file_sha256,
         "reason": SUBSTITUTION_REASON,
         "selection_policy": "first_original_plan_eligible_reserve_not_selected",
+        "failed_stage_job_id": failed_stage_job_id,
+        "substitution_job_id": substitution_job_id,
         "old": old_metadata,
         "new": new_metadata,
         "model_output_used": False,
@@ -433,6 +474,10 @@ def main() -> int:
     parser.add_argument("--jats-cache-dir", type=Path, required=True)
     parser.add_argument("--replace-document-id", required=True)
     parser.add_argument("--replacement-document-id", required=True)
+    parser.add_argument("--failed-stage-job-id", type=int, required=True)
+    parser.add_argument("--substitution-job-id", type=int, required=True)
+    parser.add_argument("--expected-observed-old-sha256", required=True)
+    parser.add_argument("--expected-observed-old-size", type=int, required=True)
     parser.add_argument("--output-manifest", type=Path, required=True)
     parser.add_argument("--output-report", type=Path, required=True)
     args = parser.parse_args()
@@ -455,6 +500,10 @@ def main() -> int:
         jats_cache_dir=args.jats_cache_dir,
         replace_document_id=args.replace_document_id,
         replacement_document_id=args.replacement_document_id,
+        failed_stage_job_id=args.failed_stage_job_id,
+        substitution_job_id=args.substitution_job_id,
+        expected_observed_old_sha256=args.expected_observed_old_sha256,
+        expected_observed_old_size=args.expected_observed_old_size,
     )
     atomic_write_json(args.output_manifest, manifest)
     atomic_write_json(args.output_report, report)

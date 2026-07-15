@@ -129,13 +129,12 @@ def _fixture(tmp_path: Path) -> dict:
 
     old_document_id = "PMC000045"
     replacement_document_id = reserve_ids[0]
-    (cache_dir / f"{old_document_id}.xml").write_bytes(
-        (
-            f"<article><front><article-meta><article-id pub-id-type='pmcid'>"
-            f"{old_document_id}</article-id></article-meta></front><body>"
-            "currently available but drifted JATS</body></article>"
-        ).encode()
-    )
+    observed_old_xml = (
+        f"<article><front><article-meta><article-id pub-id-type='pmcid'>"
+        f"{old_document_id}</article-id></article-meta></front><body>"
+        "currently available but drifted JATS</body></article>"
+    ).encode()
+    (cache_dir / f"{old_document_id}.xml").write_bytes(observed_old_xml)
     (cache_dir / f"{replacement_document_id}.xml").write_bytes(
         xml_by_id[replacement_document_id]
     )
@@ -149,6 +148,10 @@ def _fixture(tmp_path: Path) -> dict:
         "jats_cache_dir": cache_dir,
         "replace_document_id": old_document_id,
         "replacement_document_id": replacement_document_id,
+        "failed_stage_job_id": 185329,
+        "substitution_job_id": 185700,
+        "expected_observed_old_sha256": _sha256(observed_old_xml),
+        "expected_observed_old_size": len(observed_old_xml),
         "generated_at": GENERATED_AT,
         "parent": parent,
         "xml_by_id": xml_by_id,
@@ -198,6 +201,16 @@ def test_substitutes_first_eligible_reserve_and_preserves_59_rows(tmp_path: Path
     assert report["new"]["document_id"] == "PMC000061"
     assert report["source_workflow_run"] == 29087844703
     assert report["source_workflow_artifact_id"] == 8225494475
+    assert report["failed_stage_job_id"] == 185329
+    assert manifest["failed_stage_job_id"] == 185329
+    assert report["substitution_job_id"] == 185700
+    assert manifest["substitution_job_id"] == 185700
+    assert report["old"]["observed_current_full_text_sha256"] == (
+        case["expected_observed_old_sha256"]
+    )
+    assert report["old"]["observed_current_size_bytes"] == (
+        case["expected_observed_old_size"]
+    )
     assert report["model_output_used"] is False
     assert report["full_text_included"] is False
     assert "frozen fixture for" not in json.dumps(report)
@@ -231,12 +244,47 @@ def test_rejects_replacement_cache_hash_mismatch(tmp_path: Path) -> None:
 def test_rejects_when_parent_frozen_source_has_not_drifted(tmp_path: Path) -> None:
     case = _fixture(tmp_path)
     old_document_id = case["replace_document_id"]
-    (case["jats_cache_dir"] / f"{old_document_id}.xml").write_bytes(
-        case["xml_by_id"][old_document_id]
-    )
+    frozen_xml = case["xml_by_id"][old_document_id]
+    (case["jats_cache_dir"] / f"{old_document_id}.xml").write_bytes(frozen_xml)
 
     with pytest.raises(ValueError, match="has not drifted"):
+        _call(
+            case,
+            expected_observed_old_sha256=_sha256(frozen_xml),
+            expected_observed_old_size=len(frozen_xml),
+        )
+
+
+def test_rejects_unexpected_failed_stage_payload(tmp_path: Path) -> None:
+    case = _fixture(tmp_path)
+    old_document_id = case["replace_document_id"]
+    path = case["jats_cache_dir"] / f"{old_document_id}.xml"
+    observed = path.read_bytes()
+    path.write_bytes(observed.replace(b"drifted", b"altered"))
+
+    with pytest.raises(ValueError, match="recorded failed-stage observation"):
         _call(case)
+
+
+def test_rejects_unexpected_failed_stage_payload_size(tmp_path: Path) -> None:
+    case = _fixture(tmp_path)
+
+    with pytest.raises(ValueError, match="recorded failed-stage observation"):
+        _call(case, expected_observed_old_size=case["expected_observed_old_size"] + 1)
+
+
+def test_rejects_invalid_failed_stage_job_id(tmp_path: Path) -> None:
+    case = _fixture(tmp_path)
+
+    with pytest.raises(ValueError, match="failed_stage_job_id"):
+        _call(case, failed_stage_job_id=0)
+
+
+def test_rejects_invalid_substitution_job_id(tmp_path: Path) -> None:
+    case = _fixture(tmp_path)
+
+    with pytest.raises(ValueError, match="substitution_job_id"):
+        _call(case, substitution_job_id=0)
 
 
 def test_rejects_drift_payload_for_a_different_article(tmp_path: Path) -> None:
@@ -246,4 +294,8 @@ def test_rejects_drift_payload_for_a_different_article(tmp_path: Path) -> None:
     (case["jats_cache_dir"] / f"{old_document_id}.xml").write_bytes(wrong_payload)
 
     with pytest.raises(ValueError, match="does not declare PMCID"):
-        _call(case)
+        _call(
+            case,
+            expected_observed_old_sha256=_sha256(wrong_payload),
+            expected_observed_old_size=len(wrong_payload),
+        )

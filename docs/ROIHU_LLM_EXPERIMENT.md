@@ -115,7 +115,9 @@ has started. It must follow all of these rules:
    document, failure job, verified artifact/component commitments, deterministic reserve rule and
    replacement document. Commit that manifest, then create and validate a new git archive with a
    matching root `.mdmeta-source-commit`. Never reuse the superseded commit or source archive for
-   the remediated run.
+   the remediated run. The recovery job must require the failed job identifier and the exact
+   observed drifted SHA-256 and byte size as inputs; merely proving that the current bytes differ
+   from the frozen commitment is insufficient.
 6. Preserve the failed run directory, Slurm accounting, logs, checksum evidence and drift error.
    Do not overwrite or delete them after a replacement succeeds.
 
@@ -128,10 +130,11 @@ revision with a new manifest, commit, archive and run identifier.
 CPU staging job `185329` detected that the current XML for `PMC6316748` no longer matches the frozen
 source. The manifest commits SHA-256
 `cdbfd10f7e85a4042ebda7317b06cf963061f05e00d99168c03a5ed7e03a337d` and 105,780 bytes; the
-current response has a different digest (prefix `51d20c7e`) and 102,369 bytes. A separate check of
-the other four documents in the planned first-five gate (`PMC7560594`, `PMC6962038`, `PMC7439393`
-and `PMC5743237`) matched their frozen hash and size. This limited check is not evidence that all 60
-documents are currently recoverable.
+current response has SHA-256
+`51d20c7e8b35720e9150d2118d274cf2e5048a64fdaf7905552210530a87d52a` and 102,369 bytes. A
+separate check of the other four documents in the planned first-five gate (`PMC7560594`,
+`PMC6962038`, `PMC7439393` and `PMC5743237`) matched their frozen hash and size. This limited check
+is not evidence that all 60 documents are currently recoverable.
 
 The original artifact commitments used for reserve recovery have been verified as:
 
