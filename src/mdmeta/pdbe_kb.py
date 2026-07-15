@@ -468,13 +468,22 @@ def fetch_pdbe_kb_annotations(
     provider_state_counts = dict(
         sorted(Counter(item.state.value for item in provider_requests).items())
     )
-    incomplete = any(item.state is not ValidationState.VALIDATED for item in provider_requests)
-    if incomplete:
+    has_unresolved = any(
+        item.state is ValidationState.UNRESOLVED for item in provider_requests
+    )
+    has_conflict = any(item.state is ValidationState.CONFLICT for item in provider_requests)
+    if has_unresolved:
         state = ValidationState.UNRESOLVED
         reason = "pdbe_kb_provider_retrieval_incomplete"
+    elif ordered and has_conflict:
+        state = ValidationState.VALIDATED
+        reason = "pdbe_kb_annotations_projected_with_provider_conflicts"
     elif ordered:
         state = ValidationState.VALIDATED
         reason = "pdbe_kb_annotations_projected"
+    elif catalogue and has_conflict:
+        state = ValidationState.CONFLICT
+        reason = "pdbe_kb_catalogue_providers_have_no_annotation_data"
     elif catalogue:
         state = ValidationState.VALIDATED
         reason = "pdbe_kb_providers_returned_no_annotations"
