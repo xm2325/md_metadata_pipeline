@@ -18,8 +18,10 @@ completed in 17 seconds with exit code `0:0`; its source archive, result JSON an
 in the report.
 
 The script requests one GH200 from the 15-minute `gputest` partition and four CPU cores. It must be
-submitted from `roihu-gpu.csc.fi`; software built on the x86 Roihu-CPU side is not compatible with
-the aarch64 GPU nodes.
+submitted through the SSH alias `roihu_gpu` to `roihu-gpu.csc.fi`; software built on the x86
+Roihu-CPU side is not compatible with the aarch64 GPU nodes. Submit CPU staging and integration
+jobs through `roihu_cpu`, and submit GPU inference jobs through `roihu_gpu`. Results must be checked
+between clusters rather than chained with a cross-cluster Slurm dependency.
 
 ## Storage and privacy
 
@@ -27,16 +29,36 @@ the aarch64 GPU nodes.
   `/projappl/<project>/$USER/md-metadata-pipeline`.
 - Run jobs and write logs/results under `/scratch/<project>/$USER/md-metadata-pipeline`.
 - Create the user directories with mode `0700` because the GitHub repository is private.
-- Transfer only `git archive` output. Never transfer `.git`, `.env`, SSH keys, GitHub credentials,
-  local virtual environments or untracked files.
+- Transfer only a validated `git archive` whose root includes `.mdmeta-source-commit` containing
+  the exact full source commit. Never transfer `.git`, `.env`, SSH keys, GitHub credentials, local
+  virtual environments or untracked files.
 - Roihu scratch is temporary evidence storage, not an archive. Copy accepted compact evidence to an
   approved durable location and retain large datasets in CSC storage intended for that purpose.
 
 ## Submission contract
 
-Create and checksum a source archive from a clean committed revision. After copying and extracting
-it into the private project directory, submit with explicit paths, and export only CSC's
-non-interactive environment switch rather than the caller's login environment:
+Create and checksum a source archive from a clean committed revision. Add a virtual root member
+whose value binds the archive to that revision:
+
+```bash
+SOURCE_COMMIT="$(git rev-parse HEAD)"
+git archive --format=tar \
+  --add-virtual-file=".mdmeta-source-commit:$SOURCE_COMMIT" \
+  --output="$SOURCE_ARCHIVE" \
+  "$SOURCE_COMMIT"
+```
+
+Before submission, require a clean worktree, validate the archive member inventory, extract and
+compare `.mdmeta-source-commit` with `SOURCE_COMMIT`, and verify the archive SHA-256 before and
+after transfer. A missing/malformed marker, a marker mismatch, an unexpected archive member or a
+digest mismatch is a hard stop. Every new CPU or GPU job in this workflow may run only after that
+preflight; the model staging, extraction and integration scripts repeat the marker check after
+extraction.
+
+Submit CPU batch scripts through `roihu_cpu` and GPU batch scripts through `roihu_gpu`. After
+copying and extracting the verified archive into the private project directory, submit with
+explicit paths, and export only CSC's non-interactive environment switch rather than the caller's
+login environment. For the GPU smoke/inference path:
 
 ```bash
 sbatch --parsable \
@@ -64,7 +86,8 @@ job reaches a terminal state, then require all of the following:
 
 ## Next scientific step
 
-After the infrastructure gate, implement a concrete local-model `StructuredBackend` adapter. A
-scientific run must additionally bind the model-weight and tokenizer digests, model licence,
-prompt/schema hash, decoding parameters, dtype, corpus manifest, blinded predictions, human gold
-annotations and evaluation outputs. GPU execution alone is not evidence of extraction quality.
+The staged local-model experiment, promotion gates and evidence boundaries are defined in
+[the Roihu model-backed literature protocol](ROIHU_LLM_EXPERIMENT.md). A scientific run must bind
+the model-weight and tokenizer digests, model licence, prompt/schema hash, decoding parameters,
+dtype, corpus manifest, blinded predictions, human gold annotations and evaluation outputs. GPU
+execution alone is not evidence of extraction quality.
