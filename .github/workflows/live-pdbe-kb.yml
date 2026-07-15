@@ -1,22 +1,10 @@
 name: Live PDBe-KB enrichment smoke
 
 on:
-  push:
-    branches: [agent/jr3997-full-alignment]
-    paths:
-      - .github/workflows/live-pdbe-kb.yml
-      - src/mdmeta/pdbe_kb.py
-      - scripts/run_pdbe_kb_enrichment.py
-  pull_request:
-    paths:
-      - .github/workflows/live-pdbe-kb.yml
-      - src/mdmeta/pdbe_kb.py
-      - scripts/run_pdbe_kb_enrichment.py
   workflow_dispatch:
 
 permissions:
   contents: read
-  pull-requests: write
 
 concurrency:
   group: live-pdbe-kb-${{ github.ref }}
@@ -47,8 +35,7 @@ jobs:
             --pdb-id 6VSB \
             --pdb-id 6VXX \
             --output results/live_pdbe_kb/enrichment.json \
-            --cache-dir results/live_pdbe_kb/cache \
-            --retain-payload
+            --cache-dir results/live_pdbe_kb/cache
 
       - name: Summarize live response
         run: |
@@ -79,28 +66,17 @@ jobs:
           print()
           print("## Provider requests")
           print()
-          print("| PDB | Provider | State | Reason | HTTP | Annotations | Response SHA-256 | Message |")
-          print("|---|---|---|---|---:|---:|---|---|")
+          print("| PDB | Provider | State | Reason | HTTP | Annotations | Response SHA-256 |")
+          print("|---|---|---|---|---:|---:|---|")
           for row in payload["enrichments"]:
-              provider_payloads = (row.get("raw_payload") or {}).get("provider_annotations", {})
               for request in row["provider_requests"]:
-                  provider_payload = provider_payloads.get(request["provider"])
-                  message = ""
-                  if isinstance(provider_payload, dict) and isinstance(provider_payload.get("message"), str):
-                      message = provider_payload["message"].replace("|", "\\|")[:300]
                   digest = request["response_sha256"] or ""
                   print(
                       f"| {row['pdb_id']} | {request['provider']} | {request['state']} | "
                       f"`{request['reason']}` | {request['http_status'] or ''} | "
-                      f"{request['annotation_count']} | `{digest[:16]}` | {message} |"
+                      f"{request['annotation_count']} | `{digest[:16]}` |"
                   )
           PY
-
-      - name: Publish live result on the pull request
-        if: github.event_name == 'pull_request'
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: gh pr comment "${{ github.event.pull_request.number }}" --body-file results/live_pdbe_kb/summary.md
 
       - name: Upload compact live evidence
         if: always()
