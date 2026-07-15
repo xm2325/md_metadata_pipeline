@@ -149,9 +149,20 @@ In that verified original order, `PMC6994855` is the first
 `eligible_reserve_not_selected` record. Its original screen and current XML both report SHA-256
 `169ced75f7adf4ed9ab18bf28ec08ecd8ab76414dd81367ae9f277702ddc5a4d` and 87,028 bytes.
 
-**Status: remediation pending; no replacement has been executed, and no new manifest, commit or
-archive has yet been accepted.** Job `185329` remains failed drift evidence rather than a successful
-stage or model run.
+The recovery implementation at commit `8cf6b1f6c9e9b5662ac00de7db1bb724bfba8480` passed focused
+Roihu CPU validation job `185648` with 37 tests, zero failures and zero errors. Source substitution
+job `185650` then completed with exit code zero and replaced only position 1 in the development
+split. The output contains 60 unique articles with 59 parent rows unchanged and records that no
+model output was used. The accepted replacement manifest and compact report are stored at
+`study/integration_60/source_manifest.json` and
+`study/integration_60/source_substitution_report.json`.
+
+The manifest has internal commitment
+`b88942f8959fe85ca18b3fe333d9a4fc06aef93a1103a080a6c6ad3ff9aac96b` and file SHA-256
+`404a43cd1297b8803f75d4a50d356887adbecdd7cdc0b29d6d1fe196e1cb6a23`. The report has internal
+commitment `e1987d67e5aef0b51f80047970efcb501a9faa3f14116e946ac3a9423193086b` and file SHA-256
+`81695496dda707dcb715b90877123a5030eed3793a8027c7c123b9d0eca51fa4`. Job `185329` remains
+preserved failed drift evidence rather than a successful stage or model run.
 
 ## Promotion gates
 
