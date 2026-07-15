@@ -13,6 +13,9 @@ if ! module load python-pytorch/2.10; then
     printf 'failed to load python-pytorch/2.10\n' >&2
     exit 69
 fi
+# The submission exports only CSC's initialization switch. Allow job steps to inherit the
+# resulting sanitized module environment (PATH, SIF and APPTAINER_NV), not the caller's login.
+export SLURM_EXPORT_ENV=ALL
 set -Eeuo pipefail
 
 RUN_DIR=${1:?run directory required}

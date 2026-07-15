@@ -43,6 +43,10 @@ sbatch --parsable \
   "$RUN_DIR" "$SOURCE_DIR" "$SOURCE_ARCHIVE" "$SOURCE_COMMIT" "$SOURCE_ARCHIVE_SHA256"
 ```
 
+The batch script sets `SLURM_EXPORT_ENV=ALL` only after the clean login shell loads CSC's PyTorch
+module. This is required for `srun` to see the module wrapper `PATH`, container image and NVIDIA
+settings; it does not reintroduce the submitting shell's omitted environment.
+
 Use `squeue` for bounded polling while the job is pending or running. Query `sacct` once after the
 job reaches a terminal state, then require all of the following:
 
