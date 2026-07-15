@@ -1,0 +1,63 @@
+[
+  {
+    "candidate_id": "CAND-001",
+    "label": "Structure-supported target A",
+    "evidence": {
+      "genetic": 0.82,
+      "structure": 0.91,
+      "assay": 0.78,
+      "literature": 0.74,
+      "clinical": 0.69,
+      "external_validation": 0.72
+    },
+    "uncertainty": 0.22,
+    "data_completeness": 0.93,
+    "translational_relevance": 0.84,
+    "novelty": 0.58,
+    "notes": "Synthetic decision example; not a biological claim."
+  },
+  {
+    "candidate_id": "CAND-002",
+    "label": "Assay-positive target B",
+    "evidence": {
+      "structure": 0.61,
+      "assay": 0.88,
+      "literature": 0.68,
+      "clinical": 0.52
+    },
+    "uncertainty": 0.39,
+    "data_completeness": 0.76,
+    "translational_relevance": 0.71,
+    "novelty": 0.76,
+    "notes": "Synthetic decision example; not a biological claim."
+  },
+  {
+    "candidate_id": "CAND-003",
+    "label": "Novel target C with sparse evidence",
+    "evidence": {
+      "structure": 0.86
+    },
+    "uncertainty": 0.73,
+    "data_completeness": 0.38,
+    "translational_relevance": 0.66,
+    "novelty": 0.92,
+    "notes": "The policy should abstain and request more evidence."
+  },
+  {
+    "candidate_id": "CAND-004",
+    "label": "Clinically linked target D",
+    "evidence": {
+      "genetic": 0.57,
+      "structure": 0.54,
+      "assay": 0.58,
+      "literature": 0.62,
+      "clinical": 0.81,
+      "external_validation": 0.61
+    },
+    "uncertainty": 0.31,
+    "data_completeness": 0.88,
+    "translational_relevance": 0.90,
+    "novelty": 0.41,
+    "notes": "Synthetic decision example; not a biological claim."
+  }
+]
