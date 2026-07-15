@@ -12,6 +12,7 @@ Three different kinds of evidence must not be conflated:
 | State | What it means |
 |---|---|
 | Repository cloud-validated | For version 0.11 commit `c2981e2`, Python 3.11/3.12 CI, committed-contract drift, installed-wheel release/recovery/API tests, exact dependency audit, Bandit, hardened container smoke and the three deterministic domain-workflow PR paths passed on 2026-07-13. |
+| GPU infrastructure validated | CSC Roihu Slurm job `184708` bound to commit `cc87d7a` passed on one GH200 on 2026-07-15, including FP32 correctness, BF16 GEMM, CUDA attention, non-zero utilisation and result checksum gates. This is infrastructure evidence, not a validated model backend. |
 | Live/release validation pending | Pull-request live scientific jobs were skipped by design. No version 0.11 dataset bundle, GHCR image/SBOM/provenance or target-server deployment was published or exercised by these runs. |
 | External decision or deployment required | Dataset identity and licence, publisher/creators, durable archive, image promotion, DNS/TLS, authentication policy, rate limits, monitoring ownership, SLOs, RPO/RTO and incident ownership cannot be established by repository code alone. |
 
@@ -62,6 +63,12 @@ on 2026-07-13:
   and [provisional 29217837108](https://github.com/xm2325/md_metadata_pipeline/actions/runs/29217837108):
   their deterministic offline PR jobs passed on supported Python versions. Live jobs were skipped
   by PR policy and are not represented as executed evidence.
+
+The later [Roihu GH200 infrastructure report](../study/roihu_gpu_smoke/RUN_2026-07-15.md) records a
+successful remote Slurm execution for commit `cc87d7a`. GitHub-hosted jobs for that later head were
+blocked before runner startup by the account billing/payment or Actions spending limit. They are
+therefore not represented as passing repository gates, and the last fully executed GitHub evidence
+remains `c2981e2` until billing is fixed and the current head is rerun.
 
 Before describing version 0.11 as release-ready or deployed, the project still needs:
 
@@ -122,6 +129,8 @@ and must not route it to the public API.
   dataset bundle digest to the published container image digest in one deployment manifest.
 - No durable scientific dataset release or immutable version 0.11 GHCR deployment has yet been
   demonstrated.
+- A real Roihu GH200 infrastructure gate has passed, but no concrete local-model backend, bound
+  model/tokenizer artefact or human-reference extraction evaluation has been executed.
 - The repository does not contain an authorised project/data `LICENSE` or `CITATION.cff`.
 - Metrics and logs exist, but no external collector, dashboard, alert route or approved SLO has been
   deployed.

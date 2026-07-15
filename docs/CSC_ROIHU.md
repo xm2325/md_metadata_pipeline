@@ -12,6 +12,11 @@ scaled dot-product attention execute successfully, and that the run emits proven
 environment, GPU-utilisation and checksum evidence. Passing this gate does **not** demonstrate a
 working literature-extraction model or acceptable scientific accuracy.
 
+The first accepted execution is documented in
+[the 2026-07-15 GH200 run report](../study/roihu_gpu_smoke/RUN_2026-07-15.md). Slurm job `184708`
+completed in 17 seconds with exit code `0:0`; its source archive, result JSON and checksums are bound
+in the report.
+
 The script requests one GH200 from the 15-minute `gputest` partition and four CPU cores. It must be
 submitted from `roihu-gpu.csc.fi`; software built on the x86 Roihu-CPU side is not compatible with
 the aarch64 GPU nodes.
