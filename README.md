@@ -6,6 +6,14 @@ Evidence-linked extraction and validation for molecular-dynamics literature, des
 
 The frozen-v2 independent held-out result is an externally reported baseline: 15 articles, 165 reference facts, precision 0.844, recall 0.695, and F1 0.763. Its original report/artifact is not committed in this repository, so it is not reproducible from the current tree. The same limitation applies to the externally reported 120-article unlabelled audit (1,204 evidence-linked facts and no reported execution failure); it does not provide an accuracy estimate.
 
+On 2026-07-15, a complete current-source audit checked the original 60 selected articles and all
+18 ordered reserves: 58 selected payloads still matched, two had drifted, 17 reserves were valid
+and zero rows were unresolved. A deterministic one-generation rebuild replaced only those two
+positions and preserved 60 unique rows and the provisional 30/10/20 layout. This is source-integrity
+evidence, not annotation or accuracy evidence; model-backed 1/5/60 inference against the rebuilt
+pool has not yet been reported. See
+[`study/integration_60/SOURCE_POOL_REBUILD_2026-07-15.md`](study/integration_60/SOURCE_POOL_REBUILD_2026-07-15.md).
+
 Version 0.3 added a phase-aware protocol-event schema and PDBe, UniProt, and SIFTS-derived validation states.
 
 Version 0.4 added hashed Europe PMC retrieval, deterministic 30/10/20 planning, dual-annotation comparison, adjudication templates, and event-level evaluation.
@@ -67,13 +75,12 @@ Version 0.10 adds the first server-readiness layer:
 Version 0.11 is the current production-candidate change set. It adds strict JSON Schema and API
 contracts, semantic SQLite verification, WAL-safe backup/restore, digest-addressed release bundles,
 atomic release activation/rollback, production environment guards, request IDs, JSON request logs,
-Prometheus metrics and additional supply-chain/security controls. The repository gates for commit
-`c2981e2` passed on 2026-07-13: the [main CI](https://github.com/xm2325/md_metadata_pipeline/actions/runs/29217837097)
-passed 145 tests on each of Python 3.11 and 3.12 at 77.90% branch coverage, the
-[Python security gates](https://github.com/xm2325/md_metadata_pipeline/actions/runs/29217837131)
-passed the exact-constraint dependency audit and Bandit scan, and
-[Server readiness](https://github.com/xm2325/md_metadata_pipeline/actions/runs/29217837100)
-passed contract drift, 98 installed-wheel tests and the hardened container smoke test. This is
+Prometheus metrics and additional supply-chain/security controls. The repository gates for exact
+commit `c5f3018` passed on 2026-07-15: the
+[main CI](https://github.com/xm2325/md_metadata_pipeline/actions/runs/29447212786),
+[Python security gates](https://github.com/xm2325/md_metadata_pipeline/actions/runs/29447212706),
+[Server readiness](https://github.com/xm2325/md_metadata_pipeline/actions/runs/29447212735) and all
+three deterministic domain workflows passed. This is
 cloud validation of the production-candidate code, not a live scientific release, GHCR publication
 or server deployment. Version 0.11 must therefore still not be described as fully production ready.
 
@@ -96,12 +103,12 @@ pytest --cov=mdmeta --cov-branch --cov-report=term-missing --cov-fail-under=75
 ```
 
 GitHub Actions is the authoritative validation environment and runs Python 3.11 and 3.12
-independently. On commit `c2981e2`, both jobs passed 145 tests with 77.90% branch coverage. The
+independently. Exact commit `c5f3018` passed the full six-workflow PR set on 2026-07-15. The
 commands above remain developer instructions rather than substitutes for that dated cloud evidence.
-The PR also passed the deterministic offline jobs for
-[integrated enrichment](https://github.com/xm2325/md_metadata_pipeline/actions/runs/29217837135),
-[file-backed mapping](https://github.com/xm2325/md_metadata_pipeline/actions/runs/29217837098) and
-[provisional-corpus construction](https://github.com/xm2325/md_metadata_pipeline/actions/runs/29217837108).
+The same head passed the deterministic offline jobs for
+[integrated enrichment](https://github.com/xm2325/md_metadata_pipeline/actions/runs/29447212682),
+[file-backed mapping](https://github.com/xm2325/md_metadata_pipeline/actions/runs/29447212692) and
+[provisional-corpus construction](https://github.com/xm2325/md_metadata_pipeline/actions/runs/29447212680).
 Their live external-service/file jobs are intentionally skipped on pull requests, so these green
 PR runs do not constitute a new live corpus, integration or file-backed execution.
 
@@ -136,10 +143,9 @@ not route it through the public ingress.
 
 GitHub Actions is the authoritative test/build environment for this repository. The
 `Server readiness` workflow runs lint, tests, coverage, wheel construction and a hardened
-container smoke test on GitHub-hosted Ubuntu runners. For version 0.11 commit `c2981e2`, contract
-drift checks, 98 installed-wheel tests, dependency audit, storage inventory and the hardened
-non-root/read-only container smoke test passed on 2026-07-13 in
-[run 29217837100](https://github.com/xm2325/md_metadata_pipeline/actions/runs/29217837100).
+container smoke test on GitHub-hosted Ubuntu runners. For exact commit `c5f3018`, the workflow
+passed on 2026-07-15 in
+[run 29447212735](https://github.com/xm2325/md_metadata_pipeline/actions/runs/29447212735).
 Workflow-owned Python and container evidence uploads succeeded, but the extra Docker build-record
 artifact still emitted a storage-quota warning. Actions artifacts are short-lived evidence and the
 quota is not considered fully recovered; durable scientific bundles must be promoted to a release

@@ -19,7 +19,7 @@ Planned work is labelled explicitly below. It must not be described as implement
 cover letter or interview.
 
 Version 0.11 production-candidate controls in the current change set are labelled separately from
-deployment claims. Their repository cloud gates passed for exact commit `c2981e2` on 2026-07-13;
+deployment claims. Their repository cloud gates passed for exact commit `c5f3018` on 2026-07-15;
 this is not evidence of a live release, GHCR publication or production deployment. See
 [Production readiness](PRODUCTION_READINESS.md).
 
@@ -30,9 +30,13 @@ demo:
 
 - The frozen 60-article workflow completed literature extraction, live PDBe and UniProt
   validation, SIFTS-derived residue mapping and SQLite persistence for 60/60 articles; this is an
-  integration/coverage result, not an accuracy result
+  integration/coverage result for the original manifest, not an accuracy result
   ([run report](../study/integration_60/RUN_2026-07-10.md),
   [workflow](../.github/workflows/integrated-enrichment.yml)).
+- A complete current-source audit later checked all original 60 rows and 18 ordered reserves with
+  zero unresolved retrievals. A deterministic rebuild replaced two drifted rows and preserved 60
+  unique positions and the provisional 30/10/20 layout; this proves source lineage, not model
+  performance ([rebuild report](../study/integration_60/SOURCE_POOL_REBUILD_2026-07-15.md)).
 - A public MDDB/MDposit case verified PSF, PDB and authentic XTC data, then composed 3,741
   MD-to-PDB residue mappings into 3,573 MD-to-PDB-to-UniProt mappings
   ([run report](../study/file_backed_mddb/RUN_2026-07-10.md),
@@ -47,9 +51,9 @@ demo:
   [CI](../.github/workflows/ci.yml)).
 - The version 0.11 candidate adds public JSON Schema contracts, strict release manifests, semantic
   database verification, WAL-safe recovery, atomic release rollback, typed API/error responses,
-  structured logs and Prometheus metrics. Main CI passed 145 tests on each supported Python version
-  at 77.90% branch coverage; security gates, 98 installed-wheel tests, schema drift and hardened
-  container smoke also passed for `c2981e2`. A live release and target-server exercise remain pending.
+  structured logs and Prometheus metrics. CI, security gates, server readiness and all three
+  deterministic domain workflows passed for exact commit `c5f3018`. A live release and
+  target-server exercise remain pending.
 - The 60-paper AI-consensus evaluation is explicitly exploratory. Human dual annotation and
   adjudication remain incomplete
   ([evaluation](../study/confirmatory_60/AI_ANNOTATED_EXPLORATORY_EVALUATION_2026-07-10.md),
@@ -60,7 +64,7 @@ demo:
 | Official responsibility | Current repository evidence | Status |
 |---|---|---|
 | Design pipelines connecting MDDB with PDBe, UniProt, PDBe-KB and other resources | The file-backed case connects one MDDB project to PDB/PDBe, UniProt and SIFTS; the 60-paper path integrates literature, PDBe and UniProt. There is no direct PDBe-KB adapter and the two paths are not yet a multi-project production ingestion service. See [file-backed runner](../scripts/run_file_backed_mddb_case.py) and [integration runner](../scripts/run_integrated_60.py). | **Partial** |
-| Develop and deploy AI/ML approaches to extract experimental and biological metadata from literature | Exact-span deterministic extraction, a provider-independent schema-constrained model adapter, blinded prediction freezing and evaluation code exist. A real one-GH200 PyTorch/CUDA infrastructure gate passed on CSC Roihu, but there is still no concrete production model backend, human gold standard or deployed ML service. See [LLM adapter](../src/mdmeta/llm_adapter.py), [protocol extractor](../src/mdmeta/protocol_events.py), [event evaluation](../src/mdmeta/event_evaluation.py) and [Roihu report](../study/roihu_gpu_smoke/RUN_2026-07-15.md). | **Partial** |
+| Develop and deploy AI/ML approaches to extract experimental and biological metadata from literature | Exact-span deterministic extraction, a provider-independent schema-constrained model adapter, a frozen Qwen model/revision protocol, blinded prediction freezing and evaluation code exist. A real one-GH200 PyTorch/CUDA infrastructure gate passed on CSC Roihu, but the current Qwen 1/5/60 extraction chain, a human gold standard and a deployed ML service are still pending. See [LLM experiment](ROIHU_LLM_EXPERIMENT.md), [LLM adapter](../src/mdmeta/llm_adapter.py), [event evaluation](../src/mdmeta/event_evaluation.py) and [Roihu report](../study/roihu_gpu_smoke/RUN_2026-07-15.md). | **Partial** |
 | Extend and maintain SIFTS infrastructure/code to integrate MD and other resources | Real SIFTS-derived mappings are consumed and composed with MD-to-PDB alignment, including explicit ambiguity and unmapped residues. The repository does not modify, import or contribute to the official [PDBeurope/SIFTS](https://github.com/PDBeurope/SIFTS) codebase. | **Partial** |
 | Develop and maintain software tools, APIs, workflows and documentation | Installable Python package, CLI scripts, typed FastAPI endpoints, SQLite persistence, CI/live workflows and detailed scientific/operational documentation exist. Release/recovery/observability controls passed repository cloud gates for version 0.11, but a live release and real production deployment are pending. See [project configuration](../pyproject.toml), [production readiness](PRODUCTION_READINESS.md) and [.github/workflows](../.github/workflows). | **Strong** |
 | Collaborate with domain experts, engineers and data-resource providers | Modular boundaries and scientific reporting are collaboration-ready, but a repository alone does not demonstrate actual co-development with those groups. | **Gap** |
@@ -88,7 +92,7 @@ demo:
 |---|---|---|
 | Relevant postdoctoral experience | Applicant credential; cannot be established here. | **Gap** |
 | Graph databases such as Neo4j | No graph schema, export or Neo4j integration. | **Gap** |
-| REST APIs | Typed FastAPI health, record and PDB/UniProt search endpoints, stable problem details, request IDs and bounded queries exist. The expanded version 0.11 API/installed-wheel contract passed cloud tests for `c2981e2`; target deployment remains pending. See [API](../src/mdmeta/api.py). | **Strong** |
+| REST APIs | Typed FastAPI health, record and PDB/UniProt search endpoints, stable problem details, request IDs and bounded queries exist. The expanded version 0.11 API/installed-wheel contract passed cloud tests for `c5f3018`; target deployment remains pending. See [API](../src/mdmeta/api.py). | **Strong** |
 | Containerisation | A pinned, non-root API `Dockerfile`, hardened read-only Compose service and GitHub-hosted container smoke workflow are implemented. The version 0.11 hardened container smoke passed on 2026-07-13; immutable image publication and server deployment are still pending. | **Partial** |
 | Workflow systems such as Nextflow | GitHub Actions automates the project, but this is not evidence of a scientific workflow engine such as Nextflow. | **Gap** |
 | Data visualisation and analysis | Metric computation and machine-readable reports exist; there is no user-facing visualisation layer. | **Partial** |
@@ -187,10 +191,10 @@ authoritative long-term scientific repository.
 
 The current FastAPI app factory, environment-configured Uvicorn entry point, health/readiness
 checks, metadata endpoint, SQLite store, container and Compose manifest are a useful server base.
-Version 0.11 cloud verification passed for commit `c2981e2`: see
-[CI 29217837097](https://github.com/xm2325/md_metadata_pipeline/actions/runs/29217837097),
-[security 29217837131](https://github.com/xm2325/md_metadata_pipeline/actions/runs/29217837131)
-and [Server readiness 29217837100](https://github.com/xm2325/md_metadata_pipeline/actions/runs/29217837100).
+Version 0.11 cloud verification passed for exact commit `c5f3018`: see
+[CI 29447212786](https://github.com/xm2325/md_metadata_pipeline/actions/runs/29447212786),
+[security 29447212706](https://github.com/xm2325/md_metadata_pipeline/actions/runs/29447212706)
+and [Server readiness 29447212735](https://github.com/xm2325/md_metadata_pipeline/actions/runs/29447212735).
 The deterministic integrated, file-backed and provisional PR jobs also passed, but their live jobs
 were skipped. There is still no immutable version 0.11 GHCR publication, database migration system,
 durable backup job, external observability stack or deployed TLS/authentication envelope.
@@ -249,7 +253,7 @@ durable backup job, external observability stack or deployed TLS/authentication 
 
 ## Defensible current summary
 
-The repository currently demonstrates a well-tested, cloud-validated-at-`c2981e2` version 0.11
+The repository currently demonstrates a well-tested, cloud-validated-at-`c5f3018` version 0.11
 production-candidate change set for evidence-linked MD
 literature extraction, live PDBe/UniProt enrichment, SIFTS-derived residue mappings, one authentic
 file-backed MDDB case, provenance-aware storage, an executable query server, release/recovery

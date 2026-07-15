@@ -17,9 +17,9 @@ The immediate experiment is designed to produce bounded evidence relevant to EMB
 
 It does not turn the current provisional corpus into a confirmatory benchmark. The current
 `study/integration_60/source_manifest.json` contains 60 machine-screened articles in a 30/10/20
-layout, but its study status is `provisional_temporal_isolation_machine_screened`. In particular,
-the 20 rows whose split label is `locked_test` are placeholders and must not be described as an
-independent locked test set.
+layout after a complete current-source audit and deterministic two-row rebuild. Its study status is
+`provisional_operational_multi_rebuild_not_accuracy`. In particular, the 20 rows whose split label
+is `locked_test` are placeholders and must not be described as an independent locked test set.
 
 The independent 100-article study described later is a future study, not part of the immediate
 1 → 5 → 60 execution and not a current accuracy result. Its total is 100: 80 scale articles plus
@@ -125,7 +125,7 @@ If inference has already started, the affected run fails as a whole: no in-place
 partial-result merge or hash update is permitted. Any restart must be reviewed as a new corpus
 revision with a new manifest, commit, archive and run identifier.
 
-### Current drift incident
+### Historical one-row recovery
 
 CPU staging job `185329` detected that the current XML for `PMC6316748` no longer matches the frozen
 source. The manifest commits SHA-256
@@ -154,7 +154,7 @@ Roihu CPU validation job `185648` with 37 tests, zero failures and zero errors. 
 job `185650` then completed with exit code zero and replaced only position 1 in the development
 split. The output contains 60 unique articles with 59 parent rows unchanged and records that no
 model output was used. The accepted replacement manifest and compact report are stored at
-`study/integration_60/source_manifest.json` and
+`study/integration_60/source_manifest_superseded_185650.json` and
 `study/integration_60/source_substitution_report.json`.
 
 The manifest has internal commitment
@@ -162,29 +162,47 @@ The manifest has internal commitment
 `404a43cd1297b8803f75d4a50d356887adbecdd7cdc0b29d6d1fe196e1cb6a23`. The report has internal
 commitment `e1987d67e5aef0b51f80047970efcb501a9faa3f14116e946ac3a9423193086b` and file SHA-256
 `81695496dda707dcb715b90877123a5030eed3793a8027c7c123b9d0eca51fa4`. Job `185329` remains
-preserved failed drift evidence rather than a successful stage or model run.
+preserved failed drift evidence rather than a successful stage or model run. This one-row manifest
+is immutable superseded lineage; it is not the current operational manifest.
 
-### Mandatory full-pool audit after the second drift
+### Complete full-pool audit and deterministic rebuild
 
 The one-row recovery above did not make the remaining 59 source commitments recoverable. Staging
 job `185656` verified the existing model snapshot, then stopped with exit code 1 when Europe PMC's
 current XML for `PMC6423238` differed from its frozen SHA-256. No GPU inference started. The
-one-row manifest and job `185650` remain immutable lineage evidence, but that manifest is not
-eligible for inference and must not be mutated through another sequential substitution.
+one-row manifest and job `185650` remain immutable lineage evidence and were not mutated through a
+second sequential substitution.
 
-Before another staging attempt, run one authoritative CPU audit over the original 60 selected
-articles and every `eligible_reserve_not_selected` row in original plan order. The audit must not
-stop after finding enough reserves. It records current digest, size, PMCID identity and retrieval
-status for every row, stores XML only in private scratch, and is incomplete if any retrieval remains
-unresolved. A compact self-committed report and a byte-verified private cache bind the result; model
-outputs, current article topics and downstream integration outcomes are not inputs.
+Roihu CPU audit job `185845` then examined the original 60 selected rows and all 18 original
+`eligible_reserve_not_selected` rows without early stopping. It completed 78/78 retrieval
+classifications with zero unresolved rows: 58 selected rows were exact matches, two selected rows
+required replacement, 17 reserves were exact matches and one reserve was diagnostic rather than a
+matching cache entry. The private cache contained 75 exact payloads and three diagnostic payloads.
+The compact accepted audit is
+`study/integration_60/source_pool_audit.json`; it has internal commitment
+`62d9c0063a47c0b86a52723a2262c72116f5902c0997c32ee49cf9e5ff57f5ea` and file SHA-256
+`ab4f6fc8a799aec35c5fdb177f67e82fba1482935ac1df9931a80eb820340eca`.
 
-If the audit is complete, define replacement-required selected rows by original position and
-currently valid reserves by original reserve rank. A single offline rebuild may map the former to
-the first equally sized prefix of the latter, preserving all positions, the 60-row count and the
-30/10/20 split counts. Those split labels remain provisional lineage placeholders, not an
-independent or human-gold evaluation. If valid reserves are insufficient, emit no partial manifest
-and start a separately preregistered corpus protocol instead.
+Because the audit was complete and had enough valid reserves, offline rebuild job `187089` applied
+the predeclared first-N policy in one generation. It mapped original position 1 `PMC6316748` to
+original reserve rank 1 `PMC6994855`, and original position 42 `PMC6423238` to original reserve
+rank 2 `PMC7603383`. The other 58 rows stayed unchanged; all positions, 60 unique identifiers and
+the provisional 30/10/20 split counts were preserved. No model output, article topic or downstream
+result entered the decision.
+
+The current operational manifest is `study/integration_60/source_manifest.json`, with internal
+commitment `b73387925f866162c42863aa7957c759c1404b5ed9229c8d6b57ed4707a2bdfe` and file SHA-256
+`2c0e0275b2b3303607ccb30e9632994d86a2d71367dcc3cd73581e59d1bbd74e`. The compact rebuild
+report is `study/integration_60/source_pool_rebuild_report.json`, with internal commitment
+`1bae366076d02f606238424796957576d56d15e5727d4ee37ef5f324bec5a491` and file SHA-256
+`8c9f5f4c620a17dda952ee6cd9841ec16dc95ba64b993cafbdeaf32ab14e1aa4`.
+The rebuild was generated from exact source commit
+`c5f3018f686c0adf8ed212b7c71b3a3decf87ec5` and source archive SHA-256
+`79e8ef5f7a168885b083dcad8c0466d79e2f05cb6e93f6ca97ed389aa830aa76`.
+
+This audit establishes current-source recoverability, not scientific annotation quality. The
+operational rebuild does not make the split independent or human gold, and no 1/5/60 model
+inference had been executed when these compact artifacts were accepted.
 
 ## Promotion gates
 

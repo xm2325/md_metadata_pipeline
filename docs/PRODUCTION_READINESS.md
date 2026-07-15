@@ -1,7 +1,7 @@
 # Production readiness status
 
 The repository is **not yet fully production ready**. It now contains a substantially stronger
-production candidate whose repository cloud gates passed for commit `c2981e2` on 2026-07-13.
+production candidate whose repository cloud gates passed for commit `c5f3018` on 2026-07-15.
 Live release execution, image publication, target-server deployment and several governance and
 service-management decisions remain outside that evidence.
 
@@ -11,12 +11,12 @@ Three different kinds of evidence must not be conflated:
 
 | State | What it means |
 |---|---|
-| Repository cloud-validated | For version 0.11 commit `c2981e2`, Python 3.11/3.12 CI, committed-contract drift, installed-wheel release/recovery/API tests, exact dependency audit, Bandit, hardened container smoke and the three deterministic domain-workflow PR paths passed on 2026-07-13. |
+| Repository cloud-validated | For exact commit `c5f3018`, Python 3.11/3.12 CI, security, server-readiness and the three deterministic domain-workflow PR paths passed on 2026-07-15. This verifies repository code, not the later model experiment. |
 | GPU infrastructure validated | CSC Roihu Slurm job `184708` bound to commit `cc87d7a` passed on one GH200 on 2026-07-15, including FP32 correctness, BF16 GEMM, CUDA attention, non-zero utilisation and result checksum gates. This is infrastructure evidence, not a validated model backend. |
 | Live/release validation pending | Pull-request live scientific jobs were skipped by design. No version 0.11 dataset bundle, GHCR image/SBOM/provenance or target-server deployment was published or exercised by these runs. |
 | External decision or deployment required | Dataset identity and licence, publisher/creators, durable archive, image promotion, DNS/TLS, authentication policy, rate limits, monitoring ownership, SLOs, RPO/RTO and incident ownership cannot be established by repository code alone. |
 
-The dated checks validate repository code at `c2981e2`; they do not create a promotable release.
+The dated checks validate repository code at `c5f3018`; they do not create a promotable release.
 A candidate is promotable only after the live release workflow succeeds and its exact commit,
 dataset bundle and image digests are recorded and accepted.
 
@@ -48,6 +48,22 @@ dataset bundle and image digests are recorded and accepted.
 
 ## Cloud validation evidence and remaining release gates
 
+The following GitHub-hosted PR runs all passed for exact head
+`c5f3018f686c0adf8ed212b7c71b3a3decf87ec5` on 2026-07-15:
+
+- [CI 29447212786](https://github.com/xm2325/md_metadata_pipeline/actions/runs/29447212786),
+  including the Python 3.11 and 3.12 matrix;
+- [Python security gates 29447212706](https://github.com/xm2325/md_metadata_pipeline/actions/runs/29447212706);
+- [Server readiness 29447212735](https://github.com/xm2325/md_metadata_pipeline/actions/runs/29447212735);
+- [Integrated MD metadata enrichment 29447212682](https://github.com/xm2325/md_metadata_pipeline/actions/runs/29447212682);
+- [File-backed MDDB mapping 29447212692](https://github.com/xm2325/md_metadata_pipeline/actions/runs/29447212692); and
+- [Build provisional temporal corpus 29447212680](https://github.com/xm2325/md_metadata_pipeline/actions/runs/29447212680).
+
+These runs include the hardened complete-pool audit/rebuild implementation. They do not execute
+the accepted 60-row model-backed experiment, publish a release or deploy a service.
+
+### Earlier version 0.11 baseline
+
 The following GitHub-hosted PR runs passed for exact head `c2981e2120649fe6cdbe14ace402d60f7ac00a57`
 on 2026-07-13:
 
@@ -65,10 +81,8 @@ on 2026-07-13:
   by PR policy and are not represented as executed evidence.
 
 The later [Roihu GH200 infrastructure report](../study/roihu_gpu_smoke/RUN_2026-07-15.md) records a
-successful remote Slurm execution for commit `cc87d7a`. GitHub-hosted jobs for that later head were
-blocked before runner startup by the account billing/payment or Actions spending limit. They are
-therefore not represented as passing repository gates, and the last fully executed GitHub evidence
-remains `c2981e2` until billing is fixed and the current head is rerun.
+successful remote Slurm execution for commit `cc87d7a`. An intervening Actions billing/spending
+block was subsequently cleared; it is historical incident evidence, not the current cloud status.
 
 Before describing version 0.11 as release-ready or deployed, the project still needs:
 
@@ -102,9 +116,9 @@ and must not route it to the public API.
 
 ## Known technical gaps
 
-- The private-repository plan currently prevents branch protection/rulesets and a protected
-  production environment. Required checks and promotion approval therefore cannot yet be enforced
-  as repository policy.
+- The repository is public, but required branch checks, rulesets and a protected production
+  environment still need to be configured and evidenced before promotion approval can be treated
+  as enforced repository policy.
 - Native code scanning, secret scanning and Dependabot alerts are disabled. The current workflow
   blocks known Python dependency findings with `pip-audit` and selected Bandit findings, but an
   immutable-SHA secret-history scanner and container CVE scanner have not yet been added. Third-party
@@ -153,4 +167,4 @@ A production owner should approve promotion only when all of the following are t
 - governance metadata, SLO/RPO/RTO, on-call ownership and incident procedures are approved.
 
 Until then, the accurate description is **production-candidate engineering with repository cloud
-gates passed for `c2981e2`, while release, deployment and operational acceptance remain pending**.
+gates passed for `c5f3018`, while release, deployment and operational acceptance remain pending**.
