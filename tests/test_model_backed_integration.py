@@ -188,3 +188,65 @@ def test_schema_invalid_response_cannot_be_relabelled_as_evidence_rejected() -> 
             {"PMC1": xml_bytes},
             {"PMC1": split},
         )
+
+
+def test_generation_rejection_is_committed_and_replayed_as_an_empty_task() -> None:
+    text = "Production MD simulations were run for a long trajectory."
+    context_sha256 = hashlib.sha256(text.encode()).hexdigest()
+    xml_bytes = (
+        f"<article><body><sec><title>Methods</title><p id='p1'>{text}</p>"
+        "</sec></body></article>"
+    ).encode()
+    paragraph = Paragraph("PMC1", "Methods", "p1", text)
+    split = "development"
+    revision = "a" * 40
+    response = '{"events":['
+    task = {
+        "task_id": hashlib.sha256(
+            "|".join(("PMC1", split, "Methods", "p1", context_sha256)).encode()
+        ).hexdigest(),
+        "document_id": "PMC1",
+        "split": split,
+        "section": "Methods",
+        "paragraph_id": "p1",
+        "context_sha256": context_sha256,
+        "prompt_sha256": hashlib.sha256(
+            SchemaConstrainedEventExtractor.build_prompt([paragraph]).encode()
+        ).hexdigest(),
+        "response_sha256": canonical_sha256(response),
+        "response": response,
+        "classification": "generation_rejected",
+        "event_count": 0,
+        "events": [],
+        "generation_rejection": {
+            "type": "StructuredOutputError",
+            "reason_code": "finish_reason_rejected",
+            "message": "response 0 did not finish cleanly: finish_reason='length'",
+            "finish_reason": "length",
+        },
+    }
+    prediction = {
+        "model": {
+            "repo_id": "test/tiny",
+            "revision": revision,
+            "tokenizer_revision": revision,
+        },
+        "batch": {
+            "response_schema_version": RESPONSE_SCHEMA_VERSION,
+            "response_schema_sha256": _response_schema_sha256(),
+            "tasks": [task],
+        },
+    }
+
+    events_by_key, classifications = _validated_event_map(
+        prediction,
+        {"PMC1": xml_bytes},
+        {"PMC1": split},
+    )
+
+    assert events_by_key[("PMC1", "Methods", "p1", context_sha256)] == []
+    assert classifications == {"generation_rejected": 1}
+
+    task["response_sha256"] = "0" * 64
+    with pytest.raises(ValueError, match="response commitment"):
+        _validated_event_map(prediction, {"PMC1": xml_bytes}, {"PMC1": split})

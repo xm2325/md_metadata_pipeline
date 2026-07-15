@@ -6,7 +6,11 @@ from pathlib import Path
 import pytest
 
 from mdmeta.benchmark import canonical_sha256
-from mdmeta.llm_adapter import LLMEventResponse, SchemaConstrainedEventExtractor
+from mdmeta.llm_adapter import (
+    LLMEventResponse,
+    SchemaConstrainedEventExtractor,
+    StructuredGenerationRejection,
+)
 from mdmeta.llm_batch import (
     FrozenArticle,
     fetch_frozen_jats,
@@ -185,6 +189,7 @@ def test_model_batch_classifies_every_task_without_silent_dropping() -> None:
         "accepted_paragraph_count": 1,
         "rejected_paragraph_count": 2,
         "accepted_with_evidence_rejections_count": 0,
+        "generation_rejected_count": 0,
         "event_count": 1,
         "event_bearing_paragraph_count": 1,
     }
@@ -193,6 +198,62 @@ def test_model_batch_classifies_every_task_without_silent_dropping() -> None:
     assert checkpoints[-1]["task_count_classified"] == 3
     assert checkpoints[-1]["response_schema_sha256"] == result["response_schema_sha256"]
     assert checkpoints[-1]["status"] == "running"
+
+
+def test_model_batch_retains_one_unclean_completion_without_dropping_its_peers() -> None:
+    first = "Production MD simulations were discussed."
+    second = "Coordinates were sampled during the MD trajectory."
+    xml_bytes = f"""\
+<article><body><sec><title>Methods</title>
+  <p id="p1">{first}</p>
+  <p id="p2">{second}</p>
+</sec></body></article>
+""".encode()
+    article = FrozenArticle.model_validate(_article("PMC77", xml_bytes))
+    partial = '{"events":['
+    backend = _FakeBatchBackend(
+        [
+            {"events": []},
+            StructuredGenerationRejection(
+                reason_code="finish_reason_rejected",
+                message="response 1 did not finish cleanly: finish_reason='length'",
+                finish_reason="length",
+                response=partial,
+            ),
+        ]
+    )
+    extractor = SchemaConstrainedEventExtractor(backend, "fake-pinned-model")
+
+    result = run_model_batch(
+        backend=backend,
+        extractor=extractor,
+        articles=[article],
+        xml_by_document={"PMC77": xml_bytes},
+        response_schema=LLMEventResponse.model_json_schema(),
+        batch_size=2,
+        determinism_check=False,
+    )
+
+    assert result["task_count"] == 2
+    assert result["task_count_classified"] == 2
+    assert result["classification_counts"] == {
+        "accepted": 1,
+        "generation_rejected": 1,
+    }
+    rejected = result["tasks"][1]
+    assert rejected["response"] == partial
+    assert rejected["response_sha256"] == canonical_sha256(partial)
+    assert rejected["events"] == []
+    assert rejected["generation_rejection"] == {
+        "type": "StructuredOutputError",
+        "reason_code": "finish_reason_rejected",
+        "message": "response 1 did not finish cleanly: finish_reason='length'",
+        "finish_reason": "length",
+    }
+    assert result["generation_rejection_reason_counts"] == {
+        "finish_reason_rejected": 1
+    }
+    assert result["per_article"]["PMC77"]["generation_rejected_count"] == 1
 
 
 def test_model_batch_audits_mixed_candidate_acceptance_without_dropping_event() -> None:

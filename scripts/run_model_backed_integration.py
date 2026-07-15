@@ -122,11 +122,12 @@ def _validated_event_map(
             "accepted",
             "accepted_with_evidence_rejections",
             "evidence_rejected",
+            "generation_rejected",
         }:
             raise ValueError(f"model task has an unusable classification: {classification!r}")
         classifications[classification] += 1
         stored_events = [ProtocolEvent.model_validate(row) for row in task.get("events", [])]
-        if classification == "evidence_rejected" and stored_events:
+        if classification in {"evidence_rejected", "generation_rejected"} and stored_events:
             raise ValueError("a rejected model task must not contain accepted events")
         if classification == "accepted_with_evidence_rejections" and not stored_events:
             raise ValueError("an accepted-with-rejections task must retain an accepted event")
@@ -168,6 +169,32 @@ def _validated_event_map(
         if task.get("prompt_sha256") != expected_prompt_sha256:
             raise ValueError("model task prompt commitment does not reproduce from frozen JATS")
         response = task.get("response")
+        if task["classification"] == "generation_rejected":
+            if response is not None and not isinstance(response, str):
+                raise ValueError("generation-rejected response must be raw text or null")
+            if task.get("response_sha256") != canonical_sha256(response):
+                raise ValueError("generation-rejected response commitment is invalid")
+            rejection = task.get("generation_rejection")
+            if not isinstance(rejection, dict):
+                raise ValueError("generation-rejected task lacks its rejection audit")
+            if rejection.get("type") != "StructuredOutputError":
+                raise ValueError("generation-rejected task has an invalid error type")
+            if rejection.get("reason_code") not in {
+                "completion_count_rejected",
+                "finish_reason_rejected",
+                "response_text_missing",
+                "strict_json_rejected",
+            }:
+                raise ValueError("generation-rejected task has an invalid reason code")
+            if not isinstance(rejection.get("message"), str) or not rejection["message"]:
+                raise ValueError("generation-rejected task lacks an error message")
+            finish_reason = rejection.get("finish_reason")
+            if finish_reason is not None and not isinstance(finish_reason, str):
+                raise ValueError("generation-rejected task has an invalid finish reason")
+            if set(rejection) != {"type", "reason_code", "message", "finish_reason"}:
+                raise ValueError("generation-rejected task has unexpected audit fields")
+            by_key[key] = []
+            continue
         if not isinstance(response, dict):
             raise ValueError("model task does not retain its structured raw response")
         if task.get("response_sha256") != canonical_sha256(response):
@@ -325,15 +352,26 @@ def main() -> int:
                     for task in prediction["batch"]["tasks"]
                     if task["document_id"] == article.document_id
                 ]
-                rejected = sum(
+                evidence_rejected = sum(
                     task["classification"]
                     in {"evidence_rejected", "accepted_with_evidence_rejections"}
                     for task in document_tasks
                 )
-                completeness = dict(record.completeness)
-                completeness["protocol_event_extraction"] = (
-                    "complete" if rejected == 0 else "complete_with_evidence_rejections"
+                generation_rejected = sum(
+                    task["classification"] == "generation_rejected"
+                    for task in document_tasks
                 )
+                completeness = dict(record.completeness)
+                if generation_rejected:
+                    completeness["protocol_event_extraction"] = (
+                        "partial_with_generation_rejections"
+                    )
+                elif evidence_rejected:
+                    completeness["protocol_event_extraction"] = (
+                        "complete_with_evidence_rejections"
+                    )
+                else:
+                    completeness["protocol_event_extraction"] = "complete"
                 record = record.model_copy(update={"completeness": completeness})
                 store.write(record)
                 records.append(record)

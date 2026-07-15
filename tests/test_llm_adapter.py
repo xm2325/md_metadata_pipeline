@@ -7,6 +7,7 @@ import pytest
 from mdmeta.llm_adapter import (
     EvidenceIntegrityError,
     SchemaConstrainedEventExtractor,
+    StructuredGenerationRejection,
     StructuredOutputError,
     VLLMStructuredBackend,
 )
@@ -38,7 +39,13 @@ class FakeBatchBackend(FakeBackend):
         return self.payloads
 
 
-def _install_fake_vllm(monkeypatch, response_texts, *, version="0.19.1"):
+def _install_fake_vllm(
+    monkeypatch,
+    response_texts,
+    *,
+    version="0.19.1",
+    finish_reasons=None,
+):
     class FakeStructuredOutputsParams:
         def __init__(self, **kwargs):
             self.kwargs = kwargs
@@ -75,7 +82,11 @@ def _install_fake_vllm(monkeypatch, response_texts, *, version="0.19.1"):
                         SimpleNamespace(
                             text=text,
                             token_ids=list(range(index + 2)),
-                            finish_reason="stop",
+                            finish_reason=(
+                                finish_reasons[index]
+                                if finish_reasons is not None
+                                else "stop"
+                            ),
                         )
                     ],
                 )
@@ -616,6 +627,31 @@ def test_vllm_backend_rejects_non_strict_json(monkeypatch, response_text):
 
     with pytest.raises(StructuredOutputError):
         backend.complete("prompt", {"type": "object"})
+
+
+def test_vllm_batch_returns_auditable_per_prompt_generation_rejection(monkeypatch):
+    _install_fake_vllm(
+        monkeypatch,
+        [json.dumps({"events": []}), '{"events":['],
+        finish_reasons=["stop", "length"],
+    )
+    backend = VLLMStructuredBackend(
+        model="org/pinned-model",
+        revision="a" * 40,
+        tokenizer_revision="b" * 40,
+    )
+
+    responses = backend.complete_many(
+        ["first prompt", "second prompt"],
+        {"type": "object"},
+    )
+
+    assert responses[0] == {"events": []}
+    assert isinstance(responses[1], StructuredGenerationRejection)
+    assert responses[1].reason_code == "finish_reason_rejected"
+    assert responses[1].finish_reason == "length"
+    assert responses[1].response == '{"events":['
+    assert backend.last_batch_metadata[1]["finish_reason"] == "length"
 
 
 def test_vllm_backend_rejects_wrong_runtime_version(monkeypatch):

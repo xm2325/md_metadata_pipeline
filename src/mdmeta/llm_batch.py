@@ -20,12 +20,13 @@ from .llm_adapter import (
     EvidenceValidationAudit,
     LLMEventResponse,
     SchemaConstrainedEventExtractor,
+    StructuredGenerationRejection,
 )
 from .models import ProtocolEvent
 from .protocol_events import Paragraph
 
 
-SCHEMA_VERSION = "mdmeta.llm-protocol-batch.v3"
+SCHEMA_VERSION = "mdmeta.llm-protocol-batch.v4"
 RESPONSE_SCHEMA_VERSION = "mdmeta.llm-event-response.v2"
 RESPONSE_SCHEMA_FILENAME = "llm-event-response-v2.schema.json"
 FULLTEXT_URL = "https://www.ebi.ac.uk/europepmc/webservices/rest/{document_id}/fullTextXML"
@@ -364,6 +365,26 @@ def classify_evidence_audit(audit: EvidenceValidationAudit) -> str:
     return "accepted"
 
 
+def serialize_generation_rejection(
+    rejection: StructuredGenerationRejection,
+) -> dict[str, Any]:
+    """Serialize one private raw completion and a source-free rejection audit."""
+
+    return {
+        "response_sha256": canonical_sha256(rejection.response),
+        "response": rejection.response,
+        "classification": "generation_rejected",
+        "event_count": 0,
+        "events": [],
+        "generation_rejection": {
+            "type": "StructuredOutputError",
+            "reason_code": rejection.reason_code,
+            "message": rejection.message,
+            "finish_reason": rejection.finish_reason,
+        },
+    }
+
+
 def run_model_batch(
     *,
     backend: Any,
@@ -397,12 +418,21 @@ def run_model_batch(
         )
         if len(duplicate) != 2:
             raise RuntimeError("determinism check returned an unexpected response count")
+        duplicate_payloads = [
+            serialize_generation_rejection(item)
+            if isinstance(item, StructuredGenerationRejection)
+            else item
+            for item in duplicate
+        ]
         deterministic.update(
             {
                 "performed": True,
                 "task_id": tasks[0].task_id,
-                "identical": canonical_sha256(duplicate[0]) == canonical_sha256(duplicate[1]),
-                "response_sha256": [canonical_sha256(item) for item in duplicate],
+                "identical": canonical_sha256(duplicate_payloads[0])
+                == canonical_sha256(duplicate_payloads[1]),
+                "response_sha256": [
+                    canonical_sha256(item) for item in duplicate_payloads
+                ],
             }
         )
 
@@ -425,36 +455,43 @@ def run_model_batch(
                 "paragraph_id": task.paragraph.paragraph_id,
                 "context_sha256": task.context_sha256,
                 "prompt_sha256": task.prompt_sha256,
-                "response_sha256": canonical_sha256(response),
-                "response": response,
                 "usage": _metadata_at(backend, index),
             }
-            try:
-                LLMEventResponse.model_validate(response)
-            except ValidationError as error:
-                record.update(
-                    {
-                        "classification": "schema_rejected",
-                        "event_count": 0,
-                        "events": [],
-                        "rejection": {
-                            "type": type(error).__name__,
-                            "message": str(error),
-                        },
-                    }
-                )
+            if isinstance(response, StructuredGenerationRejection):
+                record.update(serialize_generation_rejection(response))
             else:
-                audit = extractor.validate_response_with_audit([task.paragraph], response)
-                record.update(serialize_evidence_audit(audit, response))
                 record.update(
                     {
-                        "classification": classify_evidence_audit(audit),
-                        "event_count": len(audit.events),
-                        "events": [
-                            event.model_dump(mode="json") for event in audit.events
-                        ],
+                        "response_sha256": canonical_sha256(response),
+                        "response": response,
                     }
                 )
+                try:
+                    LLMEventResponse.model_validate(response)
+                except ValidationError as error:
+                    record.update(
+                        {
+                            "classification": "schema_rejected",
+                            "event_count": 0,
+                            "events": [],
+                            "rejection": {
+                                "type": type(error).__name__,
+                                "message": str(error),
+                            },
+                        }
+                    )
+                else:
+                    audit = extractor.validate_response_with_audit([task.paragraph], response)
+                    record.update(serialize_evidence_audit(audit, response))
+                    record.update(
+                        {
+                            "classification": classify_evidence_audit(audit),
+                            "event_count": len(audit.events),
+                            "events": [
+                                event.model_dump(mode="json") for event in audit.events
+                            ],
+                        }
+                    )
             task_results.append(record)
         if checkpoint is not None:
             checkpoint(
@@ -486,6 +523,11 @@ def run_model_batch(
         for item in task_results
         for row in item.get("repairs", [])
     )
+    generation_rejection_reasons = Counter(
+        item["generation_rejection"]["reason_code"]
+        for item in task_results
+        if item["classification"] == "generation_rejected"
+    )
     events = [
         ProtocolEvent.model_validate(event)
         for item in task_results
@@ -512,6 +554,9 @@ def run_model_batch(
                 item["classification"] == "accepted_with_evidence_rejections"
                 for item in rows
             ),
+            "generation_rejected_count": sum(
+                item["classification"] == "generation_rejected" for item in rows
+            ),
             "event_count": sum(item["event_count"] for item in rows),
             "event_bearing_paragraph_count": sum(item["event_count"] > 0 for item in rows),
         }
@@ -534,6 +579,9 @@ def run_model_batch(
             sorted(attribute_rejection_reasons.items())
         ),
         "repair_reason_counts": dict(sorted(repair_reasons.items())),
+        "generation_rejection_reason_counts": dict(
+            sorted(generation_rejection_reasons.items())
+        ),
         "event_count": len(events),
         "phase_counts": dict(sorted(phase_counts.items())),
         "attribute_counts": dict(sorted(attribute_counts.items())),
@@ -582,6 +630,7 @@ def compact_summary(result: dict[str, Any]) -> dict[str, Any]:
                 "candidate_rejection_reason_counts",
                 "attribute_rejection_reason_counts",
                 "repair_reason_counts",
+                "generation_rejection_reason_counts",
                 "event_count",
                 "phase_counts",
                 "attribute_counts",

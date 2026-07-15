@@ -112,6 +112,16 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--no-determinism-check", action="store_true")
     parser.add_argument("--require-cached-jats", action="store_true")
     parser.add_argument(
+        "--maximum-generation-rejection-fraction",
+        type=lambda value: _bounded_float(
+            value,
+            minimum=0.0,
+            maximum=1.0,
+            name="maximum generation rejection fraction",
+        ),
+        default=0.01,
+    )
+    parser.add_argument(
         "--minimum-event-count",
         type=lambda value: _bounded_int(
             value, minimum=0, maximum=1_000_000, name="minimum event count"
@@ -220,6 +230,9 @@ def main() -> int:
             "seed": args.seed,
             "temperature": 0.0,
             "determinism_check": not args.no_determinism_check,
+            "maximum_generation_rejection_fraction": (
+                args.maximum_generation_rejection_fraction
+            ),
             "source_snapshot_policy": "private_cache_with_frozen_sha256_gate",
             "network_allowed_for_jats": not args.require_cached_jats,
             "task_unit": "one_protocol_relevant_jats_paragraph",
@@ -290,6 +303,9 @@ def main() -> int:
         )
         result["batch"] = batch_result
         schema_rejections = batch_result["classification_counts"].get("schema_rejected", 0)
+        generation_rejections = batch_result["classification_counts"].get(
+            "generation_rejected", 0
+        )
         if batch_result["task_count_classified"] != batch_result["task_count"]:
             raise RuntimeError("not every model task received an explicit classification")
         if batch_result["task_count"] < 1:
@@ -317,6 +333,14 @@ def main() -> int:
             )
         if schema_rejections:
             raise RuntimeError(f"{schema_rejections} structured responses failed their schema")
+        maximum_generation_rejections = int(
+            batch_result["task_count"] * args.maximum_generation_rejection_fraction
+        )
+        if generation_rejections > maximum_generation_rejections:
+            raise RuntimeError(
+                f"{generation_rejections} generations were rejected; maximum allowed is "
+                f"{maximum_generation_rejections} of {batch_result['task_count']} tasks"
+            )
         check = batch_result["determinism_check"]
         if check["performed"] and check["identical"] is not True:
             raise RuntimeError("temperature-zero repeated inference was not identical")

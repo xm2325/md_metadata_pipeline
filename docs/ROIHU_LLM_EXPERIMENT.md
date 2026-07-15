@@ -235,12 +235,20 @@ Proceed to five only when all of the following hold:
   valid SQLite/checksum result; and
 - every evidence rejection or integration failure is explicit rather than silently discarded.
 
-Batch result schema `mdmeta.llm-protocol-batch.v3` performs evidence replay at candidate and
+Batch result schema `mdmeta.llm-protocol-batch.v4` performs evidence replay at candidate and
 attribute granularity after the complete response has passed response schema v2. A task may be
 `accepted_with_evidence_rejections` only when at least one normalized event remains; every removed
 candidate or attribute is bound to its candidate index and SHA-256 with a stable reason code. The
 raw response and its commitment are never rewritten. Compact summaries expose aggregate reason
 counts, not source text or model responses.
+
+An unclean per-prompt completion is retained in the private result and classified as
+`generation_rejected` without discarding valid peers from the same vLLM call. Its raw text (or
+explicit null), commitment, finish reason and stable reason code are replayed by the CPU
+integration. The default promotion gate permits at most the integer floor of 1% of tasks in this
+state: this is zero for the 1- and 5-article gates and seven for the current 740-task full batch.
+Any accepted large-batch generation rejection therefore remains visible as partial extraction
+coverage rather than being treated as an empty model answer.
 
 This is a technical integration gate only. It is not an extraction-quality or accuracy estimate.
 
@@ -273,6 +281,8 @@ artifacts in place.
 - Require 60 selected document identifiers and complete classification of every paragraph task.
 - Require zero schema rejection, a successful in-run determinism check, valid result commitments
   and no source/model digest drift.
+- Require generation rejections to remain at or below the predeclared 1% gate, report their stable
+  reason counts, and mark affected article extraction completeness as partial.
 - Require the downstream CPU integration to account for all 60 requested articles. A service or
   data failure must remain an explicit failure record; it cannot be removed from the denominator.
 - Report elapsed GPU time, token counts, tokens/second, peak sampled memory/utilisation,

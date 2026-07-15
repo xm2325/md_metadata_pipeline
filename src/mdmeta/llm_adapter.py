@@ -27,11 +27,26 @@ class BatchStructuredBackend(StructuredBackend, Protocol):
         self,
         prompts: list[str],
         json_schema: dict[str, Any],
-    ) -> list[dict[str, Any]]: ...
+    ) -> list[dict[str, Any] | StructuredGenerationRejection]: ...
 
 
 class StructuredOutputError(ValueError):
     """Raised when a model response is not one complete, strict JSON object."""
+
+
+@dataclass(frozen=True)
+class StructuredGenerationRejection:
+    """One auditable per-prompt generation failure returned by a batch backend.
+
+    Batch inference must not discard the other valid responses merely because one completion
+    reached a token limit or was not strict JSON. The private task record retains ``response``;
+    compact summaries expose only the stable reason code and aggregate count.
+    """
+
+    reason_code: str
+    message: str
+    finish_reason: str | None
+    response: str | None
 
 
 def _distribution_version(distribution: str) -> str | None:
@@ -207,13 +222,16 @@ class VLLMStructuredBackend:
         return [dict(item) for item in self._last_batch_metadata]
 
     def complete(self, prompt: str, json_schema: dict[str, Any]) -> dict[str, Any]:
-        return self.complete_many([prompt], json_schema)[0]
+        response = self.complete_many([prompt], json_schema)[0]
+        if isinstance(response, StructuredGenerationRejection):
+            raise StructuredOutputError(response.message)
+        return response
 
     def complete_many(
         self,
         prompts: list[str],
         json_schema: dict[str, Any],
-    ) -> list[dict[str, Any]]:
+    ) -> list[dict[str, Any] | StructuredGenerationRejection]:
         self._last_batch_metadata = []
         if not prompts:
             return []
@@ -268,20 +286,58 @@ class VLLMStructuredBackend:
             )
         self._last_batch_metadata = batch_metadata
 
-        parsed: list[dict[str, Any]] = []
+        parsed: list[dict[str, Any] | StructuredGenerationRejection] = []
         for index, request_output in enumerate(request_outputs):
             completions = getattr(request_output, "outputs", None)
             if not isinstance(completions, list) or len(completions) != 1:
-                raise StructuredOutputError(
-                    f"response {index} did not contain exactly one completion"
+                parsed.append(
+                    StructuredGenerationRejection(
+                        reason_code="completion_count_rejected",
+                        message=f"response {index} did not contain exactly one completion",
+                        finish_reason=None,
+                        response=None,
+                    )
                 )
+                continue
             completion = completions[0]
-            if getattr(completion, "finish_reason", None) != "stop":
-                raise StructuredOutputError(f"response {index} did not finish cleanly")
+            finish_reason = getattr(completion, "finish_reason", None)
             text = getattr(completion, "text", None)
+            if finish_reason != "stop":
+                parsed.append(
+                    StructuredGenerationRejection(
+                        reason_code="finish_reason_rejected",
+                        message=(
+                            f"response {index} did not finish cleanly: "
+                            f"finish_reason={finish_reason!r}"
+                        ),
+                        finish_reason=(
+                            finish_reason if isinstance(finish_reason, str) else None
+                        ),
+                        response=text if isinstance(text, str) else None,
+                    )
+                )
+                continue
             if not isinstance(text, str):
-                raise StructuredOutputError(f"response {index} did not contain text")
-            parsed.append(_strict_json_object(text, response_index=index))
+                parsed.append(
+                    StructuredGenerationRejection(
+                        reason_code="response_text_missing",
+                        message=f"response {index} did not contain text",
+                        finish_reason=finish_reason,
+                        response=None,
+                    )
+                )
+                continue
+            try:
+                parsed.append(_strict_json_object(text, response_index=index))
+            except StructuredOutputError as error:
+                parsed.append(
+                    StructuredGenerationRejection(
+                        reason_code="strict_json_rejected",
+                        message=str(error),
+                        finish_reason=finish_reason,
+                        response=text,
+                    )
+                )
         return parsed
 
 
