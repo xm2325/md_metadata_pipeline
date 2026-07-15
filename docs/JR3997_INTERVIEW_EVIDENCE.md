@@ -3,8 +3,8 @@
 ## One-sentence conclusion
 
 I built an evidence-first molecular-dynamics metadata pipeline that links literature and public MD
-assets to PDBe, UniProt, SIFTS-derived residue mappings and PDBe-KB annotations, while treating LLM
-outputs and external-service responses as auditable candidates rather than database truth.
+assets to PDBe, UniProt, SIFTS-derived residue mappings and live PDBe-KB annotations, while treating
+LLM outputs and external-service responses as auditable candidates rather than database truth.
 
 ## 30-second version
 
@@ -12,9 +12,10 @@ The problem is that MD simulations, structures, protein annotations and methods 
 in different formats and use different identifiers. My project extracts protocol metadata with exact
 source evidence, validates PDB and UniProt identifiers, composes MD-residue to PDB to UniProt
 mappings, and exposes the resulting records through tested Python, SQLite and FastAPI components. I
-also added a real open-weight LLM path, a Roihu GPU benchmark, PDBe-KB enrichment and SIFTS quality
-checks. The key design choice is fail-closed validation: uncertain or malformed information remains
-`unresolved` instead of becoming a confident biological fact.
+also live-tested a two-stage PDBe-KB adapter that projected 41,600 residue annotations for two spike
+structures, added SIFTS mapping QA, and prepared a revision-locked Roihu GPU benchmark. The key design
+choice is fail-closed validation: network uncertainty remains `unresolved`, while successful no-data
+responses remain explicit provider conflicts rather than being hidden.
 
 ## Two-minute version
 
@@ -30,10 +31,10 @@ joins unsafe.
 1. Parse local or permitted JATS paragraphs and retain source hashes.
 2. Extract explicit protocol events and exact evidence spans.
 3. Validate PDB and UniProt identifiers through audited, cached public-service calls.
-4. consume SIFTS-derived PDB-chain to UniProt ranges and compose them with verified MD-to-PDB
+4. Consume SIFTS-derived PDB-chain to UniProt ranges and compose them with verified MD-to-PDB
    correspondences when real files are available.
-5. Retrieve PDBe-KB/FunPDBe annotations as a conservative sidecar; unsupported provider-specific
-   shapes are retained as hashes or unresolved payloads rather than guessed.
+5. Discover PDBe-KB providers, retrieve provider-specific annotations and project only explicit
+   common residue fields while retaining provider state and response hashes.
 6. Store integrated records transactionally, expose a bounded typed API, and export graph-shaped data
    for Neo4j when relationship queries are useful.
 7. Compare deterministic, LLM and validated-hybrid extraction on the same frozen corpus with exact,
@@ -44,6 +45,8 @@ joins unsafe.
 - The file-backed MDDB case verified PSF, PDB and XTC assets and created thousands of MD-to-PDB and
   MD-to-PDB-to-UniProt residue correspondences.
 - The 60-article integration completed end to end with explicit validation and mapping states.
+- A live PDBe-KB run projected 23,597 annotations for 6VSB and 18,003 for 6VXX from EMVS,
+  POPScomp_PDBML and p2rank; WEBnma's explicit 404 remained a provider conflict.
 - A real Qwen CPU smoke run exposed an important evidence error: the model understood a replicate
   count but changed the source text from `three` to `3`; the exact-source validator rejected that
   transformation.
@@ -69,9 +72,14 @@ response hash, retry history and cache status.
 A timeout means the service was unavailable. It does not mean a PDB entry or mapping is false. The
 pipeline distinguishes:
 
-- `validated`: a successful service response satisfies the expected contract;
-- `conflict`: a successful response provides evidence that the identifier/mapping is absent;
+- `validated`: request outcomes are known and the expected contract can be processed;
+- `conflict`: a successful response provides evidence that an identifier or provider relation is
+  absent;
 - `unresolved`: no reliable scientific decision is possible because of network or payload failure.
+
+The live PDBe-KB run illustrated the distinction: WEBnma returned HTTP 404 with an explicit no-data
+message, so it was a conflict, not an unresolved network failure. Other provider annotations remained
+usable and the whole enrichment was validated-with-provider-conflicts.
 
 ### Why SIFTS mapping needs a QA layer
 
@@ -82,11 +90,13 @@ isoforms and chimeras ultimately require residue-level comparison with the offic
 
 ### Why PDBe-KB is initially a sidecar
 
-PDBe-KB integrates heterogeneous provider annotations. Adding unknown provider fields directly to the
-stable database schema before observing real payload diversity would create brittle contracts. The
-adapter therefore projects only explicit provider, type, label, chain and residue-range fields,
-retains response hashes, and records a valid-but-unprojected state. After live payload profiling and
-domain review, the stable IntegratedMDRecord and API can be migrated deliberately.
+The live API showed a two-stage contract: a provider catalogue followed by provider-specific
+annotation endpoints. Three providers generated 41,600 projected records for only two structures,
+while a fourth provider had a catalogue relation but no annotation data. Migrating that volume and
+heterogeneity directly into the stable database before profiling more structures would create a
+brittle public contract. The sidecar therefore projects provider, label/type, chain, residue,
+author-numbering, entity and confidence fields; retains response hashes; and keeps provider conflicts
+visible. A stable API/storage migration should follow stratified profiling and domain review.
 
 ### Why SQLite and Neo4j both appear
 
@@ -155,18 +165,18 @@ variants and chain ambiguity, then composed only length-consistent SIFTS segment
 **Result:** Produced thousands of residue correspondences while preserving unmapped and ambiguous
 states instead of forcing total coverage.
 
-### 4. Stable schema versus rapidly changing upstream annotations
+### 4. Discovering the real PDBe-KB contract
 
-**Situation:** PDBe-KB annotations come from multiple providers with potentially different shapes.
+**Situation:** The first live catalogue request returned HTTP 200 but no embedded annotations.
 
-**Task:** Add direct functional-annotation evidence without destabilising the production-candidate
-record contract.
+**Task:** Determine whether the adapter was wrong or whether the provider had no data.
 
-**Action:** Built a conservative audited sidecar that projects a small explicit common core and hashes
-the source record; unknown shapes remain valid-but-unprojected.
+**Action:** Profiled only container keys/types, found four provider catalogue rows, followed the
+provider-specific annotation endpoints and retained each provider's request status and response hash.
 
-**Result:** The project now demonstrates direct PDBe-KB integration while retaining a controlled path
-to a future schema migration after live profiling and expert review.
+**Result:** Projected 41,600 residue annotations from three providers. WEBnma returned a known 404,
+which remained an explicit provider conflict. The finding justified the two-stage adapter and the
+sidecar decision without pretending all providers behaved identically.
 
 ## Likely interview questions
 
@@ -202,7 +212,8 @@ supports this workflow, but actual collaboration must be demonstrated through te
 
 - Built a cloud-tested scientific integration prototype linking literature, MD assets, PDBe,
   UniProt and SIFTS-derived mappings.
-- Implemented a direct conservative PDBe-KB annotation adapter.
+- Implemented and live-tested a two-stage PDBe-KB adapter that projected 41,600 residue-level
+  annotations while preserving a provider-level conflict.
 - Implemented a real OpenAI-compatible open-weight LLM client with exact-evidence rejection.
 - Designed a revision-locked Roihu GPU benchmark and deterministic/LLM/hybrid evaluation.
 - Implemented typed APIs, data contracts, transactional storage, release/recovery controls and
