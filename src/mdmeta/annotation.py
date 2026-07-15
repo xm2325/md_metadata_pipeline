@@ -21,6 +21,7 @@ class AnnotationFact(BaseModel):
     unit: str | None = None
     event_type: EventType = EventType.UNKNOWN
     paragraph_id: str = Field(min_length=1)
+    paragraph_sha256: str | None = Field(default=None, pattern=r"^[0-9a-f]{64}$")
     start_char: int = Field(ge=0)
     end_char: int = Field(gt=0)
     quote: str = Field(min_length=1)
@@ -58,6 +59,10 @@ def load_annotations(path: str | Path) -> list[AnnotationFact]:
 def _agreement(count_agreed: int, count_a: int, count_b: int) -> float:
     denominator = count_agreed + count_a + count_b
     return count_agreed / denominator if denominator else 1.0
+
+
+def _stable_tuple_sort_key(value: tuple[Any, ...]) -> str:
+    return json.dumps(value, ensure_ascii=False, separators=(",", ":"))
 
 
 def compare_annotators(
@@ -107,8 +112,14 @@ def compare_annotators(
         ),
         "by_field": dict(sorted(by_field.items())),
         "disagreements": {
-            "only_a": [exact_a[key].model_dump(mode="json") for key in sorted(only_a)],
-            "only_b": [exact_b[key].model_dump(mode="json") for key in sorted(only_b)],
+            "only_a": [
+                exact_a[key].model_dump(mode="json")
+                for key in sorted(only_a, key=_stable_tuple_sort_key)
+            ],
+            "only_b": [
+                exact_b[key].model_dump(mode="json")
+                for key in sorted(only_b, key=_stable_tuple_sort_key)
+            ],
         },
     }
 

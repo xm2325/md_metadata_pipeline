@@ -30,6 +30,10 @@ completed corpus construction 100/100 with zero prior-article overlap: 80 scale 
 sealed gold20. Human eligibility is still 0/100, Roihu scale inference 0/80, gold dual
 annotation/adjudication 0/20 and gold prediction/evaluation 0/20; no new accuracy result exists.
 See [`study/independent_100/RUN_2026-07-15.md`](study/independent_100/RUN_2026-07-15.md).
+The repository now has a strict gold-reference gate for two independent, source-bound 20-article
+submissions, explicit reviewed-zero states, item-level adjudication and a label-free public freeze
+receipt. Actions validates only synthetic labels; this infrastructure does not change the 0/20
+human-annotation progress.
 
 Version 0.3 added a phase-aware protocol-event schema and PDBe, UniProt, and SIFTS-derived validation states.
 

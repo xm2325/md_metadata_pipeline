@@ -30,6 +30,13 @@ the study status is `independent_100_machine_screened_unreviewed`.
 6. Generate gold20 predictions separately, unseal once, and report per-field metrics with
    article-bootstrap uncertainty and complete failure accounting.
 
+The code now enforces step 3 through
+[`scripts/gold_reference_gate.py`](../../scripts/gold_reference_gate.py): two content-addressed
+20-article submissions, explicit reviewed-zero states, source and paragraph hashes, distinct
+annotators, complete item-level adjudication, a private reference bundle and a label-free public
+freeze receipt. This is infrastructure, not completed annotation. Real labels must remain in
+access-controlled storage outside this public checkout; Actions exercises only synthetic fixtures.
+
 ## Current progress
 
 The live GitHub Actions run completed corpus construction **100/100** on 2026-07-15: 80 scale
