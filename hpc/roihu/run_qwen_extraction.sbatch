@@ -19,6 +19,10 @@ umask 027
 : "${INPUT_JSONL:?Set INPUT_JSONL to the frozen paragraph JSONL}"
 : "${INPUT_MANIFEST:?Set INPUT_MANIFEST to its generated manifest JSON}"
 : "${MODEL_REVISION:?Set MODEL_REVISION to the exact model commit SHA}"
+if [[ ! "${MODEL_REVISION}" =~ ^[0-9a-fA-F]{40}$ ]]; then
+  echo "MODEL_REVISION must be a 40-character immutable Git commit SHA" >&2
+  exit 2
+fi
 
 MODEL_ID="${MODEL_ID:-Qwen/Qwen3.6-27B}"
 TENSOR_PARALLEL_SIZE="${TENSOR_PARALLEL_SIZE:-1}"
@@ -98,7 +102,7 @@ python -m pip freeze --all | sort > "${RUN_DIR}/python-environment.txt"
 git status --short > "${RUN_DIR}/git-status.txt"
 git rev-parse HEAD > "${RUN_DIR}/git-commit.txt"
 
-VLLM_EXTRA_ARGS_TEXT="${VLLM_EXTRA_ARGS:---language-model-only --enable-prefix-caching}"
+VLLM_EXTRA_ARGS_TEXT="${VLLM_EXTRA_ARGS:---language-model-only --enable-prefix-caching --reasoning-parser qwen3}"
 read -r -a VLLM_EXTRA_ARGS_ARRAY <<< "${VLLM_EXTRA_ARGS_TEXT}"
 
 vllm serve "${MODEL_ID}" \
@@ -170,9 +174,13 @@ if [[ -n "${REFERENCE_EVENTS:-}" || -n "${DETERMINISTIC_EVENTS:-}" ]]; then
     --markdown "${COMPARISON_MD}"
 fi
 
+# Stop the service before hashing its log so the evidence digest cannot change after publication.
+cleanup
+trap - EXIT
+
 export MODEL_ID MODEL_REVISION TENSOR_PARALLEL_SIZE MAX_MODEL_LEN
 export MAX_PARAGRAPHS_PER_REQUEST GPU_MEMORY_UTILIZATION INPUT_JSONL INPUT_MANIFEST
-export OUTPUT_JSON RUN_MANIFEST RUN_DIR SERVER_LOG
+export OUTPUT_JSON RUN_MANIFEST RUN_DIR SERVER_LOG VLLM_EXTRA_ARGS_TEXT
 python - <<'PY'
 import hashlib
 import importlib.metadata
@@ -220,6 +228,7 @@ manifest = {
         "max_model_len": int(os.environ["MAX_MODEL_LEN"]),
         "max_paragraphs_per_request": int(os.environ["MAX_PARAGRAPHS_PER_REQUEST"]),
         "gpu_memory_utilization": float(os.environ["GPU_MEMORY_UTILIZATION"]),
+        "vllm_extra_args": os.environ["VLLM_EXTRA_ARGS_TEXT"],
         "disable_thinking": os.environ.get("MDMETA_LLM_DISABLE_THINKING"),
         "seed": int(os.environ.get("MDMETA_LLM_SEED", "3997")),
     },
