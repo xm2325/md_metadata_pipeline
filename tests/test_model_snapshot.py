@@ -136,3 +136,12 @@ def test_rejects_committed_snapshot_without_safetensors(tmp_path: Path) -> None:
 
     with pytest.raises(ValueError, match="safetensors"):
         load_and_verify_model_snapshot(snapshot_dir, manifest_path)
+
+
+def test_rejects_symlinked_manifest(tmp_path: Path) -> None:
+    snapshot_dir, manifest_path, _ = _write_fake_snapshot(tmp_path)
+    manifest_link = tmp_path / "model-manifest-link.json"
+    manifest_link.symlink_to(manifest_path)
+
+    with pytest.raises(ValueError, match="symbolic links"):
+        load_and_verify_model_snapshot(snapshot_dir, manifest_link)

@@ -88,6 +88,68 @@ GPU allocation; identifier validation, record construction and database writing 
 on CPU. This keeps paid GPU time attributable to the task that needs it and makes failures easier
 to isolate.
 
+## Source-drift recovery
+
+A frozen JATS digest is an evidence commitment, not a value to update when Europe PMC changes its
+current XML representation. First try to recover the exact frozen bytes from an approved immutable
+copy and require them to reproduce the committed SHA-256. If those bytes cannot be recovered, do
+**not** replace the manifest digest with the hash of the newly downloaded XML and do not treat the
+changed document as the same frozen input.
+
+A deterministic reserve substitution is allowed only before any model inference for that corpus
+has started. It must follow all of these rules:
+
+1. Retrieve the original GitHub Actions corpus artifact named by the source manifest. Verify the
+   outer artifact digest and the stored SHA-256 of every component used to reconstruct selection,
+   including `provisional_temporal_plan.json` and `fulltext_machine_screen.json`.
+2. In the original plan's `rejected_or_reserve` order, select exactly the first row whose reason is
+   `eligible_reserve_not_selected`. Do not choose a more convenient replacement and do not skip to
+   a later reserve if the first reserve fails validation without a reviewed protocol amendment.
+3. Locate that document's record in the verified original screen component. Fetch its current XML
+   and require both `full_text_sha256` and `xml_size_bytes` to equal the screen record. A matching
+   title, identifier or screen status alone is insufficient.
+4. Replace only the unrecoverable article at its original array position. Preserve the selected
+   corpus size, position and assigned split; do not reshuffle any other article or recalculate the
+   selection using current upstream data.
+5. Create a new self-committed source manifest that records the superseded manifest, failed
+   document, failure job, verified artifact/component commitments, deterministic reserve rule and
+   replacement document. Commit that manifest, then create and validate a new git archive with a
+   matching root `.mdmeta-source-commit`. Never reuse the superseded commit or source archive for
+   the remediated run.
+6. Preserve the failed run directory, Slurm accounting, logs, checksum evidence and drift error.
+   Do not overwrite or delete them after a replacement succeeds.
+
+If inference has already started, the affected run fails as a whole: no in-place substitution,
+partial-result merge or hash update is permitted. Any restart must be reviewed as a new corpus
+revision with a new manifest, commit, archive and run identifier.
+
+### Current drift incident
+
+CPU staging job `185329` detected that the current XML for `PMC6316748` no longer matches the frozen
+source. The manifest commits SHA-256
+`cdbfd10f7e85a4042ebda7317b06cf963061f05e00d99168c03a5ed7e03a337d` and 105,780 bytes; the
+current response has a different digest (prefix `51d20c7e`) and 102,369 bytes. A separate check of
+the other four documents in the planned first-five gate (`PMC7560594`, `PMC6962038`, `PMC7439393`
+and `PMC5743237`) matched their frozen hash and size. This limited check is not evidence that all 60
+documents are currently recoverable.
+
+The original artifact commitments used for reserve recovery have been verified as:
+
+- GitHub artifact digest:
+  `sha256:470bb9fb223703413a3e0f287ce410adcdb9e5c7ea09c1d3bd15687437ef0966`;
+- `provisional_temporal_plan.json` file SHA-256:
+  `49f2608deff0641a47c87e7be4e65c1d34f2df33f63b8dc218797f12a52b3737`; and
+- `fulltext_machine_screen.json` file SHA-256:
+  `3cfcfeb7c74e4beb3d4b7bd69c9ff97c2f837a78314a2e71fc3c38ae1353b877`.
+
+In that verified original order, `PMC6994855` is the first
+`eligible_reserve_not_selected` record. Its original screen and current XML both report SHA-256
+`169ced75f7adf4ed9ab18bf28ec08ecd8ab76414dd81367ae9f277702ddc5a4d` and 87,028 bytes.
+
+**Status: remediation pending; no replacement has been executed, and no new manifest, commit or
+archive has yet been accepted.** Job `185329` remains failed drift evidence rather than a successful
+stage or model run.
+
 ## Promotion gates
 
 ### Before submitting any inference job

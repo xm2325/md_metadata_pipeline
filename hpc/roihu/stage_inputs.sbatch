@@ -19,6 +19,7 @@ ARTICLE_LIMIT=${7:?article limit required}
 MODEL_REPO_ID=${8:?model repository identifier required}
 MODEL_REVISION=${9:?model revision required}
 MODEL_LICENSE=${10:?model licence required}
+MODEL_MODE=${11:-create}
 
 if [[ -L "$RUN_DIR_INPUT" || -L "$SOURCE_ARCHIVE_INPUT" || -L "$MODEL_ROOT_INPUT" ]]; then
     printf 'path arguments must not be symbolic links\n' >&2
@@ -53,6 +54,10 @@ if [[ ! "$SOURCE_ARCHIVE_SHA256" =~ ^[0-9a-f]{64}$ ]]; then
 fi
 if [[ ! "$ARTICLE_LIMIT" =~ ^[1-9][0-9]*$ ]]; then
     printf 'article limit must be a positive integer\n' >&2
+    exit 64
+fi
+if [[ "$MODEL_MODE" != create && "$MODEL_MODE" != verify-existing ]]; then
+    printf 'model mode must be create or verify-existing\n' >&2
     exit 64
 fi
 
@@ -143,7 +148,8 @@ fi
 
 PYTHON_LAYER="$RUN_DIR/python"
 export PYTHONPATH="$SOURCE_DIR/src:$PYTHON_LAYER"
-if ! python3 -c 'import huggingface_hub; assert huggingface_hub.__version__ == "1.14.0"' 2>/dev/null; then
+if [[ "$MODEL_MODE" == create ]] \
+    && ! python3 -c 'import huggingface_hub; assert huggingface_hub.__version__ == "1.14.0"' 2>/dev/null; then
     python3 -m pip install \
         --disable-pip-version-check \
         --no-cache-dir \
@@ -158,20 +164,31 @@ ENVIRONMENT_TEMP="$RUN_DIR/.environment.txt.tmp"
     uname -a
     printf 'source_commit=%s\n' "$SOURCE_COMMIT"
     printf 'source_archive_sha256=%s\n' "$SOURCE_ARCHIVE_SHA256"
+    printf 'model_mode=%s\n' "$MODEL_MODE"
     module list 2>&1
     module show python-data 2>&1
-    python3 -c 'import huggingface_hub,httpx,pydantic; print("huggingface_hub=" + huggingface_hub.__version__); print("httpx=" + httpx.__version__); print("pydantic=" + pydantic.__version__)'
+    python3 -c 'import httpx,pydantic; print("httpx=" + httpx.__version__); print("pydantic=" + pydantic.__version__)'
+    if [[ "$MODEL_MODE" == create ]]; then
+        python3 -c 'import huggingface_hub; print("huggingface_hub=" + huggingface_hub.__version__)'
+    else
+        printf 'huggingface_hub=not_required_for_offline_verification\n'
+    fi
 } > "$ENVIRONMENT_TEMP"
 mv "$ENVIRONMENT_TEMP" "$RUN_DIR/environment.txt"
 
 MODEL_MANIFEST="$MODEL_ROOT/model-manifest.json"
+MODEL_MODE_ARGUMENTS=()
+if [[ "$MODEL_MODE" == verify-existing ]]; then
+    MODEL_MODE_ARGUMENTS+=(--verify-existing)
+fi
 srun --kill-on-bad-exit=1 --ntasks=1 \
     python3 "$SOURCE_DIR/hpc/roihu/stage_model.py" \
     --repo-id "$MODEL_REPO_ID" \
     --revision "$MODEL_REVISION" \
     --expected-license "$MODEL_LICENSE" \
     --snapshot-dir "$MODEL_ROOT/snapshot" \
-    --manifest "$MODEL_MANIFEST"
+    --manifest "$MODEL_MANIFEST" \
+    "${MODEL_MODE_ARGUMENTS[@]}"
 
 srun --kill-on-bad-exit=1 --ntasks=1 \
     python3 "$SOURCE_DIR/scripts/stage_frozen_jats.py" \

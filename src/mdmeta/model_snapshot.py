@@ -52,7 +52,9 @@ def _snapshot_files(snapshot_dir: Path) -> list[dict[str, Any]]:
         if relative.parts and relative.parts[0] == ".cache":
             continue
         if path.suffix.casefold() in {".bin", ".ckpt", ".pt", ".pth", ".pickle", ".pkl"}:
-            raise ValueError(f"model snapshot contains a prohibited pickle-capable file: {relative}")
+            raise ValueError(
+                f"model snapshot contains a prohibited pickle-capable file: {relative}"
+            )
         rows.append(
             {
                 "path": relative.as_posix(),
@@ -187,6 +189,10 @@ def load_and_verify_model_snapshot(
 ) -> dict[str, Any]:
     """Verify the manifest commitment and every staged file before offline inference."""
 
+    if snapshot_dir.is_symlink() or manifest_path.is_symlink():
+        raise ValueError("model snapshot root and manifest must not be symbolic links")
+    if not snapshot_dir.is_dir() or not manifest_path.is_file():
+        raise FileNotFoundError("model snapshot root or manifest is missing")
     payload = json.loads(manifest_path.read_text(encoding="utf-8"))
     stored = payload.get("manifest_sha256")
     core = {key: value for key, value in payload.items() if key != "manifest_sha256"}
