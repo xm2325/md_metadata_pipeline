@@ -164,6 +164,28 @@ commitment `e1987d67e5aef0b51f80047970efcb501a9faa3f14116e946ac3a9423193086b` an
 `81695496dda707dcb715b90877123a5030eed3793a8027c7c123b9d0eca51fa4`. Job `185329` remains
 preserved failed drift evidence rather than a successful stage or model run.
 
+### Mandatory full-pool audit after the second drift
+
+The one-row recovery above did not make the remaining 59 source commitments recoverable. Staging
+job `185656` verified the existing model snapshot, then stopped with exit code 1 when Europe PMC's
+current XML for `PMC6423238` differed from its frozen SHA-256. No GPU inference started. The
+one-row manifest and job `185650` remain immutable lineage evidence, but that manifest is not
+eligible for inference and must not be mutated through another sequential substitution.
+
+Before another staging attempt, run one authoritative CPU audit over the original 60 selected
+articles and every `eligible_reserve_not_selected` row in original plan order. The audit must not
+stop after finding enough reserves. It records current digest, size, PMCID identity and retrieval
+status for every row, stores XML only in private scratch, and is incomplete if any retrieval remains
+unresolved. A compact self-committed report and a byte-verified private cache bind the result; model
+outputs, current article topics and downstream integration outcomes are not inputs.
+
+If the audit is complete, define replacement-required selected rows by original position and
+currently valid reserves by original reserve rank. A single offline rebuild may map the former to
+the first equally sized prefix of the latter, preserving all positions, the 60-row count and the
+30/10/20 split counts. Those split labels remain provisional lineage placeholders, not an
+independent or human-gold evaluation. If valid reserves are insufficient, emit no partial manifest
+and start a separately preregistered corpus protocol instead.
+
 ## Promotion gates
 
 ### Before submitting any inference job
