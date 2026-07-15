@@ -32,6 +32,12 @@ between clusters rather than chained with a cross-cluster Slurm dependency.
 - Transfer only a validated `git archive` whose root includes `.mdmeta-source-commit` containing
   the exact full source commit. Never transfer `.git`, `.env`, SSH keys, GitHub credentials, local
   virtual environments or untracked files.
+- A dataset manifest generated after the code commit may remain a separate immutable file under
+  `/projappl/<project>/$USER`. The three model-pipeline scripts accept such an absolute manifest
+  only when its exact file SHA-256 is supplied as their final optional argument; they reject
+  symlinks, cross-project paths, paths outside the submitting user's private directory and digest
+  mismatches. This keeps a sealed evaluation split out of the code archive while preserving an
+  independently verifiable code/data binding.
 - Roihu scratch is temporary evidence storage, not an archive. Copy accepted compact evidence to an
   approved durable location and retain large datasets in CSC storage intended for that purpose.
 
@@ -54,6 +60,12 @@ after transfer. A missing/malformed marker, a marker mismatch, an unexpected arc
 digest mismatch is a hard stop. Every new CPU or GPU job in this workflow may run only after that
 preflight; the model staging, extraction and integration scripts repeat the marker check after
 extraction.
+
+For a separate scale-only source manifest, pass its absolute `/projappl` path in the normal
+manifest-position argument and pass its file SHA-256 as the final optional argument. The accepted
+independent-100 workflow uses this mode so the scale80 manifest can be sent to Roihu without the
+sealed gold20 manifest or workpack. Archive-relative manifests remain supported for the original
+1 → 5 → 60 experiment.
 
 Submit CPU batch scripts through `roihu_cpu` and GPU batch scripts through `roihu_gpu`. After
 copying and extracting the verified archive into the private project directory, submit with

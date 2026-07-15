@@ -13,12 +13,14 @@ RUN_DIR_INPUT=${1:?run directory required}
 SOURCE_ARCHIVE_INPUT=${2:?source archive required}
 SOURCE_COMMIT=${3:?source commit required}
 SOURCE_ARCHIVE_SHA256=${4:?source archive SHA-256 required}
-SOURCE_MANIFEST_RELATIVE=${5:?source manifest relative path required}
+SOURCE_MANIFEST_SPEC=${5:?source manifest path required}
 JATS_CACHE_DIR_INPUT=${6:?JATS cache directory required}
 MODEL_RESULT_INPUT=${7:?model result required}
+SOURCE_MANIFEST_FILE_SHA256=${8:-}
 
 if [[ -L "$RUN_DIR_INPUT" || -L "$SOURCE_ARCHIVE_INPUT" \
-    || -L "$JATS_CACHE_DIR_INPUT" || -L "$MODEL_RESULT_INPUT" ]]; then
+    || -L "$JATS_CACHE_DIR_INPUT" || -L "$MODEL_RESULT_INPUT" \
+    || ( "$SOURCE_MANIFEST_SPEC" = /* && -L "$SOURCE_MANIFEST_SPEC" ) ]]; then
     printf 'path arguments must not be symbolic links\n' >&2
     exit 64
 fi
@@ -26,6 +28,16 @@ RUN_DIR=$(realpath -m -- "$RUN_DIR_INPUT")
 SOURCE_ARCHIVE=$(realpath -e -- "$SOURCE_ARCHIVE_INPUT")
 JATS_CACHE_DIR=$(realpath -e -- "$JATS_CACHE_DIR_INPUT")
 MODEL_RESULT=$(realpath -e -- "$MODEL_RESULT_INPUT")
+EXTERNAL_SOURCE_MANIFEST=''
+if [[ "$SOURCE_MANIFEST_SPEC" = /* ]]; then
+    if ! EXTERNAL_SOURCE_MANIFEST=$(realpath -e -- "$SOURCE_MANIFEST_SPEC"); then
+        printf 'external source manifest does not exist\n' >&2
+        exit 66
+    fi
+elif [[ "$SOURCE_MANIFEST_SPEC" == *".."* ]]; then
+    printf 'source manifest must be a safe archive-relative or absolute project path\n' >&2
+    exit 64
+fi
 if [[ "$RUN_DIR" != /scratch/project_*/* ]]; then
     printf 'run directory must be inside /scratch/project_*\n' >&2
     exit 64
@@ -42,16 +54,17 @@ if [[ "$SOURCE_ARCHIVE" != /projappl/project_*/* || ! -f "$SOURCE_ARCHIVE" ]]; t
     printf 'source archive must be inside /projappl/project_*\n' >&2
     exit 64
 fi
-if [[ "$SOURCE_MANIFEST_RELATIVE" = /* || "$SOURCE_MANIFEST_RELATIVE" == *".."* ]]; then
-    printf 'source manifest must be a safe archive-relative path\n' >&2
-    exit 64
-fi
 if [[ ! "$SOURCE_COMMIT" =~ ^[0-9a-f]{40}$ ]]; then
     printf 'source commit must be a full lowercase Git SHA-1\n' >&2
     exit 64
 fi
 if [[ ! "$SOURCE_ARCHIVE_SHA256" =~ ^[0-9a-f]{64}$ ]]; then
     printf 'source archive digest must be a lowercase SHA-256\n' >&2
+    exit 64
+fi
+if [[ -n "$EXTERNAL_SOURCE_MANIFEST" \
+    && ! "$SOURCE_MANIFEST_FILE_SHA256" =~ ^[0-9a-f]{64}$ ]]; then
+    printf 'external source manifest requires its lowercase file SHA-256\n' >&2
     exit 64
 fi
 
@@ -63,6 +76,11 @@ RESULT_PROJECT=${MODEL_RESULT#/scratch/}
 RESULT_PROJECT=${RESULT_PROJECT%%/*}
 ARCHIVE_PROJECT=${SOURCE_ARCHIVE#/projappl/}
 ARCHIVE_PROJECT=${ARCHIVE_PROJECT%%/*}
+MANIFEST_PROJECT=''
+if [[ -n "$EXTERNAL_SOURCE_MANIFEST" ]]; then
+    MANIFEST_PROJECT=${EXTERNAL_SOURCE_MANIFEST#/projappl/}
+    MANIFEST_PROJECT=${MANIFEST_PROJECT%%/*}
+fi
 if [[ ! "$RUN_PROJECT" =~ ^project_[0-9]+$ || ! "$USER" =~ ^[A-Za-z0-9._-]+$ ]]; then
     printf 'project or user identity has an unsafe form\n' >&2
     exit 64
@@ -72,10 +90,19 @@ if [[ "$RUN_PROJECT" != "$JATS_PROJECT" || "$RUN_PROJECT" != "$RESULT_PROJECT" \
     printf 'run, JATS, model result and source archive paths must belong to the same project\n' >&2
     exit 64
 fi
+if [[ -n "$EXTERNAL_SOURCE_MANIFEST" \
+    && ( "$EXTERNAL_SOURCE_MANIFEST" != /projappl/project_*/* \
+        || ! -f "$EXTERNAL_SOURCE_MANIFEST" \
+        || "$MANIFEST_PROJECT" != "$RUN_PROJECT" ) ]]; then
+    printf 'external source manifest must be a regular file in the matching project\n' >&2
+    exit 64
+fi
 if [[ "$RUN_DIR" != "/scratch/$RUN_PROJECT/$USER/"* \
     || "$JATS_CACHE_DIR" != "/scratch/$RUN_PROJECT/$USER/"* \
     || "$MODEL_RESULT" != "/scratch/$RUN_PROJECT/$USER/"* \
-    || "$SOURCE_ARCHIVE" != "/projappl/$RUN_PROJECT/$USER/"* ]]; then
+    || "$SOURCE_ARCHIVE" != "/projappl/$RUN_PROJECT/$USER/"* \
+    || ( -n "$EXTERNAL_SOURCE_MANIFEST" \
+        && "$EXTERNAL_SOURCE_MANIFEST" != "/projappl/$RUN_PROJECT/$USER/"* ) ]]; then
     printf 'all paths must be below the submitting user private project paths\n' >&2
     exit 64
 fi
@@ -137,10 +164,20 @@ if [[ "$ARCHIVE_COMMIT" != "$SOURCE_COMMIT" ]]; then
     exit 65
 fi
 chmod -R u=rwX,go= "$SOURCE_DIR"
-SOURCE_MANIFEST="$SOURCE_DIR/$SOURCE_MANIFEST_RELATIVE"
+if [[ -n "$EXTERNAL_SOURCE_MANIFEST" ]]; then
+    SOURCE_MANIFEST="$EXTERNAL_SOURCE_MANIFEST"
+else
+    SOURCE_MANIFEST="$SOURCE_DIR/$SOURCE_MANIFEST_SPEC"
+fi
 if [[ ! -f "$SOURCE_MANIFEST" ]]; then
     printf 'source manifest is missing from the verified source archive\n' >&2
     exit 66
+fi
+ACTUAL_SOURCE_MANIFEST_FILE_SHA256=$(sha256sum "$SOURCE_MANIFEST" | awk '{print $1}')
+if [[ -n "$SOURCE_MANIFEST_FILE_SHA256" \
+    && "$ACTUAL_SOURCE_MANIFEST_FILE_SHA256" != "$SOURCE_MANIFEST_FILE_SHA256" ]]; then
+    printf 'source manifest file digest mismatch\n' >&2
+    exit 65
 fi
 export PYTHONPATH="$SOURCE_DIR/src"
 
@@ -151,6 +188,8 @@ ENVIRONMENT_TEMP="$RUN_DIR/.environment.txt.tmp"
     uname -a
     printf 'source_commit=%s\n' "$SOURCE_COMMIT"
     printf 'source_archive_sha256=%s\n' "$SOURCE_ARCHIVE_SHA256"
+    printf 'source_manifest_file_sha256=%s\n' "$ACTUAL_SOURCE_MANIFEST_FILE_SHA256"
+    printf 'source_manifest_external=%s\n' "$([[ -n "$EXTERNAL_SOURCE_MANIFEST" ]] && printf true || printf false)"
     printf 'model_result_file_sha256=%s\n' "$(sha256sum "$MODEL_RESULT" | awk '{print $1}')"
     module list 2>&1
     module show python-data 2>&1

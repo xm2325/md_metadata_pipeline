@@ -92,6 +92,14 @@ GPU allocation; identifier validation, record construction and database writing 
 on CPU. This keeps paid GPU time attributable to the task that needs it and makes failures easier
 to isolate.
 
+For the later independent scale80 run, use the accepted scale-only source artifact rather than the
+full 80/20 plan. Pass its absolute private `/projappl` path and exact file SHA-256 to
+`stage_inputs.sbatch`, `llm_extract.sbatch` and `model_integration.sbatch`. Each script independently
+rejects a symlink, cross-project path, path outside the submitting user's private project tree or
+digest mismatch. The source manifest must report 80 scale articles, zero exported gold articles
+and zero scale/gold overlap; no gold20 workpack or human reference label may be transferred to the
+model-development run.
+
 ## Source-drift recovery
 
 A frozen JATS digest is an evidence commitment, not a value to update when Europe PMC changes its
