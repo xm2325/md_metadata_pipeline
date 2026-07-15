@@ -420,8 +420,6 @@ class LLMEventCandidate(BaseModel):
 
 
 class LLMEventResponseV2(BaseModel):
-    """Historical unbounded response contract retained for schema reproducibility."""
-
     model_config = ConfigDict(extra="forbid", title="LLMEventResponse")
 
     events: list[LLMEventCandidate]
