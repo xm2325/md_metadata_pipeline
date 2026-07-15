@@ -53,7 +53,10 @@ def load_event_run(path: str | Path) -> tuple[dict[str, list[ProtocolEvent]], di
         )
         return documents, metadata
 
-    if isinstance(payload, dict) and all(isinstance(key, str) for key in payload):
+    if isinstance(payload, dict) and payload and all(
+        isinstance(document_id, str) and isinstance(rows, list)
+        for document_id, rows in payload.items()
+    ):
         for document_id, rows in payload.items():
             documents[document_id] = _events(rows)
         metadata["schema_version"] = "canonical-document-event-map-v1"
@@ -144,19 +147,20 @@ def paired_bootstrap_delta(
     baseline_counts = _article_counts(baseline, references)
     rng = random.Random(seed)
     deltas: list[float] = []
-    for _ in range(iterations):
-        candidate_total = Counter()
-        baseline_total = Counter()
-        for _ in documents:
-            document_id = rng.choice(documents)
-            c_tp, c_fp, c_fn = candidate_counts[document_id]
-            b_tp, b_fp, b_fn = baseline_counts[document_id]
-            candidate_total.update(tp=c_tp, fp=c_fp, fn=c_fn)
-            baseline_total.update(tp=b_tp, fp=b_fp, fn=b_fn)
-        deltas.append(
-            _f1(candidate_total["tp"], candidate_total["fp"], candidate_total["fn"])
-            - _f1(baseline_total["tp"], baseline_total["fp"], baseline_total["fn"])
-        )
+    if documents:
+        for _ in range(iterations):
+            candidate_total = Counter()
+            baseline_total = Counter()
+            for _ in documents:
+                document_id = rng.choice(documents)
+                c_tp, c_fp, c_fn = candidate_counts[document_id]
+                b_tp, b_fp, b_fn = baseline_counts[document_id]
+                candidate_total.update(tp=c_tp, fp=c_fp, fn=c_fn)
+                baseline_total.update(tp=b_tp, fp=b_fp, fn=b_fn)
+            deltas.append(
+                _f1(candidate_total["tp"], candidate_total["fp"], candidate_total["fn"])
+                - _f1(baseline_total["tp"], baseline_total["fp"], baseline_total["fn"])
+            )
     deltas.sort()
     if deltas:
         lower = deltas[int(0.025 * (len(deltas) - 1))]
