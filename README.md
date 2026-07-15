@@ -316,4 +316,7 @@ python scripts/summarize_validation.py \
 
 Offline validation tests use mocked service responses. Live PDBe, UniProt and mapping results are produced only by the separate integrated-enrichment and file-backed workflows and remain dated run artifacts rather than timeless repository claims.
 
-See `docs/CONFIRMATORY_BENCHMARK.md`, `docs/ANNOTATION_GUIDE.md`, `docs/VALIDATION_SEMANTICS.md`, `docs/LLM_ADAPTER.md`, `docs/TEMPORAL_ISOLATION.md`, `docs/JD_END_TO_END_INTEGRATION.md`, and `docs/FILE_BACKED_MDDB_PLAN.md`.
+See `docs/CONFIRMATORY_BENCHMARK.md`, `docs/ANNOTATION_GUIDE.md`,
+`docs/VALIDATION_SEMANTICS.md`, `docs/LLM_ADAPTER.md`, `docs/TEMPORAL_ISOLATION.md`,
+`docs/JD_END_TO_END_INTEGRATION.md`, `docs/FILE_BACKED_MDDB_PLAN.md`, and
+`docs/CSC_ROIHU.md`.
