@@ -19,6 +19,7 @@ from .integration import parse_jats_paragraphs, protocol_paragraphs
 from .llm_adapter import (
     EvidenceValidationAudit,
     LLMEventResponse,
+    MAX_EVENTS_PER_PARAGRAPH,
     SchemaConstrainedEventExtractor,
     StructuredGenerationRejection,
 )
@@ -26,9 +27,9 @@ from .models import ProtocolEvent
 from .protocol_events import Paragraph
 
 
-SCHEMA_VERSION = "mdmeta.llm-protocol-batch.v4"
-RESPONSE_SCHEMA_VERSION = "mdmeta.llm-event-response.v2"
-RESPONSE_SCHEMA_FILENAME = "llm-event-response-v2.schema.json"
+SCHEMA_VERSION = "mdmeta.llm-protocol-batch.v5"
+RESPONSE_SCHEMA_VERSION = "mdmeta.llm-event-response.v3"
+RESPONSE_SCHEMA_FILENAME = "llm-event-response-v3.schema.json"
 FULLTEXT_URL = "https://www.ebi.ac.uk/europepmc/webservices/rest/{document_id}/fullTextXML"
 RETRYABLE_STATUS_CODES = {429, 500, 502, 503, 504}
 _DOCUMENT_ID = re.compile(r"PMC\d+", re.IGNORECASE)
@@ -48,8 +49,10 @@ def load_committed_response_schema(path: Path) -> dict[str, Any]:
         not isinstance(candidate, dict)
         or candidate.get("additionalProperties") is not False
         or "event_type_raw_text" not in candidate.get("required", [])
+        or payload.get("properties", {}).get("events", {}).get("maxItems")
+        != MAX_EVENTS_PER_PARAGRAPH
     ):
-        raise ValueError("committed LLM response schema lacks the v2 evidence contract")
+        raise ValueError("committed LLM response schema lacks the v3 bounded evidence contract")
     return payload
 
 

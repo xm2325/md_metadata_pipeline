@@ -14,6 +14,9 @@ from .models import EventType, Evidence, ProtocolEvent
 from .protocol_events import Paragraph
 
 
+MAX_EVENTS_PER_PARAGRAPH = 16
+
+
 class StructuredBackend(Protocol):
     """Provider-independent interface for structured model generation."""
 
@@ -416,10 +419,18 @@ class LLMEventCandidate(BaseModel):
         return value
 
 
+class LLMEventResponseV2(BaseModel):
+    """Historical unbounded response contract retained for schema reproducibility."""
+
+    model_config = ConfigDict(extra="forbid", title="LLMEventResponse")
+
+    events: list[LLMEventCandidate]
+
+
 class LLMEventResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    events: list[LLMEventCandidate]
+    events: list[LLMEventCandidate] = Field(max_length=MAX_EVENTS_PER_PARAGRAPH)
 
 
 class EvidenceIntegrityError(ValueError):
@@ -655,8 +666,9 @@ class SchemaConstrainedEventExtractor:
             "raw_text and also return its parsed value and unit. Set every unstated or unsupported "
             "attribute to null; never invent placeholders such as 'none'. Do not attach an attribute "
             "from another sentence unless the single contiguous quote contains both statements and "
-            "the wording explicitly links them to the same phase. Return an empty events list when "
-            "no supported event is present.\n\n"
+            "the wording explicitly links them to the same phase. Return no more than 16 distinct "
+            "events for this one paragraph, and return an empty events list when no supported event "
+            "is present.\n\n"
             f"SOURCE PARAGRAPHS\n{blocks}"
         )
 

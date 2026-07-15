@@ -25,7 +25,7 @@ A proposed event enters the pipeline only after its phase, quote and at least on
 
 The original structured response and its hash remain unchanged. A candidate with a supported phase and at least one valid attribute may survive conservative removal of unsupported attributes; the private result records candidate indices, candidate hashes, repairs and rejection reason codes. A candidate with no valid attribute is rejected. One rejected candidate does not erase an independently valid candidate from the same schema-valid response. A structurally invalid response is still rejected as a whole.
 
-Batch result schema v4 also isolates an unclean completion to its own task. A token-limited,
+Batch result schema v5 also isolates an unclean completion to its own task. A token-limited,
 missing, or non-strict-JSON response is retained privately as raw text (or an explicit null), bound
 to a SHA-256 commitment, and classified as `generation_rejected`; valid peer responses in the
 same inference batch continue through validation. Compact summaries contain only aggregate stable
@@ -43,7 +43,7 @@ An incorrect `event_type_raw_text` can be repaired only when it is an exact subs
 - timestep: fs, ps;
 - replicate counts: integers or English words one through ten.
 
-The adapter currently treats one exact quote as the evidence unit for one event. Cross-paragraph relation extraction is not accepted. Batch result schema v4 distinguishes fully accepted tasks from `accepted_with_evidence_rejections` and `generation_rejected`, and publishes only aggregate reason counts in compact summaries.
+The adapter currently treats one exact quote as the evidence unit for one event. Cross-paragraph relation extraction is not accepted. Response schema v3 permits at most 16 candidate events from one paragraph, preventing unbounded schema-constrained enumeration while retaining headroom above the observed completed-run maximum of 11. Batch result schema v5 distinguishes fully accepted tasks from `accepted_with_evidence_rejections` and `generation_rejected`, and publishes only aggregate reason counts in compact summaries.
 
 ## Prompt rule
 

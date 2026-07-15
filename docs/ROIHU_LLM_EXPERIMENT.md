@@ -235,8 +235,10 @@ Proceed to five only when all of the following hold:
   valid SQLite/checksum result; and
 - every evidence rejection or integration failure is explicit rather than silently discarded.
 
-Batch result schema `mdmeta.llm-protocol-batch.v4` performs evidence replay at candidate and
-attribute granularity after the complete response has passed response schema v2. A task may be
+Batch result schema `mdmeta.llm-protocol-batch.v5` performs evidence replay at candidate and
+attribute granularity after the complete response has passed response schema v3. Response v3
+limits one paragraph to 16 candidate events; this exceeds the observed completed-task maximum of
+11 while preventing unbounded event-array generation. A task may be
 `accepted_with_evidence_rejections` only when at least one normalized event remains; every removed
 candidate or attribute is bound to its candidate index and SHA-256 with a stable reason code. The
 raw response and its commitment are never rewritten. Compact summaries expose aggregate reason

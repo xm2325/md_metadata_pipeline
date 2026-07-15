@@ -6,6 +6,7 @@ import pytest
 
 from mdmeta.llm_adapter import (
     EvidenceIntegrityError,
+    LLMEventResponse,
     SchemaConstrainedEventExtractor,
     StructuredGenerationRejection,
     StructuredOutputError,
@@ -156,6 +157,7 @@ def test_accepts_exact_evidence_and_normalizes_units():
     assert "never invent placeholders" in backend.prompt
     assert "Never emit a separate phase-only or duplicate event" in backend.prompt
     assert "never return an event with all protocol attributes null" in backend.prompt
+    assert "no more than 16 distinct events" in backend.prompt
     assert "populate every supported protocol attribute" in backend.prompt
     assert "'80 ns' into duration" in backend.prompt
     assert "'NPT' into ensemble" in backend.prompt
@@ -652,6 +654,14 @@ def test_vllm_batch_returns_auditable_per_prompt_generation_rejection(monkeypatc
     assert responses[1].finish_reason == "length"
     assert responses[1].response == '{"events":['
     assert backend.last_batch_metadata[1]["finish_reason"] == "length"
+
+
+def test_response_schema_limits_candidate_events_per_paragraph() -> None:
+    schema = LLMEventResponse.model_json_schema()
+
+    assert schema["properties"]["events"]["maxItems"] == 16
+    with pytest.raises(ValueError, match="at most 16"):
+        LLMEventResponse.model_validate({"events": [_payload(_paragraph())["events"][0]] * 17})
 
 
 def test_vllm_backend_rejects_wrong_runtime_version(monkeypatch):
