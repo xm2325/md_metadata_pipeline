@@ -56,6 +56,22 @@ jobs:
           import json
           from pathlib import Path
 
+          def shape(value, depth=0):
+              if depth >= 3:
+                  return type(value).__name__
+              if isinstance(value, dict):
+                  return {
+                      key: shape(item, depth + 1)
+                      for key, item in list(value.items())[:12]
+                  }
+              if isinstance(value, list):
+                  return {
+                      "type": "list",
+                      "length": len(value),
+                      "first": shape(value[0], depth + 1) if value else None,
+                  }
+              return type(value).__name__
+
           payload = json.loads(
               Path("results/live_pdbe_kb/enrichment.json").read_text(encoding="utf-8")
           )
@@ -76,8 +92,17 @@ jobs:
                   f"{row['http_status'] or ''} | {providers} | "
                   f"{len(row['annotations'])} | `{digest[:16]}` |"
               )
+          print()
+          print("## Payload shape profile")
+          print()
+          print("Only keys, container lengths and value types are shown; full upstream records remain in the run file.")
+          print()
+          for row in payload["enrichments"]:
+              print(f"### {row['pdb_id']}")
+              print("```json")
+              print(json.dumps(shape(row.get("raw_payload")), indent=2, sort_keys=True))
+              print("```")
           PY
-          cat results/live_pdbe_kb/enrichment.json
 
       - name: Publish live result on the pull request
         if: github.event_name == 'pull_request'
