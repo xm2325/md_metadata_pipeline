@@ -27,7 +27,7 @@ from .models import ProtocolEvent
 from .protocol_events import Paragraph
 
 
-SCHEMA_VERSION = "mdmeta.llm-protocol-batch.v5"
+SCHEMA_VERSION = "mdmeta.llm-protocol-batch.v6"
 RESPONSE_SCHEMA_VERSION = "mdmeta.llm-event-response.v3"
 RESPONSE_SCHEMA_FILENAME = "llm-event-response-v3.schema.json"
 FULLTEXT_URL = "https://www.ebi.ac.uk/europepmc/webservices/rest/{document_id}/fullTextXML"

@@ -157,7 +157,6 @@ def test_accepts_exact_evidence_and_normalizes_units():
     assert "never invent placeholders" in backend.prompt
     assert "Never emit a separate phase-only or duplicate event" in backend.prompt
     assert "never return an event with all protocol attributes null" in backend.prompt
-    assert "no more than 16 distinct events" in backend.prompt
     assert "populate every supported protocol attribute" in backend.prompt
     assert "'80 ns' into duration" in backend.prompt
     assert "'NPT' into ensemble" in backend.prompt

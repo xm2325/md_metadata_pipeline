@@ -664,9 +664,8 @@ class SchemaConstrainedEventExtractor:
             "raw_text and also return its parsed value and unit. Set every unstated or unsupported "
             "attribute to null; never invent placeholders such as 'none'. Do not attach an attribute "
             "from another sentence unless the single contiguous quote contains both statements and "
-            "the wording explicitly links them to the same phase. Return no more than 16 distinct "
-            "events for this one paragraph, and return an empty events list when no supported event "
-            "is present.\n\n"
+            "the wording explicitly links them to the same phase. Return an empty events list when "
+            "no supported event is present.\n\n"
             f"SOURCE PARAGRAPHS\n{blocks}"
         )
 
