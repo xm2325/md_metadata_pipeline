@@ -56,6 +56,13 @@ def test_committed_contract_schemas_are_current_and_strict() -> None:
     )
     assert graph["additionalProperties"] is False
     assert graph["properties"]["schema_version"]["const"] == "mdmeta-graph-export-v1"
+    review = json.loads(
+        (ROOT / "schemas" / "mdmeta-human-review-queue-v1.schema.json").read_text()
+    )
+    assert review["additionalProperties"] is False
+    assert review["properties"]["schema_version"]["const"] == (
+        "mdmeta-human-review-queue-v1"
+    )
 
 
 def test_contract_check_detects_drift(tmp_path: Path) -> None:

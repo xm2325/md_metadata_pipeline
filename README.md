@@ -125,6 +125,13 @@ commit `602a9bf` all passed, including
 [PDBe-KB run report](study/pdbekb_scale80/RUN_2026-07-16.md). This still is not a governed public
 release, published GHCR image or externally reachable production service.
 
+Version 0.13 adds a deterministic, content-bound human-review queue. Production records are
+risk-routed to automatic provisional acceptance, one reviewer, or blinded independent double
+review. Every routed record states the uncertainty, source/evidence locator, concrete review
+question and second-review escalation conditions. The independent gold/reference path still
+requires double review for every item because confidence-based selection would bias accuracy
+measurement. See [`docs/HUMAN_REVIEW_POLICY.md`](docs/HUMAN_REVIEW_POLICY.md).
+
 See [`docs/PRODUCTION_READINESS.md`](docs/PRODUCTION_READINESS.md),
 [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md), [`docs/OPERATIONS.md`](docs/OPERATIONS.md), and
 [`docs/JR3997_ALIGNMENT_AND_ROADMAP.md`](docs/JR3997_ALIGNMENT_AND_ROADMAP.md).

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "md-metadata-pipeline"
-version = "0.12.0"
+version = "0.13.0"
 description = "Evidence-linked molecular-dynamics literature and file metadata integration"
 requires-python = ">=3.11"
 dependencies = [
@@ -23,6 +23,7 @@ files = ["MDAnalysis>=2.8,<3"]
 [project.scripts]
 mdmeta-export-contracts = "mdmeta.contracts:main"
 mdmeta-export-graph = "mdmeta.graph:main"
+mdmeta-human-review = "mdmeta.human_review:main"
 mdmeta-migrate-database = "mdmeta.migrate:main"
 mdmeta-recovery = "mdmeta.recovery:main"
 mdmeta-release = "mdmeta.release:main"
