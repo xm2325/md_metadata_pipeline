@@ -9,6 +9,7 @@ from pathlib import Path
 from pydantic import BaseModel
 
 from .file_backed import FileBackedMDReport
+from .graph import GraphExportManifest
 from .integration import IntegratedMDRecord
 from .llm_adapter import LLMEventResponse, LLMEventResponseV2
 from .pdbekb import PDBeKBBatchReport
@@ -17,6 +18,7 @@ from .release import ReleaseManifest
 
 CONTRACTS: dict[str, type[BaseModel]] = {
     "file-backed-md-record-v1.schema.json": FileBackedMDReport,
+    "mdmeta-graph-export-v1.schema.json": GraphExportManifest,
     "integrated-md-record-v1.schema.json": IntegratedMDRecord,
     "llm-event-response-v2.schema.json": LLMEventResponseV2,
     "llm-event-response-v3.schema.json": LLMEventResponse,

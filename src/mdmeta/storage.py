@@ -723,6 +723,25 @@ class SQLiteRecordStore:
             ).fetchall()
         return [json.loads(str(row["enrichment_json"])) for row in rows]
 
+    def list_pdbekb_enrichments(self) -> list[dict[str, object]]:
+        """Return every enrichment with the report commitment that supplied it."""
+
+        with self._connect() as connection:
+            rows = connection.execute(
+                """
+                SELECT report_commitment_sha256, enrichment_json
+                FROM pdbekb_enrichments
+                ORDER BY report_commitment_sha256, accession
+                """
+            ).fetchall()
+        return [
+            {
+                "report_commitment_sha256": str(row["report_commitment_sha256"]),
+                "enrichment": json.loads(str(row["enrichment_json"])),
+            }
+            for row in rows
+        ]
+
     @staticmethod
     def _file_sha256(path: Path) -> str:
         digest = hashlib.sha256()

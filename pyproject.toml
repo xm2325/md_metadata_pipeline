@@ -22,6 +22,7 @@ files = ["MDAnalysis>=2.8,<3"]
 
 [project.scripts]
 mdmeta-export-contracts = "mdmeta.contracts:main"
+mdmeta-export-graph = "mdmeta.graph:main"
 mdmeta-migrate-database = "mdmeta.migrate:main"
 mdmeta-recovery = "mdmeta.recovery:main"
 mdmeta-release = "mdmeta.release:main"
