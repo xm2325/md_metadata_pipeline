@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 from pathlib import Path
 
 import pytest
@@ -220,13 +221,22 @@ def test_review_queue_is_deterministic_content_bound_and_database_bound(
     store.checkpoint()
     policy = _policy()
 
-    first = export_human_review_queue(database, tmp_path / "first.json", policy=policy)
-    second = build_human_review_queue(database, policy=policy)
+    first = export_human_review_queue(
+        database,
+        tmp_path / "first.json",
+        implementation_git_commit="a" * 40,
+        policy=policy,
+    )
+    second = build_human_review_queue(
+        database, implementation_git_commit="a" * 40, policy=policy
+    )
 
     assert first == second
     assert [item.document_id for item in first.items] == ["DOC1", "DOC2"]
     assert first.review_tier_counts == {"auto_accept": 2}
     assert first.review_reason_counts == {}
+    assert first.software_version == "0.13.0"
+    assert first.implementation_git_commit == "a" * 40
     assert verify_human_review_queue(
         tmp_path / "first.json", database=database
     ) == first
@@ -245,4 +255,47 @@ def test_review_queue_rejects_uncheckpointed_database(tmp_path: Path) -> None:
     database.with_name(database.name + "-wal").write_bytes(b"sidecar")
 
     with pytest.raises(RuntimeError, match="checkpointed database"):
-        build_human_review_queue(database, policy=_policy())
+        build_human_review_queue(
+            database, implementation_git_commit="a" * 40, policy=_policy()
+        )
+
+
+def test_model_batch_rejections_are_bound_and_routed(tmp_path: Path) -> None:
+    database = tmp_path / "records.sqlite"
+    store = SQLiteRecordStore(database)
+    store.write(_record())
+    store.checkpoint()
+    summary = tmp_path / "model-summary.json"
+    summary.write_text(
+        json.dumps(
+            {
+                "batch": {
+                    "per_article": {
+                        "DOC1": {
+                            "paragraph_count": 3,
+                            "accepted_paragraph_count": 2,
+                            "accepted_with_evidence_rejections_count": 1,
+                            "rejected_paragraph_count": 1,
+                            "generation_rejected_count": 1,
+                            "event_count": 0,
+                        }
+                    }
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    queue = build_human_review_queue(
+        database,
+        implementation_git_commit="b" * 40,
+        policy=_policy(),
+        model_summary=summary,
+    )
+
+    assert queue.model_summary_sha256 == hashlib.sha256(summary.read_bytes()).hexdigest()
+    assert queue.items[0].review_tier is ReviewTier.SINGLE_REVIEW
+    assert {reason.code for reason in queue.items[0].review_reasons} == {
+        "model_evidence_rejection",
+        "model_generation_rejection",
+    }

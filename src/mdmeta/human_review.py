@@ -4,6 +4,7 @@ import argparse
 import hashlib
 import json
 import os
+import re
 import tempfile
 from collections import Counter, defaultdict
 from enum import StrEnum
@@ -12,6 +13,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+from . import __version__
 from .integration import IntegratedMDRecord
 from .models import EventType, MappingSegment, ValidationState
 from .storage import SCHEMA_VERSION, SQLiteRecordStore
@@ -71,6 +73,7 @@ class ReviewEvidenceBinding(_StrictModel):
         "residue_mapping",
         "pdbekb",
         "completeness",
+        "model_batch",
         "policy",
     ]
     field: str | None = None
@@ -155,6 +158,11 @@ class HumanReviewQueue(_StrictModel):
     source_database_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
     source_database_schema_version: Literal[2] = SCHEMA_VERSION
     source_article_count: int = Field(ge=0)
+    software_version: str = Field(min_length=1)
+    implementation_git_commit: str = Field(pattern=r"^[0-9a-f]{40}$")
+    model_summary_sha256: str | None = Field(
+        default=None, pattern=r"^[0-9a-f]{64}$"
+    )
     policy: HumanReviewPolicy
     items: list[HumanReviewItem]
     review_tier_counts: dict[str, int]
@@ -284,11 +292,73 @@ def _reason(
     )
 
 
+_MODEL_AUDIT_FIELDS = (
+    "paragraph_count",
+    "accepted_paragraph_count",
+    "accepted_with_evidence_rejections_count",
+    "rejected_paragraph_count",
+    "generation_rejected_count",
+    "event_count",
+)
+
+
+def _load_model_summary(
+    path: Path,
+    *,
+    expected_document_ids: set[str],
+) -> tuple[dict[str, dict[str, int]], str]:
+    if path.is_symlink() or not path.is_file():
+        raise ValueError("model summary must be a regular file")
+    if path.stat().st_size > 128 * 1024 * 1024:
+        raise ValueError("model summary exceeds the 128 MiB input limit")
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+        per_article = payload["batch"]["per_article"]
+    except (json.JSONDecodeError, KeyError, TypeError) as error:
+        raise ValueError("model summary has no batch.per_article object") from error
+    if not isinstance(per_article, dict):
+        raise ValueError("model summary batch.per_article must be an object")
+    actual_document_ids = set(per_article)
+    if actual_document_ids != expected_document_ids:
+        missing = sorted(expected_document_ids - actual_document_ids)
+        extra = sorted(actual_document_ids - expected_document_ids)
+        raise ValueError(
+            f"model summary article inventory mismatch; missing={missing}, extra={extra}"
+        )
+    selected: dict[str, dict[str, int]] = {}
+    for document_id, value in sorted(per_article.items()):
+        if not isinstance(value, dict):
+            raise ValueError(f"model summary row {document_id} is not an object")
+        row: dict[str, int] = {}
+        for field in _MODEL_AUDIT_FIELDS:
+            count = value.get(field)
+            if isinstance(count, bool) or not isinstance(count, int) or count < 0:
+                raise ValueError(
+                    f"model summary row {document_id} has invalid {field}"
+                )
+            row[field] = count
+        if row["accepted_paragraph_count"] > row["paragraph_count"]:
+            raise ValueError(
+                f"model summary row {document_id} accepts more paragraphs than supplied"
+            )
+        if row["rejected_paragraph_count"] > row["paragraph_count"]:
+            raise ValueError(
+                f"model summary row {document_id} rejects more paragraphs than supplied"
+            )
+        if row["generation_rejected_count"] > row["rejected_paragraph_count"]:
+            raise ValueError(
+                f"model summary row {document_id} has inconsistent generation rejections"
+            )
+        selected[str(document_id)] = row
+    return selected, _file_sha256(path)
+
+
 def review_record(
     record: IntegratedMDRecord,
     *,
     policy: HumanReviewPolicy,
     pdbekb_by_accession: dict[str, list[dict[str, object]]] | None = None,
+    model_article_audit: dict[str, int] | None = None,
 ) -> HumanReviewItem:
     """Apply deterministic risk rules and expose exactly what a reviewer must inspect."""
 
@@ -524,6 +594,7 @@ def review_record(
         "failed",
         "incomplete",
         "partial",
+        "rejection",
         "unresolved",
     }
     incomplete_bindings = [
@@ -539,11 +610,71 @@ def review_record(
                 "incomplete_pipeline_stage",
                 "coverage",
                 ReviewSeverity.ELEVATED,
-                "One or more pipeline completeness fields are partial, unresolved, or failed.",
+                "A pipeline stage is partial, unresolved, failed, or contains rejected output.",
                 "Is the incomplete stage expected for this article, or does it require reprocessing/correction?",
                 incomplete_bindings,
             )
         )
+
+    if model_article_audit is not None:
+        if model_article_audit["paragraph_count"] == 0:
+            add(
+                _reason(
+                    "no_model_task_coverage",
+                    "coverage",
+                    ReviewSeverity.ELEVATED,
+                    "No protocol paragraph reached the model for this selected article.",
+                    "Is a true reviewed-zero appropriate, or did paragraph selection miss the MD methods?",
+                    [
+                        ReviewEvidenceBinding(
+                            source="model_batch",
+                            field="paragraph_count",
+                            value=0,
+                        )
+                    ],
+                )
+            )
+        evidence_rejections = model_article_audit[
+            "accepted_with_evidence_rejections_count"
+        ] + (
+            model_article_audit["rejected_paragraph_count"]
+            - model_article_audit["generation_rejected_count"]
+        )
+        if evidence_rejections > 0:
+            add(
+                _reason(
+                    "model_evidence_rejection",
+                    "evidence",
+                    ReviewSeverity.ELEVATED,
+                    "One or more model paragraphs or attributes failed deterministic evidence checks.",
+                    "Do rejected candidates contain a scientifically supported event/value that should be recovered, or were they correctly rejected?",
+                    [
+                        ReviewEvidenceBinding(
+                            source="model_batch",
+                            field="paragraphs_or_attributes_with_evidence_rejections",
+                            value=evidence_rejections,
+                        )
+                    ],
+                )
+            )
+        generation_rejections = model_article_audit["generation_rejected_count"]
+        if generation_rejections > 0:
+            add(
+                _reason(
+                    "model_generation_rejection",
+                    "coverage",
+                    ReviewSeverity.ELEVATED,
+                    "One or more model generations failed the response gate.",
+                    "Does the rejected paragraph contain protocol metadata that is absent from the accepted record?",
+                    [
+                        ReviewEvidenceBinding(
+                            source="model_batch",
+                            field="generation_rejected_count",
+                            value=generation_rejections,
+                        )
+                    ],
+                )
+            )
 
     mapped_accessions = sorted(
         {segment.uniprot_accession.upper() for segment in record.residue_mappings}
@@ -665,7 +796,9 @@ def review_record(
 def build_human_review_queue(
     database: str | Path,
     *,
+    implementation_git_commit: str,
     policy: HumanReviewPolicy | None = None,
+    model_summary: str | Path | None = None,
 ) -> HumanReviewQueue:
     database_path = Path(database)
     for suffix in ("-wal", "-shm"):
@@ -677,6 +810,19 @@ def build_human_review_queue(
     if store.schema_version() != SCHEMA_VERSION:
         raise RuntimeError(f"human-review export requires schema {SCHEMA_VERSION}")
     selected_policy = policy or HumanReviewPolicy()
+    if not isinstance(implementation_git_commit, str) or not re.fullmatch(
+        r"[0-9a-f]{40}", implementation_git_commit
+    ):
+        raise ValueError("implementation_git_commit must be a 40-character lowercase SHA")
+    verification_rows = store.verification_rows()
+    document_ids = {str(row["document_id"]) for row in verification_rows}
+    if model_summary is None:
+        model_audits: dict[str, dict[str, int]] = {}
+        model_summary_sha256 = None
+    else:
+        model_audits, model_summary_sha256 = _load_model_summary(
+            Path(model_summary), expected_document_ids=document_ids
+        )
     pdbekb_by_accession: dict[str, list[dict[str, object]]] = defaultdict(list)
     for row in store.list_pdbekb_enrichments():
         enrichment = row.get("enrichment")
@@ -691,8 +837,9 @@ def build_human_review_queue(
             IntegratedMDRecord.model_validate(json.loads(str(row["record_json"]))),
             policy=selected_policy,
             pdbekb_by_accession=pdbekb_by_accession,
+            model_article_audit=model_audits.get(str(row["document_id"])),
         )
-        for row in store.verification_rows()
+        for row in verification_rows
     ]
     items.sort(key=lambda item: item.document_id)
     body: dict[str, object] = {
@@ -700,6 +847,9 @@ def build_human_review_queue(
         "source_database_sha256": _file_sha256(database_path),
         "source_database_schema_version": SCHEMA_VERSION,
         "source_article_count": len(items),
+        "software_version": __version__,
+        "implementation_git_commit": implementation_git_commit,
+        "model_summary_sha256": model_summary_sha256,
         "policy": selected_policy.model_dump(mode="json"),
         "items": [item.model_dump(mode="json") for item in items],
         "review_tier_counts": dict(
@@ -721,9 +871,16 @@ def export_human_review_queue(
     database: str | Path,
     output: str | Path,
     *,
+    implementation_git_commit: str,
     policy: HumanReviewPolicy | None = None,
+    model_summary: str | Path | None = None,
 ) -> HumanReviewQueue:
-    queue = build_human_review_queue(database, policy=policy)
+    queue = build_human_review_queue(
+        database,
+        implementation_git_commit=implementation_git_commit,
+        policy=policy,
+        model_summary=model_summary,
+    )
     destination = Path(output)
     rendered = (
         json.dumps(
@@ -742,6 +899,7 @@ def verify_human_review_queue(
     queue_path: str | Path,
     *,
     database: str | Path | None = None,
+    model_summary: str | Path | None = None,
 ) -> HumanReviewQueue:
     path = Path(queue_path)
     if path.is_symlink() or not path.is_file():
@@ -756,6 +914,12 @@ def verify_human_review_queue(
         store = SQLiteRecordStore(database_path, read_only=True)
         if store.count_articles() != queue.source_article_count:
             raise ValueError("source database article count does not match review queue")
+    if model_summary is not None:
+        model_summary_path = Path(model_summary)
+        if model_summary_path.is_symlink() or not model_summary_path.is_file():
+            raise ValueError("model summary must be a regular file")
+        if _file_sha256(model_summary_path) != queue.model_summary_sha256:
+            raise ValueError("model summary SHA-256 does not match review queue")
     return queue
 
 
@@ -767,6 +931,8 @@ def main() -> None:
     build_parser = subparsers.add_parser("build")
     build_parser.add_argument("--database", type=Path, required=True)
     build_parser.add_argument("--output", type=Path, required=True)
+    build_parser.add_argument("--git-commit", required=True)
+    build_parser.add_argument("--model-summary", type=Path)
     build_parser.add_argument(
         "--purpose", choices=[item.value for item in ReviewPurpose],
         default=ReviewPurpose.PRODUCTION_TRIAGE.value,
@@ -778,6 +944,7 @@ def main() -> None:
     verify_parser = subparsers.add_parser("verify")
     verify_parser.add_argument("--queue", type=Path, required=True)
     verify_parser.add_argument("--database", type=Path)
+    verify_parser.add_argument("--model-summary", type=Path)
     args = parser.parse_args()
     if args.command == "build":
         selected_policy = HumanReviewPolicy(
@@ -788,10 +955,18 @@ def main() -> None:
             require_pdbekb=not args.allow_missing_pdbekb,
         )
         result = export_human_review_queue(
-            args.database, args.output, policy=selected_policy
+            args.database,
+            args.output,
+            implementation_git_commit=args.git_commit,
+            policy=selected_policy,
+            model_summary=args.model_summary,
         )
     else:
-        result = verify_human_review_queue(args.queue, database=args.database)
+        result = verify_human_review_queue(
+            args.queue,
+            database=args.database,
+            model_summary=args.model_summary,
+        )
     print(json.dumps(result.model_dump(mode="json"), indent=2, sort_keys=True))
 
 

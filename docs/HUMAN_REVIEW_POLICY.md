@@ -67,7 +67,9 @@ Build the production queue from a checkpointed schema-v2 database:
 ```bash
 mdmeta-human-review build \
   --database records.sqlite \
+  --model-summary model-batch-summary.json \
   --output human-review-queue.json \
+  --git-commit "${GIT_COMMIT:?set exact 40-character commit}" \
   --purpose production_triage \
   --confidence-threshold 0.8 \
   --audit-sample-rate 0.05 \
@@ -75,7 +77,8 @@ mdmeta-human-review build \
 
 mdmeta-human-review verify \
   --queue human-review-queue.json \
-  --database records.sqlite
+  --database records.sqlite \
+  --model-summary model-batch-summary.json
 ```
 
 For an independently annotated benchmark workpack, use
@@ -83,5 +86,10 @@ For an independently annotated benchmark workpack, use
 `dual_independent`; it does not replace the private submissions, blinded comparison, adjudication
 and label-free public receipt defined in the sealed gold20 protocol.
 
+When supplied, the model summary adds per-article no-task, evidence-rejection and
+generation-rejection signals. Its SHA-256 is bound into the queue, so failures discarded before
+database integration cannot disappear from human triage.
+
 The queue is reproducible: it has no wall-clock timestamp, is sorted by document ID, binds the
-source database SHA-256, records the full policy, and carries a commitment over all content.
+source database and optional model-summary SHA-256 values, records the software version, exact Git
+commit and full policy, and carries a commitment over all content.
