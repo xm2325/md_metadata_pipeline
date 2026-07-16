@@ -44,6 +44,13 @@ def test_committed_contract_schemas_are_current_and_strict() -> None:
     database = release["$defs"]["DatabaseContract"]
     assert database["additionalProperties"] is False
     assert database["properties"]["schema_version"]["const"] == 1
+    pdbekb = json.loads(
+        (ROOT / "schemas" / "pdbekb-enrichment-batch-v1.schema.json").read_text()
+    )
+    assert pdbekb["additionalProperties"] is False
+    assert pdbekb["properties"]["schema_version"]["const"] == (
+        "pdbekb-enrichment-batch-v1"
+    )
 
 
 def test_contract_check_detects_drift(tmp_path: Path) -> None:

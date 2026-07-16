@@ -457,6 +457,19 @@ class SQLiteRecordStore:
             row = connection.execute("SELECT COUNT(*) AS n FROM articles").fetchone()
         return int(row["n"])
 
+    def list_uniprot_accessions(self) -> list[str]:
+        """Return the database's distinct mapped UniProt accessions."""
+
+        with self._connect() as connection:
+            rows = connection.execute(
+                """
+                SELECT DISTINCT uniprot_accession
+                FROM residue_mappings
+                ORDER BY uniprot_accession
+                """
+            ).fetchall()
+        return [str(row["uniprot_accession"]) for row in rows]
+
     def verification_rows(self) -> list[dict[str, object]]:
         """Return the stored record and its deliberately redundant article columns."""
 

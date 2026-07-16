@@ -287,6 +287,7 @@ def test_sqlite_storage_and_rest_api(tmp_path: Path) -> None:
     store = SQLiteRecordStore(database)
     store.write(record)
     assert store.count_articles() == 1
+    assert store.list_uniprot_accessions() == ["P0DTC2"]
     assert store.get("WOO2020")["article"]["doi"] == "10.1021/acs.jpcb.0c04553"
     assert len(store.search(pdb_id="6vsb")) == 1
     assert len(store.search(uniprot_accession="P0DTC2")) == 1

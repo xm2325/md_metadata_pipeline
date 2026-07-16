@@ -11,6 +11,7 @@ from pydantic import BaseModel
 from .file_backed import FileBackedMDReport
 from .integration import IntegratedMDRecord
 from .llm_adapter import LLMEventResponse, LLMEventResponseV2
+from .pdbekb import PDBeKBBatchReport
 from .release import ReleaseManifest
 
 
@@ -20,6 +21,7 @@ CONTRACTS: dict[str, type[BaseModel]] = {
     "llm-event-response-v2.schema.json": LLMEventResponseV2,
     "llm-event-response-v3.schema.json": LLMEventResponse,
     "mdmeta-dataset-release-v1.schema.json": ReleaseManifest,
+    "pdbekb-enrichment-batch-v1.schema.json": PDBeKBBatchReport,
 }
 
 
