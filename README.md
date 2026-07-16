@@ -137,6 +137,16 @@ prompts and none met the calibrated critical double-review rules. This is a cons
 assessment, not completed review or accuracy evidence. See the
 [`scale80 human-review run`](study/human_review_scale80/RUN_2026-07-16.md).
 
+The same immutable scale80 snapshot now passes a resumable Nextflow DSL2 workflow that gates the
+database, creates the review queue, exports the Neo4j projection and re-verifies both outputs. The
+workflow is pinned and checksum-tested on GitHub-hosted Ubuntu and ran through the CSC Slurm
+executor as four `small` CPU jobs; a second run was 4/4 cached. See the
+[`Nextflow workflow`](workflows/nextflow/README.md) and
+[`scale80 Nextflow run`](study/nextflow_scale80/RUN_2026-07-16.md). Official PDBe-SIFTS `v1.0.4`
+compatibility is also checked against its pinned readers and fixtures; see
+[`docs/OFFICIAL_SIFTS_COMPATIBILITY.md`](docs/OFFICIAL_SIFTS_COMPATIBILITY.md). These are technical
+integration results, not completed human review, gold accuracy or a deployed production release.
+
 See [`docs/PRODUCTION_READINESS.md`](docs/PRODUCTION_READINESS.md),
 [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md), [`docs/OPERATIONS.md`](docs/OPERATIONS.md), and
 [`docs/JR3997_ALIGNMENT_AND_ROADMAP.md`](docs/JR3997_ALIGNMENT_AND_ROADMAP.md).

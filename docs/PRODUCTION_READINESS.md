@@ -1,12 +1,13 @@
 # Production readiness status
 
 The repository is **not yet fully production ready**. Version 0.13 adds content-bound, risk-based
-human triage to the version 0.12 production candidate. All ten repository workflows passed for
-exact implementation commit `8636020` on 2026-07-16. A real scale80 database copy completed a
-backed-up v1-to-v2 migration, PDBe-KB import, semantic verification, production read-only API query
-and deterministic review-queue build/verification on CSC. Governed release execution, image
-publication, externally reachable deployment and several ownership decisions remain outside that
-evidence.
+human triage, official SIFTS compatibility, a Neo4j projection and resumable Nextflow execution to
+the version 0.12 production candidate. All 11 repository workflows passed for exact implementation
+commit `38b90bf` on 2026-07-16. A real scale80 database copy completed a backed-up v1-to-v2
+migration, PDBe-KB import, semantic verification, production read-only API query, deterministic
+review/graph exports and a four-process CSC Slurm workflow with a 4/4 cached resume. Governed
+release execution, human decisions, image publication, externally reachable deployment and several
+ownership decisions remain outside that evidence.
 
 ## Evidence boundary
 
@@ -14,13 +15,13 @@ Three different kinds of evidence must not be conflated:
 
 | State | What it means |
 |---|---|
-| Repository cloud-validated | For exact commit `8636020`, all ten workflows passed on 2026-07-16, including Python 3.11/3.12 CI, security, server-readiness and the deterministic domain paths. This verifies repository code, not human-reference accuracy. |
+| Repository cloud-validated | For exact commit `38b90bf`, all 11 workflows passed on 2026-07-16, including Python 3.11/3.12 CI, security, server-readiness, official SIFTS compatibility, Nextflow smoke/resume and deterministic domain paths. This verifies repository code, not human-reference accuracy. |
 | GPU infrastructure validated | CSC Roihu Slurm job `184708` bound to commit `cc87d7a` passed on one GH200 on 2026-07-15, including FP32 correctness, BF16 GEMM, CUDA attention, non-zero utilisation and result checksum gates. This is infrastructure evidence, not a validated model backend. |
-| Scale integration, migration and triage exercised | Scale inference/integration completed 80/80; the schema-v2 drill migrated a content-addressed copy, imported 107 PDBe-KB records and passed database/API checks. Risk triage produced 2 auto-accept and 78 single-review records, with 0 critical double-review triggers. This is not completed human review, accuracy or a governed release. |
+| Scale integration, migration, triage and workflow exercised | Scale inference/integration completed 80/80; the schema-v2 drill migrated a content-addressed copy, imported 107 PDBe-KB records and passed database/API checks. Nextflow/Slurm jobs `195246`, `195259`, `195260` and `195268` produced and verified the review/graph outputs; resume was 4/4 cached. Risk triage produced 2 auto-accept and 78 single-review records, with 0 critical double-review triggers. This is not completed human review, accuracy or a governed release. |
 | Live/release validation pending | No governed dataset bundle, GHCR image/SBOM/provenance or externally reachable target deployment has been published. |
 | External decision or deployment required | Dataset identity and licence, publisher/creators, durable archive, image promotion, DNS/TLS, authentication policy, rate limits, monitoring ownership, SLOs, RPO/RTO and incident ownership cannot be established by repository code alone. |
 
-The dated checks validate repository code at `8636020`; they do not create a promotable release.
+The dated checks validate repository code at `38b90bf`; they do not create a promotable release.
 A candidate is promotable only after the live release workflow succeeds and its exact commit,
 dataset bundle and image digests are recorded and accepted.
 
@@ -55,6 +56,11 @@ dataset bundle and image digests are recorded and accepted.
 - `mdmeta-human-review` binds a checkpointed database, optional model summary, software/Git version
   and versioned policy into a deterministic review queue. It exposes uncertainty-specific prompts,
   minimal evidence locators, audit sampling and explicit second-review escalation conditions.
+- The Nextflow DSL2 workflow gates the database before review/graph exports, verifies both outputs,
+  stages regular-file copies, uses deep content caching, requires explicit CSC account/partition
+  controls and supports digest-pinned Docker or Apptainer profiles.
+- The official SIFTS adapter strictly preserves the 26-column segment and 24-column residue
+  contracts and is compared with pinned `PDBeurope/SIFTS` `v1.0.4` readers/fixtures in cloud CI.
 
 ## Version 0.13 cloud and CSC evidence
 
@@ -66,6 +72,17 @@ seven domain workflows passed. CSC job `192664` built and verified the real scal
 seven seconds. It routed 2/80 to provisional automatic acceptance and 78/80 to one reviewer; no
 record met a calibrated critical double-review rule. See the
 [scale80 review run](../study/human_review_scale80/RUN_2026-07-16.md). Human review remains undone.
+
+### Nextflow and official SIFTS extension
+
+For exact implementation commit `38b90bfa0ccd8d93ca42dc08ed66c54cb8ad42d4`, all 11 PR
+workflows passed, including
+[CI 29487257708](https://github.com/xm2325/md_metadata_pipeline/actions/runs/29487257708) and
+[official SIFTS 29487257725](https://github.com/xm2325/md_metadata_pipeline/actions/runs/29487257725).
+The real scale80 Nextflow run completed four CSC `small` jobs in 4–8 seconds each, reproduced the
+2/78 triage split, exported 3,867 graph nodes and 18,281 relationships, and resumed with 4/4 cached
+processes and no new Slurm work. See the
+[scale80 Nextflow run](../study/nextflow_scale80/RUN_2026-07-16.md).
 
 ### Version 0.12 PDBe-KB baseline
 
@@ -117,12 +134,13 @@ block was subsequently cleared; it is historical incident evidence, not the curr
 
 Before describing the production candidate as release-ready or deployed, the project still needs:
 
-1. an accepted live release-quality scientific run and sealed dataset bundle;
-2. approved immutable-SHA secret-history and container-CVE scanning;
-3. successful immutable GHCR publication with image digest, SBOM and build provenance;
-4. a deployment record binding commit, bundle, database and image digests;
-5. durable evidence storage despite the remaining Docker build-record artifact quota warning; and
-6. a target-server deployment, recovery drill and operational acceptance.
+1. completion and adjudication of every required human-review item, including the gold20 reference;
+2. an accepted live release-quality scientific run and sealed dataset bundle;
+3. approved immutable-SHA secret-history and container-CVE scanning;
+4. successful immutable GHCR publication with image digest, SBOM and build provenance;
+5. a deployment record binding commit, bundle, database and image digests;
+6. durable evidence storage despite the remaining Docker build-record artifact quota warning; and
+7. a target-server deployment, recovery drill and operational acceptance.
 
 ## External governance and infrastructure blockers
 
@@ -177,6 +195,11 @@ and must not route it to the public API.
   demonstrated.
 - A bound Qwen model/backend completed scale80 inference and protocol freeze, but no human-reference
   extraction evaluation has been executed.
+- The production review queue exists, but 78 scale80 single-review decisions and all independent
+  gold20 annotations/adjudications remain human work. `WORKFLOW_COMPLETE` is only a technical marker
+  and cannot be interpreted as scientific approval.
+- The deterministic Neo4j export is verified, but no governed Neo4j service, backup or query SLO has
+  been deployed.
 - The repository does not contain an authorised project/data `LICENSE` or `CITATION.cff`.
 - Metrics and logs exist, but no external collector, dashboard, alert route or approved SLO has been
   deployed.
@@ -198,6 +221,6 @@ A production owner should approve promotion only when all of the following are t
 - ingress and monitoring controls are active; and
 - governance metadata, SLO/RPO/RTO, on-call ownership and incident procedures are approved.
 
-Until then, the accurate description is **version 0.12 production-candidate engineering with
-repository and CSC data-path gates passed, while governed release, public deployment and
-operational acceptance remain pending**.
+Until then, the accurate description is **version 0.13 production-candidate engineering with
+repository, official-SIFTS, Nextflow/Slurm and CSC data-path gates passed, while human scientific
+acceptance, governed release, public deployment and operational acceptance remain pending**.

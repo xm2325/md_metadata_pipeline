@@ -18,10 +18,11 @@ Status labels refer only to evidence visible in this repository:
 Planned work is labelled explicitly below. It must not be described as implemented in a CV,
 cover letter or interview.
 
-Version 0.12 production-candidate controls are labelled separately from deployment claims. All
-repository cloud gates passed for exact commit `602a9bf` on 2026-07-16, and the scale80 schema-v2
-data path was exercised on CSC; this is not evidence of a governed release, GHCR publication or
-production deployment. See [Production readiness](PRODUCTION_READINESS.md).
+Version 0.13 production-candidate controls are labelled separately from deployment claims. All 11
+repository cloud gates passed for exact commit `38b90bf` on 2026-07-16, and the scale80 schema-v2,
+official-SIFTS, Neo4j-export and Nextflow/Slurm paths were exercised; this is not evidence of
+completed human review, a governed release, GHCR publication or production deployment. See
+[Production readiness](PRODUCTION_READINESS.md).
 
 ## Current evidence baseline
 
@@ -65,8 +66,8 @@ demo:
 |---|---|---|
 | Design pipelines connecting MDDB with PDBe, UniProt, PDBe-KB and other resources | The file-backed case connects MDDB/MDposit to PDB, UniProt and SIFTS. The literature path now connects 80 scale records and 107 mapped accessions to a typed PDBe-KB adapter, schema-v2 persistence and REST query layer. Multi-project incremental MDDB ingestion remains. See the [PDBe-KB run](../study/pdbekb_scale80/RUN_2026-07-16.md). | **Strong** |
 | Develop and deploy AI/ML approaches to extract experimental and biological metadata from literature | Exact-span validation, a bound Qwen backend/revision, 80/80 scale inference, 80/80 integration and pre-gold protocol freeze are executed. Human gold annotation/evaluation and a continuously deployed ML service remain pending. See the [scale80 report](../study/independent_100/RUN_SCALE80_2026-07-16.md). | **Partial** |
-| Extend and maintain SIFTS infrastructure/code to integrate MD and other resources | Real SIFTS-derived mappings are consumed and composed with MD-to-PDB alignment, including explicit ambiguity and unmapped residues. The repository does not modify, import or contribute to the official [PDBeurope/SIFTS](https://github.com/PDBeurope/SIFTS) codebase. | **Partial** |
-| Develop and maintain software tools, APIs, workflows and documentation | Installable Python package, CLI scripts, typed FastAPI endpoints, schema-v2 SQLite persistence, CI/live workflows and detailed scientific/operational documentation exist. Release/recovery/observability controls passed version 0.12 cloud gates, but a governed release and real production deployment are pending. See [project configuration](../pyproject.toml), [production readiness](PRODUCTION_READINESS.md) and [.github/workflows](../.github/workflows). | **Strong** |
+| Extend and maintain SIFTS infrastructure/code to integrate MD and other resources | Real SIFTS-derived mappings are composed with MD-to-PDB alignment. A strict adapter now consumes all 26 segment and 24 residue columns from pinned official `PDBeurope/SIFTS` `v1.0.4` fixtures and matches upstream readers, including insertion-code, isoform, alternative, unobserved and chimera regressions. No upstream contribution or PDB-scale local SIFTS deployment has been made. See [official compatibility](OFFICIAL_SIFTS_COMPATIBILITY.md). | **Partial** |
+| Develop and maintain software tools, APIs, workflows and documentation | Installable Python package, CLI scripts, typed FastAPI endpoints, schema-v2 SQLite persistence, GitHub Actions and a real resumable Nextflow/Slurm workflow exist with detailed scientific/operational documentation. Release/recovery/observability controls pass cloud and CSC data-path gates, but a governed release and real production deployment are pending. See [project configuration](../pyproject.toml), [production readiness](PRODUCTION_READINESS.md) and [Nextflow run](../study/nextflow_scale80/RUN_2026-07-16.md). | **Strong** |
 | Collaborate with domain experts, engineers and data-resource providers | Modular boundaries and scientific reporting are collaboration-ready, but a repository alone does not demonstrate actual co-development with those groups. | **Gap** |
 | Support FAIRification, standardisation and interoperability | Source/output hashes, provenance, explicit validation states, versioned JSON Schema models, a strict dataset-release contract and machine-readable JSON/SQLite outputs are present. The release CLI requires persistent identity/licence/creator/publisher values rather than guessing them. Authorised repository/data licensing, ontology/controlled-vocabulary mappings, a published profile and durable citable release are still absent. | **Partial** |
 | Collaborate with ELIXIR, Instruct-ERIC, EU-OPENSCREEN, HPC centres and industry | No direct collaboration evidence is present. | **Gap** |
@@ -91,10 +92,10 @@ demo:
 | Official desirable criterion | Current repository evidence | Status |
 |---|---|---|
 | Relevant postdoctoral experience | Applicant credential; cannot be established here. | **Gap** |
-| Graph databases such as Neo4j | No graph schema, export or Neo4j integration. | **Gap** |
+| Graph databases such as Neo4j | A deterministic, content-bound Neo4j bulk-import projection with documented node/relationship semantics and a verifier ran on scale80, producing 3,867 nodes and 18,281 relationships. A governed live Neo4j deployment and query benchmark remain. See [graph contract](GRAPH_EXPORT.md) and [Nextflow run](../study/nextflow_scale80/RUN_2026-07-16.md). | **Strong** |
 | REST APIs | Typed health, record, PDB/UniProt search and PDBe-KB enrichment endpoints, stable problem details, request IDs and bounded queries exist. Version 0.12 passed installed-wheel/container cloud gates and a production read-only CSC API query. | **Strong** |
 | Containerisation | A pinned, non-root API `Dockerfile`, hardened read-only Compose service and GitHub-hosted container smoke workflow are implemented. The version 0.11 hardened container smoke passed on 2026-07-13; immutable image publication and server deployment are still pending. | **Partial** |
-| Workflow systems such as Nextflow | GitHub Actions automates the project, but this is not evidence of a scientific workflow engine such as Nextflow. | **Gap** |
+| Workflow systems such as Nextflow | A pinned DSL2 workflow runs database validation, targeted human-review triage, Neo4j export and independent output verification. GitHub smoke requires 4/4 cached resume; the real scale80 CSC run completed four Slurm jobs and resumed without new work. See [workflow](../workflows/nextflow/README.md) and [run](../study/nextflow_scale80/RUN_2026-07-16.md). | **Strong** |
 | Data visualisation and analysis | Metric computation and machine-readable reports exist; there is no user-facing visualisation layer. | **Partial** |
 | FAIR principles and the biological-data lifecycle | Acquisition, extraction, validation, provenance and retention boundaries are documented, but publication, long-term preservation, deprecation and deletion policies are incomplete. | **Partial** |
 | Reporting and presenting scientific topics | Detailed run reports are present; no presentation, tutorial session or public dissemination artifact is included. | **Partial** |
@@ -140,9 +141,10 @@ CSC scale data-path drill passed but still await governed release or operational
 3. **Broaden the integration evidence.** The direct PDBe-KB adapter and scale80 import are complete;
    next run several diverse MDDB projects, unify file-backed MD records with the literature/v2
    model, and test incremental refresh and upstream drift.
-4. **Work against the official SIFTS package.** Add a reproducible local
-   `PDBeurope/SIFTS` compatibility/extension experiment and regression cases for insertion codes,
-   missing residues, isoforms, engineered mutations, chimeras and ambiguous chains.
+4. **Continue official SIFTS engagement.** The pinned local compatibility experiment and regression
+   cases for insertion codes, missing residues, isoforms, alternatives and chimeras now pass.
+   Agree a useful issue or regression contribution with PDBe maintainers; do not imply upstream
+   ownership from local compatibility work.
 5. **Complete and publish the metadata contract.** Versioned Pydantic/JSON Schema and a strict
    dataset-release manifest and cloud schema-drift tests passed in the version 0.11 candidate.
    Authorised identifiers/licences, controlled vocabularies, `LICENSE`, `CITATION.cff`, a
@@ -154,14 +156,14 @@ CSC scale data-path drill passed but still await governed release or operational
 
 ### P1 — differentiators and portfolio evidence
 
-1. Export the integrated model to a small Neo4j graph with documented node/edge semantics and
-   comparison queries against the relational API.
+1. The content-bound Neo4j export and scale80 graph are complete. Next add representative Cypher
+   queries, a relational/graph result comparison and deployment/backup evidence for a live graph.
 2. Typed response models, stable problem details, production database/build requirements and a
    whole-bundle digest passed repository cloud validation in the version 0.11 candidate. Complete a
    user tutorial and bind the bundle/build identity to the published image digest in one deployment
    manifest.
-3. Add a minimal Nextflow proof of concept only after the Python pipeline interfaces and data
-   contracts are stable.
+3. The minimal Nextflow workflow now passes GitHub and real CSC Slurm execution with 4/4 cached
+   resume. Extend it only when a new stage has a clear data contract and retry boundary.
 4. Add residue/provenance/coverage visualisations that expose uncertainty rather than hiding it.
 5. Seek an external issue, review or small contribution to SIFTS/PDBe tooling; add training or talk
    material. These provide collaboration evidence that repository architecture alone cannot.
@@ -248,16 +250,18 @@ TLS/authentication envelope.
 3. Backup, restore, rollback and schema-v2 migration tests passed Actions; the migration and
    read-only query path also ran on CSC. Add approved retention, measured target-server recovery,
    RPO/RTO, incident ownership and upstream API/cache refresh policies.
-4. Schedule heavy ingestion separately from the API. Consider Nextflow or a queue/HPC scheduler
-   only when multi-stage retries, parallel file processing or HPC execution justify it.
+4. Keep heavy ingestion separate from the API. The validated Nextflow/Slurm path currently covers
+   deterministic post-processing; add ingestion or GPU inference only when their cache, retry and
+   resource boundaries are explicit.
 
 ## Defensible current summary
 
-The repository currently demonstrates a well-tested version 0.12 production candidate for
+The repository currently demonstrates a well-tested version 0.13 production candidate for
 evidence-linked MD literature extraction, a bound model-backed scale80 run, live PDBe/UniProt and
 PDBe-KB enrichment, SIFTS-derived residue mappings, one authentic file-backed MDDB case,
-schema-v2 provenance-aware storage, an executable query server, release/recovery controls,
-container manifests and CI/CD. It does **not** yet demonstrate a human gold-standard NLP result,
-contribution to the SIFTS codebase, formal FAIR conformance, a governed scientific release,
-immutable GHCR publication, a verified production deployment or international project
+official-SIFTS compatibility, schema-v2 provenance-aware storage, a content-bound Neo4j export, a
+real Nextflow/Slurm workflow, an executable query server, release/recovery controls, container
+manifests and CI/CD. It does **not** yet demonstrate completed scale80 review, a human gold-standard
+NLP result, contribution to the SIFTS codebase, formal FAIR conformance, a governed scientific
+release, immutable GHCR publication, a verified production deployment or international project
 collaboration.

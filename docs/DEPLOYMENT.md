@@ -102,6 +102,33 @@ mdmeta-verify-database \
 `--checkpoint` is forbidden in the serving process. It checkpoints the writer's WAL and converts
 the candidate to a portable DELETE-journal snapshot.
 
+Run the deterministic post-processing workflow against that immutable snapshot before creating a
+release bundle. The workflow verifies the database, builds the risk-based review queue, exports the
+Neo4j projection and re-verifies both outputs. Use a durable work directory so an interrupted run
+can resume:
+
+```bash
+nextflow run workflows/nextflow/main.nf \
+  -profile local \
+  --database "$BUNDLE_DIR/records.sqlite" \
+  --model_summary "$MODEL_SUMMARY" \
+  --expected_articles "$EXPECTED_ARTICLES" \
+  --git_commit "$GIT_COMMIT" \
+  --outdir "$BUNDLE_DIR/postprocessing" \
+  -work-dir "$WORK_ROOT/$GIT_COMMIT" \
+  -resume
+```
+
+On CSC use `-profile csc --slurm_account PROJECT --slurm_queue small`; the profile rejects other
+partitions. Container profiles also require an immutable `image@sha256:...` reference. See the
+[Nextflow runbook](../workflows/nextflow/README.md).
+
+`postprocessing/verification/WORKFLOW_COMPLETE` proves only that the deterministic technical gates
+passed. It does not approve the science. Before sealing a release, complete every item routed to
+single review, complete both blinded reviews and adjudication for every dual-review item, and
+record the policy-required audit sample. Gold/reference datasets always require independent double
+review for all records. The current scale80 queue still contains 78 pending single-review items.
+
 Seal the directory using real values approved for this dataset. The CLI records its installed
 package version and hashes the dependency lock and optional source manifest itself:
 

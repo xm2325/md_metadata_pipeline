@@ -31,10 +31,10 @@ paths. Reviewers resolve locators against the governed source snapshot. This kee
 and avoids silently creating another uncontrolled copy of source material.
 
 Current triggers include low-confidence facts/events, unknown event phases, missing evidence,
-incompatible operator-declared single-valued facts, unresolved or conflicting PDB/UniProt/SIFTS checks, overlapping
-residue mappings to different accessions, partial pipeline stages, a method signal without a
-protocol event, and missing/unresolved/conflicting PDBe-KB enrichment. A `not_applicable` upstream
-result is not itself uncertainty; it records a valid no-data outcome.
+incompatible operator-declared single-valued facts, unresolved or conflicting PDB/UniProt/SIFTS
+checks, overlapping residue mappings to different accessions, partial pipeline stages, a method
+signal without a protocol event, and missing/unresolved/conflicting PDBe-KB enrichment. A
+`not_applicable` upstream result is not itself uncertainty; it records a valid no-data outcome.
 
 ## When double review is necessary
 
@@ -59,6 +59,12 @@ Forced, blinded double review is justified in these cases:
 Routine low confidence, a transient upstream failure, missing optional enrichment, or an expected
 coverage gap normally needs one reviewer first. If that reviewer resolves the issue without a
 material change or ambiguity, a second reviewer adds cost without a defined risk-control benefit.
+
+The current scale80 queue contains 2 provisional automatic acceptances, 78 targeted single-review
+items and no direct critical double-review item. Those 78 decisions have not been performed. Any
+first reviewer who changes a value/span, cannot decide or finds competing interpretations must
+still escalate that item. `WORKFLOW_COMPLETE`, green CI and a zero direct-dual count are technical
+states; none is a substitute for recording the required human decisions before scientific release.
 
 ## Commands
 

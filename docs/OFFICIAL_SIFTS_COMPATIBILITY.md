@@ -32,3 +32,10 @@ This is a pinned interface/fixture compatibility result. It is not evidence that
 PDBe-SIFTS sequence-search and local-alignment pipeline has been run at PDB scale, and it is not an
 upstream contribution. A future contribution should begin with an issue or regression case agreed
 with PDBe maintainers rather than an unsolicited change to scientific mapping behaviour.
+
+For exact implementation commit `38b90bfa0ccd8d93ca42dc08ed66c54cb8ad42d4`, both the dedicated
+[official compatibility run](https://github.com/xm2325/md_metadata_pipeline/actions/runs/29487257725)
+and the same comparison inside
+[CI](https://github.com/xm2325/md_metadata_pipeline/actions/runs/29487257708) passed on
+GitHub-hosted Ubuntu. This dates the claim to the pinned upstream fixture and reader interface; it
+does not turn a fixture comparison into a full SIFTS production deployment.

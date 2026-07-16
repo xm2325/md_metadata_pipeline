@@ -1,6 +1,6 @@
 # Neo4j-ready graph export
 
-Version 0.12 can export one checkpointed schema-v2 SQLite snapshot as deterministic Neo4j
+Version 0.13 can export one checkpointed schema-v2 SQLite snapshot as deterministic Neo4j
 bulk-import CSV files without adding a second live persistence dependency:
 
 ```bash
@@ -64,3 +64,8 @@ ORDER BY protein.identifier, annotation.name;
 This export demonstrates a defined graph projection and supports evaluation in Neo4j. It does not
 claim that Neo4j is required for production. SQLite remains the authoritative immutable snapshot
 until real graph-query workload, operations and consistency requirements justify a second store.
+
+The real scale80 Nextflow/Slurm run exported and re-verified 3,867 nodes and 18,281 relationships
+from database SHA-256 `c5a71de…28d6`. The graph commitment is `42813f0e…f818`; see the
+[dated run report](../study/nextflow_scale80/RUN_2026-07-16.md). These counts validate the export
+path, not a live Neo4j deployment, query performance, backup or consistency operations.
