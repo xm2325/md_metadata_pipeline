@@ -167,6 +167,9 @@ workflow {
     if (!(params.slurm_queue.toString() ==~ /[a-z0-9_-]{1,32}/)) {
         error '--slurm_queue contains unsupported characters'
     }
+    if (params.require_slurm_account && params.slurm_queue.toString() != 'small') {
+        error 'The csc profile is restricted to the x86_64 small CPU partition'
+    }
     if (params.require_container_digest &&
         (!params.container_image ||
          !(params.container_image.toString() ==~ /[^\s@]+@sha256:[0-9a-f]{64}/))) {

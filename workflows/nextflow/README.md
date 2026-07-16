@@ -45,10 +45,10 @@ release is accepted; deleting it removes the restart cache.
 
 Run Nextflow from an activated, locked project environment on the login node.
 The workflow submits four bounded CPU jobs to `small`; it does not request a
-GPU. The `csc` profile initializes `python-data` inside each Slurm task, so the
-container architecture follows the compute node rather than the login node.
-Load only the CSC Nextflow module before launching, and always give the account
-explicitly:
+GPU. The `csc` profile discards modules inherited from the ARM login node, then
+loads CSC's x86_64 `python-data/3.12-31.03` module inside each Slurm task. It is
+deliberately restricted to the `small` CPU partition. Load only the CSC Nextflow
+module before launching, and always give the account explicitly:
 
 ```bash
 module load nextflow/26.04.4.12445
