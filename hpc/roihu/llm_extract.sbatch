@@ -258,7 +258,8 @@ srun --kill-on-bad-exit=1 --ntasks=1 \
     --gpu-memory-utilization 0.8 \
     --seed 3997 \
     --require-cached-jats \
-    --minimum-event-count 1
+    --minimum-event-count 1 \
+    --maximum-no-task-article-fraction 0.025
 
 cleanup_monitor
 MONITOR_PID=''

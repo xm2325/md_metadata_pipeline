@@ -23,6 +23,7 @@ from mdmeta.llm_batch import (
     RESPONSE_SCHEMA_FILENAME,
     SCHEMA_VERSION,
     atomic_write_json,
+    build_no_task_article_gate,
     compact_summary,
     fetch_frozen_jats,
     load_committed_response_schema,
@@ -127,6 +128,16 @@ def _parse_args() -> argparse.Namespace:
             value, minimum=0, maximum=1_000_000, name="minimum event count"
         ),
         default=1,
+    )
+    parser.add_argument(
+        "--maximum-no-task-article-fraction",
+        type=lambda value: _bounded_float(
+            value,
+            minimum=0.0,
+            maximum=1.0,
+            name="maximum no-task article fraction",
+        ),
+        default=0.0,
     )
     return parser.parse_args()
 
@@ -233,6 +244,9 @@ def main() -> int:
             "maximum_generation_rejection_fraction": (
                 args.maximum_generation_rejection_fraction
             ),
+            "maximum_no_task_article_fraction": (
+                args.maximum_no_task_article_fraction
+            ),
             "source_snapshot_policy": "private_cache_with_frozen_sha256_gate",
             "network_allowed_for_jats": not args.require_cached_jats,
             "task_unit": "one_protocol_relevant_jats_paragraph",
@@ -301,6 +315,12 @@ def main() -> int:
             determinism_check=not args.no_determinism_check,
             checkpoint=checkpoint,
         )
+        no_task_article_gate = build_no_task_article_gate(
+            batch_result["per_article"],
+            selected_document_ids=[article.document_id for article in articles],
+            maximum_fraction=args.maximum_no_task_article_fraction,
+        )
+        batch_result["no_task_article_gate"] = no_task_article_gate
         result["batch"] = batch_result
         schema_rejections = batch_result["classification_counts"].get("schema_rejected", 0)
         generation_rejections = batch_result["classification_counts"].get(
@@ -310,15 +330,12 @@ def main() -> int:
             raise RuntimeError("not every model task received an explicit classification")
         if batch_result["task_count"] < 1:
             raise RuntimeError("selected corpus produced no protocol paragraph tasks")
-        articles_without_tasks = [
-            document_id
-            for document_id, row in batch_result["per_article"].items()
-            if row["paragraph_count"] < 1
-        ]
-        if articles_without_tasks:
+        if not no_task_article_gate["passed"]:
             raise RuntimeError(
-                "selected articles produced no protocol tasks: "
-                + ", ".join(articles_without_tasks)
+                f"{no_task_article_gate['no_task_article_count']} selected articles produced "
+                "no protocol tasks; maximum allowed is "
+                f"{no_task_article_gate['maximum_no_task_article_count']}: "
+                + ", ".join(no_task_article_gate["no_task_article_ids"])
             )
         evidence_valid_responses = sum(
             batch_result["classification_counts"].get(name, 0)

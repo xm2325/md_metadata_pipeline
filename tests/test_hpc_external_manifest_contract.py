@@ -32,3 +32,8 @@ def test_existing_archive_relative_manifest_mode_is_retained(filename: str) -> N
     script = (Path("hpc/roihu") / filename).read_text(encoding="utf-8")
     assert 'SOURCE_MANIFEST="$SOURCE_DIR/$SOURCE_MANIFEST_SPEC"' in script
     assert "source manifest is missing from the verified source archive" in script
+
+
+def test_scale_inference_has_a_bounded_zero_task_article_policy() -> None:
+    script = (Path("hpc/roihu") / "llm_extract.sbatch").read_text(encoding="utf-8")
+    assert "--maximum-no-task-article-fraction 0.025" in script

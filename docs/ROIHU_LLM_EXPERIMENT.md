@@ -100,6 +100,13 @@ digest mismatch. The source manifest must report 80 scale articles, zero exporte
 and zero scale/gold overlap; no gold20 workpack or human reference label may be transferred to the
 model-development run.
 
+The scale corpus remains fixed after selection. If the stricter JATS paragraph parser finds no
+protocol-relevant task in a preselected article, retain that article as an explicit zero-event
+record instead of substituting a reserve after model output is visible. The committed inference
+configuration permits this for at most 2.5% of scale articles (two of 80); the result records the
+identifiers, observed count, allowed count and treatment, and both CPU integration and the model
+protocol freeze reproduce the same gate from frozen JATS. Exceeding the bound is a hard failure.
+
 ## Source-drift recovery
 
 A frozen JATS digest is an evidence commitment, not a value to update when Europe PMC changes its

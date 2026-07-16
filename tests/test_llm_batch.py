@@ -15,11 +15,40 @@ from mdmeta.llm_adapter import (
 )
 from mdmeta.llm_batch import (
     FrozenArticle,
+    build_no_task_article_gate,
     fetch_frozen_jats,
     run_model_batch,
     select_articles,
     validate_source_manifest,
 )
+
+
+def test_no_task_article_gate_retains_preselected_zero_event_articles() -> None:
+    document_ids = [f"PMC{index:03d}" for index in range(80)]
+    per_article = {
+        document_id: {"paragraph_count": 0 if index in {1, 17} else 4}
+        for index, document_id in enumerate(document_ids)
+    }
+
+    gate = build_no_task_article_gate(
+        per_article,
+        selected_document_ids=document_ids,
+        maximum_fraction=0.025,
+    )
+
+    assert gate == {
+        "selected_article_count": 80,
+        "no_task_article_count": 2,
+        "maximum_no_task_article_count": 2,
+        "no_task_article_ids": ["PMC001", "PMC017"],
+        "treatment": "retained_as_explicit_zero_event_record",
+        "passed": True,
+    }
+    assert build_no_task_article_gate(
+        per_article,
+        selected_document_ids=document_ids,
+        maximum_fraction=0.0125,
+    )["passed"] is False
 
 
 def _article(document_id: str, xml_bytes: bytes = b"<article />") -> dict[str, str]:

@@ -21,11 +21,24 @@ from mdmeta.llm_batch import (
 from mdmeta.protocol_events import Paragraph
 from scripts.run_model_backed_integration import (
     _prediction_commitment,
+    _protocol_extraction_completeness,
     _validated_event_map,
 )
 
 
 ROOT = Path(__file__).parents[1]
+
+
+def test_protocol_extraction_completeness_keeps_zero_task_articles_explicit() -> None:
+    assert _protocol_extraction_completeness([]) == "no_protocol_paragraphs_detected"
+    assert (
+        _protocol_extraction_completeness([{"classification": "generation_rejected"}])
+        == "partial_with_generation_rejections"
+    )
+    assert (
+        _protocol_extraction_completeness([{"classification": "evidence_rejected"}])
+        == "complete_with_evidence_rejections"
+    )
 
 
 def _response_schema_sha256() -> str:

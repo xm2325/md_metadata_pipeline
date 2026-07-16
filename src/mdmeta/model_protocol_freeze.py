@@ -12,6 +12,7 @@ from .llm_batch import (
     RESPONSE_SCHEMA_FILENAME,
     RESPONSE_SCHEMA_VERSION,
     SCHEMA_VERSION as MODEL_BATCH_SCHEMA_VERSION,
+    build_no_task_article_gate,
     load_committed_response_schema,
 )
 
@@ -211,6 +212,25 @@ def _validate_scale_result(
         or batch.get("classification_counts", {}).get("schema_rejected", 0) != 0
     ):
         raise ValueError("scale result task accounting is incomplete")
+    maximum_no_task_fraction = configuration.get("maximum_no_task_article_fraction")
+    if (
+        isinstance(maximum_no_task_fraction, bool)
+        or not isinstance(maximum_no_task_fraction, (int, float))
+        or not 0.0 <= maximum_no_task_fraction <= 0.025
+    ):
+        raise ValueError("scale result no-task article tolerance is missing or too broad")
+    try:
+        expected_no_task_gate = build_no_task_article_gate(
+            batch.get("per_article", {}),
+            selected_document_ids=corpus["selected_document_ids"],
+            maximum_fraction=maximum_no_task_fraction,
+        )
+    except ValueError as error:
+        raise ValueError("scale result no-task article accounting is invalid") from error
+    if batch.get("no_task_article_gate") != expected_no_task_gate or not (
+        expected_no_task_gate["passed"]
+    ):
+        raise ValueError("scale result no-task article gate did not pass")
     determinism = batch.get("determinism_check", {})
     if determinism.get("performed") is not True or determinism.get("identical") is not True:
         raise ValueError("scale result in-run determinism gate did not pass")
@@ -242,6 +262,8 @@ def _validate_integration_result(
         or integration.get("source_manifest_sha256")
         != scale_manifest.get("manifest_sha256")
         or integration.get("source") != scale_result.get("source")
+        or integration.get("no_task_article_gate")
+        != scale_result.get("batch", {}).get("no_task_article_gate")
         or integration.get("database", {}).get("portable_single_file_snapshot") is not True
         or integration.get("identifier_integration_gate", {}).get("passed") is not True
         or len(integration.get("record_index", [])) != 80

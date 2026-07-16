@@ -168,6 +168,7 @@ def _scale_result(scale_manifest: dict, model_manifest: dict) -> dict:
             "temperature": 0.0,
             "determinism_check": True,
             "maximum_generation_rejection_fraction": 0.01,
+            "maximum_no_task_article_fraction": 0.025,
             "source_snapshot_policy": "private_cache_with_frozen_sha256_gate",
             "network_allowed_for_jats": False,
             "task_unit": "one_protocol_relevant_jats_paragraph",
@@ -186,6 +187,18 @@ def _scale_result(scale_manifest: dict, model_manifest: dict) -> dict:
             "task_count": 800,
             "task_count_classified": 800,
             "classification_counts": {"accepted": 800},
+            "per_article": {
+                row["document_id"]: {"paragraph_count": 10}
+                for row in scale_manifest["articles"]
+            },
+            "no_task_article_gate": {
+                "selected_article_count": 80,
+                "no_task_article_count": 0,
+                "maximum_no_task_article_count": 2,
+                "no_task_article_ids": [],
+                "treatment": "retained_as_explicit_zero_event_record",
+                "passed": True,
+            },
             "determinism_check": {"performed": True, "identical": True},
         },
     }
@@ -202,6 +215,7 @@ def _integration(scale_manifest: dict, scale_result: dict) -> dict:
         "model_result_sha256": scale_result["result_sha256"],
         "source": scale_result["source"],
         "article_count_requested": 80,
+        "no_task_article_gate": scale_result["batch"]["no_task_article_gate"],
         "database": {"portable_single_file_snapshot": True},
         "identifier_integration_gate": {"passed": True},
         "record_index": [

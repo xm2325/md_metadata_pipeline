@@ -34,6 +34,7 @@ from mdmeta.llm_batch import (
     RESPONSE_SCHEMA_VERSION,
     SCHEMA_VERSION as MODEL_BATCH_SCHEMA_VERSION,
     atomic_write_json,
+    build_no_task_article_gate,
     classify_evidence_audit,
     load_committed_response_schema,
     select_articles,
@@ -75,6 +76,20 @@ def _task_key(task: dict[str, Any]) -> tuple[str, str, str, str]:
         task["paragraph_id"],
         task["context_sha256"],
     )
+
+
+def _protocol_extraction_completeness(document_tasks: list[dict[str, Any]]) -> str:
+    if not document_tasks:
+        return "no_protocol_paragraphs_detected"
+    if any(task["classification"] == "generation_rejected" for task in document_tasks):
+        return "partial_with_generation_rejections"
+    if any(
+        task["classification"]
+        in {"evidence_rejected", "accepted_with_evidence_rejections"}
+        for task in document_tasks
+    ):
+        return "complete_with_evidence_rejections"
+    return "complete"
 
 
 def _validated_event_map(
@@ -302,6 +317,31 @@ def main() -> int:
         split_by_document,
     )
     batch = prediction.get("batch", {})
+    per_article = batch.get("per_article")
+    if not isinstance(per_article, dict):
+        raise SystemExit("model result lacks per-article task accounting")
+    observed_paragraph_counts = Counter(key[0] for key in events_by_key)
+    for document_id in selected_ids:
+        row = per_article.get(document_id)
+        if not isinstance(row, dict) or row.get("paragraph_count") != (
+            observed_paragraph_counts[document_id]
+        ):
+            raise SystemExit("model per-article task accounting differs from frozen JATS")
+    maximum_no_task_fraction = prediction.get("configuration", {}).get(
+        "maximum_no_task_article_fraction"
+    )
+    try:
+        expected_no_task_gate = build_no_task_article_gate(
+            per_article,
+            selected_document_ids=selected_ids,
+            maximum_fraction=maximum_no_task_fraction,
+        )
+    except (TypeError, ValueError) as error:
+        raise SystemExit("model result has an invalid no-task article policy") from error
+    if batch.get("no_task_article_gate") != expected_no_task_gate or not (
+        expected_no_task_gate["passed"]
+    ):
+        raise SystemExit("model no-task article gate is invalid or did not pass")
     task_count = sum(classifications.values())
     event_count = sum(len(events) for events in events_by_key.values())
     if batch.get("task_count") != task_count or batch.get("task_count_classified") != task_count:
@@ -358,26 +398,10 @@ def main() -> int:
                     for task in prediction["batch"]["tasks"]
                     if task["document_id"] == article.document_id
                 ]
-                evidence_rejected = sum(
-                    task["classification"]
-                    in {"evidence_rejected", "accepted_with_evidence_rejections"}
-                    for task in document_tasks
-                )
-                generation_rejected = sum(
-                    task["classification"] == "generation_rejected"
-                    for task in document_tasks
-                )
                 completeness = dict(record.completeness)
-                if generation_rejected:
-                    completeness["protocol_event_extraction"] = (
-                        "partial_with_generation_rejections"
-                    )
-                elif evidence_rejected:
-                    completeness["protocol_event_extraction"] = (
-                        "complete_with_evidence_rejections"
-                    )
-                else:
-                    completeness["protocol_event_extraction"] = "complete"
+                completeness["protocol_event_extraction"] = (
+                    _protocol_extraction_completeness(document_tasks)
+                )
                 record = record.model_copy(update={"completeness": completeness})
                 store.write(record)
                 records.append(record)
@@ -451,6 +475,7 @@ def main() -> int:
         "source": expected_source,
         "model": prediction["model"],
         "article_count_requested": len(articles),
+        "no_task_article_gate": expected_no_task_gate,
         "task_classification_counts": dict(sorted(classifications.items())),
         "database": {
             "checkpoint": {

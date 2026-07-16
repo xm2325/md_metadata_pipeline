@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 import os
 import re
 import tempfile
@@ -609,6 +610,56 @@ def run_model_batch(
     }
 
 
+NO_TASK_ARTICLE_TREATMENT = "retained_as_explicit_zero_event_record"
+
+
+def build_no_task_article_gate(
+    per_article: dict[str, dict[str, Any]],
+    *,
+    selected_document_ids: list[str],
+    maximum_fraction: float,
+) -> dict[str, Any]:
+    """Bound broad-screen articles for which the strict parser creates no model task."""
+
+    if (
+        isinstance(maximum_fraction, bool)
+        or not isinstance(maximum_fraction, (int, float))
+        or not math.isfinite(maximum_fraction)
+        or not 0.0 <= maximum_fraction <= 1.0
+    ):
+        raise ValueError("maximum no-task article fraction must be between zero and one")
+    if not selected_document_ids or len(set(selected_document_ids)) != len(
+        selected_document_ids
+    ):
+        raise ValueError("selected document identifiers must be non-empty and unique")
+    if set(per_article) != set(selected_document_ids):
+        raise ValueError("per-article task accounting differs from selected documents")
+
+    no_task_article_ids: list[str] = []
+    for document_id in selected_document_ids:
+        paragraph_count = per_article[document_id].get("paragraph_count")
+        if (
+            isinstance(paragraph_count, bool)
+            or not isinstance(paragraph_count, int)
+            or paragraph_count < 0
+        ):
+            raise ValueError("per-article paragraph counts must be non-negative integers")
+        if paragraph_count == 0:
+            no_task_article_ids.append(document_id)
+
+    maximum_count = math.floor(
+        len(selected_document_ids) * float(maximum_fraction) + 1e-12
+    )
+    return {
+        "selected_article_count": len(selected_document_ids),
+        "no_task_article_count": len(no_task_article_ids),
+        "maximum_no_task_article_count": maximum_count,
+        "no_task_article_ids": no_task_article_ids,
+        "treatment": NO_TASK_ARTICLE_TREATMENT,
+        "passed": len(no_task_article_ids) <= maximum_count,
+    }
+
+
 def compact_summary(result: dict[str, Any]) -> dict[str, Any]:
     """Remove source excerpts and raw predictions from a shareable run summary."""
 
@@ -646,6 +697,7 @@ def compact_summary(result: dict[str, Any]) -> dict[str, Any]:
                 "per_article",
                 "usage",
                 "determinism_check",
+                "no_task_article_gate",
                 "response_schema_version",
                 "response_schema_sha256",
                 "prompt_contract_version",
