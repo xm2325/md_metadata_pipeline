@@ -31,7 +31,7 @@ paths. Reviewers resolve locators against the governed source snapshot. This kee
 and avoids silently creating another uncontrolled copy of source material.
 
 Current triggers include low-confidence facts/events, unknown event phases, missing evidence,
-incompatible single-valued facts, unresolved or conflicting PDB/UniProt/SIFTS checks, overlapping
+incompatible operator-declared single-valued facts, unresolved or conflicting PDB/UniProt/SIFTS checks, overlapping
 residue mappings to different accessions, partial pipeline stages, a method signal without a
 protocol event, and missing/unresolved/conflicting PDBe-KB enrichment. A `not_applicable` upstream
 result is not itself uncertainty; it records a valid no-data outcome.
@@ -87,8 +87,15 @@ For an independently annotated benchmark workpack, use
 and label-free public receipt defined in the sealed gold20 protocol.
 
 When supplied, the model summary adds per-article no-task, evidence-rejection and
-generation-rejection signals. Its SHA-256 is bound into the queue, so failures discarded before
-database integration cannot disappear from human triage.
+generation-rejection signals. Accepted events with rejected attributes and zero-event records with
+fully rejected paragraphs are routed; rejected paragraphs alongside other accepted events remain
+covered by the deterministic audit sample. Its SHA-256 is bound into the queue, so failures
+discarded before database integration cannot silently disappear from triage.
+
+No literature field is assumed globally single-valued by default: one paper may legitimately use
+multiple engines or force fields. Operators may repeat `--single-value-field FIELD` only when the
+release data product defines that field as single-valued; incompatible values then become a
+critical double-review trigger.
 
 The queue is reproducible: it has no wall-clock timestamp, is sorted by document ID, binds the
 source database and optional model-summary SHA-256 values, records the software version, exact Git

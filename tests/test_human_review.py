@@ -124,6 +124,31 @@ def test_routine_uncertainty_routes_to_one_reviewer_with_prompt() -> None:
     assert not hasattr(binding, "quote")
 
 
+def test_multiple_engines_are_not_a_conflict_unless_policy_declares_single_value() -> None:
+    facts = [
+        LiteratureFact(
+            field="simulation_engine",
+            value=value,
+            evidence=_evidence(quote=value),
+            extraction_method="fixture",
+            confidence=1,
+        )
+        for value in ("GROMACS", "NAMD")
+    ]
+    event = ProtocolEvent(
+        event_id="event-1",
+        event_type=EventType.PRODUCTION,
+        evidence=[_evidence()],
+        relation_method="fixture",
+        confidence=1,
+    )
+
+    item = review_record(_record(facts=facts, events=[event]), policy=_policy())
+
+    assert item.review_tier is ReviewTier.AUTO_ACCEPT
+    assert item.review_reasons == []
+
+
 def test_critical_ambiguity_requires_blinded_independent_double_review() -> None:
     facts = [
         LiteratureFact(
@@ -169,7 +194,9 @@ def test_critical_ambiguity_requires_blinded_independent_double_review() -> None
             mappings=mappings,
             completeness={"sifts_mapping": "partial"},
         ),
-        policy=_policy(),
+        policy=_policy(
+            single_value_fields=["force_field", "simulation_engine", "water_model"]
+        ),
     )
 
     assert item.review_tier is ReviewTier.DUAL_INDEPENDENT

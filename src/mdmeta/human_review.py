@@ -51,9 +51,7 @@ class HumanReviewPolicy(_StrictModel):
     audit_sample_rate: float = Field(default=0.05, ge=0, le=1)
     audit_salt: str = Field(default="mdmeta-production-audit-v1", min_length=1)
     require_pdbekb: bool = True
-    single_value_fields: list[str] = Field(
-        default_factory=lambda: ["force_field", "simulation_engine", "water_model"]
-    )
+    single_value_fields: list[str] = Field(default_factory=list)
 
     @model_validator(mode="after")
     def validate_fields(self) -> "HumanReviewPolicy":
@@ -594,9 +592,10 @@ def review_record(
         "failed",
         "incomplete",
         "partial",
-        "rejection",
         "unresolved",
     }
+    if model_article_audit is None:
+        incomplete_values.add("rejection")
     incomplete_bindings = [
         ReviewEvidenceBinding(
             source="completeness", field=field, value=value
@@ -636,18 +635,20 @@ def review_record(
             )
         evidence_rejections = model_article_audit[
             "accepted_with_evidence_rejections_count"
-        ] + (
-            model_article_audit["rejected_paragraph_count"]
-            - model_article_audit["generation_rejected_count"]
-        )
+        ]
+        if model_article_audit["event_count"] == 0:
+            evidence_rejections += (
+                model_article_audit["rejected_paragraph_count"]
+                - model_article_audit["generation_rejected_count"]
+            )
         if evidence_rejections > 0:
             add(
                 _reason(
                     "model_evidence_rejection",
                     "evidence",
                     ReviewSeverity.ELEVATED,
-                    "One or more model paragraphs or attributes failed deterministic evidence checks.",
-                    "Do rejected candidates contain a scientifically supported event/value that should be recovered, or were they correctly rejected?",
+                    "An accepted event lost attributes, or a zero-event record has fully rejected paragraphs.",
+                    "Do rejected attributes/candidates contain supported metadata that should be recovered, or were they correctly rejected?",
                     [
                         ReviewEvidenceBinding(
                             source="model_batch",
@@ -940,6 +941,9 @@ def main() -> None:
     build_parser.add_argument("--confidence-threshold", type=float, default=0.8)
     build_parser.add_argument("--audit-sample-rate", type=float, default=0.05)
     build_parser.add_argument("--audit-salt", default="mdmeta-production-audit-v1")
+    build_parser.add_argument(
+        "--single-value-field", action="append", default=[]
+    )
     build_parser.add_argument("--allow-missing-pdbekb", action="store_true")
     verify_parser = subparsers.add_parser("verify")
     verify_parser.add_argument("--queue", type=Path, required=True)
@@ -953,6 +957,7 @@ def main() -> None:
             audit_sample_rate=args.audit_sample_rate,
             audit_salt=args.audit_salt,
             require_pdbekb=not args.allow_missing_pdbekb,
+            single_value_fields=sorted(set(args.single_value_field)),
         )
         result = export_human_review_queue(
             args.database,
