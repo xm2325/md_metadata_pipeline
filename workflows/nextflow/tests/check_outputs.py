@@ -23,7 +23,10 @@ def check_outputs(results: Path, trace: Path, git_commit: str) -> None:
     if queue.get("review_tier_counts") != {"single_review": 1}:
         raise ValueError("smoke uncertainty was not routed to one human reviewer")
     reason_counts = queue.get("review_reason_counts")
-    if not isinstance(reason_counts, dict) or reason_counts.get("pdbekb_unresolved") != 1:
+    if (
+        not isinstance(reason_counts, dict)
+        or reason_counts.get("missing_pdbekb_enrichment") != 1
+    ):
         raise ValueError("smoke review queue did not identify missing PDBe-KB evidence")
 
     graph = _load(results / "graph" / "graph-manifest.json")
