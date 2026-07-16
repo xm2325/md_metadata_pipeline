@@ -299,14 +299,14 @@ def test_sqlite_storage_and_rest_api(tmp_path: Path) -> None:
     assert client.get("/readyz").json() == {
         "status": "ready",
         "version": __version__,
-        "database_schema_version": 1,
+        "database_schema_version": 2,
         "article_count": 1,
     }
     assert client.get("/metadata").json() == {
         "service": "md-metadata-pipeline",
         "version": __version__,
         "record_schema": "integrated-md-record-v1",
-        "database_schema_version": 1,
+        "database_schema_version": 2,
         "article_count": 1,
         "database_mode": "read_write",
         "dataset_sha256": "unversioned",
@@ -366,7 +366,7 @@ def test_rewriting_record_cascade_replaces_all_child_rows(tmp_path: Path) -> Non
     assert store.integrity_report() == {
         "integrity": ["ok"],
         "foreign_key_violations": [],
-        "schema_version": 1,
+        "schema_version": 2,
         "journal_mode": "wal",
     }
     assert len(store.checkpoint()) == 3
@@ -382,7 +382,7 @@ def test_rewriting_record_cascade_replaces_all_child_rows(tmp_path: Path) -> Non
     read_only_store = SQLiteRecordStore(database, read_only=True)
     assert read_only_store.count_articles() == 1
     assert read_only_store.integrity_report()["integrity"] == ["ok"]
-    assert read_only_store.schema_version() == 1
+    assert read_only_store.schema_version() == 2
     with pytest.raises(RuntimeError, match="read-only"):
         read_only_store.write(record)
 
@@ -395,16 +395,16 @@ def test_rewriting_record_cascade_replaces_all_child_rows(tmp_path: Path) -> Non
 def test_store_rejects_future_and_incomplete_schema(tmp_path: Path) -> None:
     future = tmp_path / "future.sqlite"
     with sqlite3.connect(future) as connection:
-        connection.execute("PRAGMA user_version = 2")
+        connection.execute("PRAGMA user_version = 3")
         connection.execute("CREATE TABLE future_only(id INTEGER PRIMARY KEY)")
-    with pytest.raises(RuntimeError, match="unsupported database schema version 2"):
+    with pytest.raises(RuntimeError, match="unsupported database schema version 3"):
         SQLiteRecordStore(future)
     with sqlite3.connect(future) as connection:
-        assert connection.execute("PRAGMA user_version").fetchone()[0] == 2
+        assert connection.execute("PRAGMA user_version").fetchone()[0] == 3
 
     incomplete = tmp_path / "incomplete.sqlite"
     with sqlite3.connect(incomplete) as connection:
-        connection.execute("PRAGMA user_version = 1")
+        connection.execute("PRAGMA user_version = 2")
         connection.execute("CREATE TABLE articles(document_id TEXT PRIMARY KEY)")
     with pytest.raises(RuntimeError, match="missing tables"):
         SQLiteRecordStore(incomplete, read_only=True)

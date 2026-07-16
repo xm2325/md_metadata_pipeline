@@ -117,11 +117,18 @@ def _canonical_hash(payload: object) -> str:
 
 
 def _endpoint_result(retrieved: object, *, endpoint: str) -> PDBeKBEndpointResult:
+    http_status = getattr(retrieved, "http_status", None)
+    if http_status == 404:
+        state = ValidationState.NOT_APPLICABLE
+        reason = "pdbekb_no_data_for_accession"
+    else:
+        state = ValidationState.UNRESOLVED
+        reason = getattr(retrieved, "terminal_error", None) or "response_unavailable"
     return PDBeKBEndpointResult(
-        state=ValidationState.UNRESOLVED,
+        state=state,
         endpoint=endpoint,
-        reason=getattr(retrieved, "terminal_error", None) or "response_unavailable",
-        http_status=getattr(retrieved, "http_status", None),
+        reason=reason,
+        http_status=http_status,
         response_sha256=getattr(retrieved, "response_sha256", None),
         attempts=getattr(retrieved, "attempts", 0),
         cache_hit=getattr(retrieved, "cache_hit", False),
@@ -341,12 +348,15 @@ def fetch_pdbekb_enrichment(
                 reason="pdbekb_partners_validated",
             )
 
+    resolved_states = {ValidationState.VALIDATED, ValidationState.NOT_APPLICABLE}
     if annotation_result.state is ValidationState.CONFLICT:
         state = ValidationState.CONFLICT
     elif (
-        annotation_result.state is ValidationState.VALIDATED
-        and partner_result.state is ValidationState.VALIDATED
+        annotation_result.state is ValidationState.NOT_APPLICABLE
+        and partner_result.state is ValidationState.NOT_APPLICABLE
     ):
+        state = ValidationState.NOT_APPLICABLE
+    elif annotation_result.state in resolved_states and partner_result.state in resolved_states:
         state = ValidationState.VALIDATED
     else:
         state = ValidationState.UNRESOLVED

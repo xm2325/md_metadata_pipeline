@@ -164,7 +164,7 @@ jobs:
             --volume mdmeta-ci-data:/data \
             --env MDMETA_DATABASE_READ_ONLY=false \
             mdmeta:ci \
-            python -c 'from mdmeta.storage import SQLiteRecordStore; store = SQLiteRecordStore("/data/records.sqlite"); report = store.integrity_report(); assert report["integrity"] == ["ok"] and report["foreign_key_violations"] == [] and report["schema_version"] == 1; store.checkpoint()'
+            python -c 'from mdmeta.storage import SQLiteRecordStore; store = SQLiteRecordStore("/data/records.sqlite"); report = store.integrity_report(); assert report["integrity"] == ["ok"] and report["foreign_key_violations"] == [] and report["schema_version"] == 2; store.checkpoint()'
           docker cp mdmeta-snapshot:/data/records.sqlite reports/records.sqlite
           docker rm mdmeta-snapshot
           docker volume rm mdmeta-ci-data
@@ -280,11 +280,11 @@ jobs:
           metrics_headers = read_headers("reports/metrics.headers")
           metrics = Path("reports/metrics.prom").read_text()
           assert metadata["database_mode"] == "read_only"
-          assert metadata["database_schema_version"] == 1
+          assert metadata["database_schema_version"] == 2
           assert metadata["dataset_sha256"] == os.environ["EXPECTED_DATASET_SHA"]
           assert metadata["build_sha"] == os.environ["EXPECTED_BUILD_SHA"]
           assert readiness["status"] == "ready"
-          assert readiness["database_schema_version"] == 1
+          assert readiness["database_schema_version"] == 2
           assert search == {"count": 0, "records": []}
           assert Path("reports/docs.status").read_text().strip() == "404"
           assert docs_headers["content-type"].startswith("application/problem+json")

@@ -12,6 +12,7 @@ from .integration import (
     MDToPDBMappingStatus,
 )
 from .models import MappingSegment, ProtocolEvent, ValidationRecord
+from .pdbekb import PDBeKBEnrichment
 
 
 class _APIModel(BaseModel):
@@ -125,3 +126,9 @@ class PublicIntegratedMDRecord(_APIModel):
 class SearchResponse(_APIModel):
     count: int = Field(ge=0)
     records: list[PublicIntegratedMDRecord]
+
+
+class PDBeKBResponse(_APIModel):
+    accession: str
+    count: int = Field(ge=0)
+    enrichments: list[PDBeKBEnrichment]

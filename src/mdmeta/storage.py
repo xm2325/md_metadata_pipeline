@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import sqlite3
 from contextlib import contextmanager
@@ -9,15 +10,21 @@ from typing import Iterator
 from .integration import IntegratedMDRecord
 
 
-SCHEMA_VERSION = 1
-_REQUIRED_TABLES = {
+SCHEMA_VERSION = 2
+_V1_REQUIRED_TABLES = {
     "articles",
     "literature_facts",
     "validations",
     "residue_mappings",
     "md_assets",
 }
-_EXPECTED_COLUMNS: dict[str, tuple[tuple[str, str, int, int], ...]] = {
+_REQUIRED_TABLES = {
+    *_V1_REQUIRED_TABLES,
+    "schema_migrations",
+    "pdbekb_reports",
+    "pdbekb_enrichments",
+}
+_V1_EXPECTED_COLUMNS: dict[str, tuple[tuple[str, str, int, int], ...]] = {
     "articles": (
         ("document_id", "TEXT", 0, 1),
         ("title", "TEXT", 1, 0),
@@ -64,17 +71,78 @@ _EXPECTED_COLUMNS: dict[str, tuple[tuple[str, str, int, int], ...]] = {
         ("reason", "TEXT", 0, 0),
     ),
 }
-_EXPECTED_INDEXES: dict[str, tuple[str, tuple[str, ...]]] = {
+_EXPECTED_COLUMNS = {
+    **_V1_EXPECTED_COLUMNS,
+    "schema_migrations": (
+        ("migration_id", "TEXT", 0, 1),
+        ("from_version", "INTEGER", 1, 0),
+        ("to_version", "INTEGER", 1, 0),
+        ("applied_at", "TEXT", 1, 0),
+        ("migration_sha256", "TEXT", 1, 0),
+        ("source_sha256_before", "TEXT", 1, 0),
+        ("backup_sha256", "TEXT", 1, 0),
+    ),
+    "pdbekb_reports": (
+        ("content_commitment_sha256", "TEXT", 0, 1),
+        ("source_database_sha256", "TEXT", 1, 0),
+        ("source_database_schema_version", "INTEGER", 1, 0),
+        ("source_article_count", "INTEGER", 1, 0),
+        ("generated_at", "TEXT", 1, 0),
+        ("report_json", "TEXT", 1, 0),
+    ),
+    "pdbekb_enrichments": (
+        ("report_commitment_sha256", "TEXT", 1, 1),
+        ("accession", "TEXT", 1, 2),
+        ("state", "TEXT", 1, 0),
+        ("sequence_length", "INTEGER", 0, 0),
+        ("annotation_group_count", "INTEGER", 1, 0),
+        ("annotation_residue_range_count", "INTEGER", 1, 0),
+        ("partner_count", "INTEGER", 1, 0),
+        ("linked_pdb_ids_json", "TEXT", 1, 0),
+        ("enrichment_json", "TEXT", 1, 0),
+    ),
+}
+_V1_EXPECTED_INDEXES: dict[str, tuple[str, tuple[str, ...]]] = {
     "idx_facts_field_value": ("literature_facts", ("field", "value_json")),
     "idx_validation_state": ("validations", ("state",)),
     "idx_mapping_pdb": ("residue_mappings", ("pdb_id",)),
     "idx_mapping_uniprot": ("residue_mappings", ("uniprot_accession",)),
 }
+_EXPECTED_INDEXES = {
+    **_V1_EXPECTED_INDEXES,
+    "idx_pdbekb_enrichment_accession": ("pdbekb_enrichments", ("accession",)),
+    "idx_pdbekb_enrichment_state": ("pdbekb_enrichments", ("state",)),
+}
+_V1_EXPECTED_USER_OBJECTS = {
+    *(("table", table) for table in _V1_REQUIRED_TABLES),
+    *(("index", index) for index in _V1_EXPECTED_INDEXES),
+}
 _EXPECTED_USER_OBJECTS = {
     *(("table", table) for table in _REQUIRED_TABLES),
     *(("index", index) for index in _EXPECTED_INDEXES),
 }
-_FOREIGN_KEY_TABLES = _REQUIRED_TABLES - {"articles"}
+_ARTICLE_FOREIGN_KEY = {
+    ("articles", "document_id", "document_id", "NO ACTION", "CASCADE", "NONE")
+}
+_V1_EXPECTED_FOREIGN_KEYS = {
+    table: (_ARTICLE_FOREIGN_KEY if table != "articles" else set())
+    for table in _V1_REQUIRED_TABLES
+}
+_EXPECTED_FOREIGN_KEYS = {
+    **_V1_EXPECTED_FOREIGN_KEYS,
+    "schema_migrations": set(),
+    "pdbekb_reports": set(),
+    "pdbekb_enrichments": {
+        (
+            "pdbekb_reports",
+            "report_commitment_sha256",
+            "content_commitment_sha256",
+            "NO ACTION",
+            "CASCADE",
+            "NONE",
+        )
+    },
+}
 _SCHEMA = """
 PRAGMA foreign_keys = ON;
 PRAGMA journal_mode = WAL;
@@ -132,7 +200,90 @@ CREATE TABLE IF NOT EXISTS md_assets (
     reason TEXT,
     FOREIGN KEY(document_id) REFERENCES articles(document_id) ON DELETE CASCADE
 );
+CREATE TABLE IF NOT EXISTS schema_migrations (
+    migration_id TEXT PRIMARY KEY,
+    from_version INTEGER NOT NULL,
+    to_version INTEGER NOT NULL,
+    applied_at TEXT NOT NULL,
+    migration_sha256 TEXT NOT NULL,
+    source_sha256_before TEXT NOT NULL,
+    backup_sha256 TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS pdbekb_reports (
+    content_commitment_sha256 TEXT PRIMARY KEY,
+    source_database_sha256 TEXT NOT NULL,
+    source_database_schema_version INTEGER NOT NULL,
+    source_article_count INTEGER NOT NULL,
+    generated_at TEXT NOT NULL,
+    report_json TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS pdbekb_enrichments (
+    report_commitment_sha256 TEXT NOT NULL,
+    accession TEXT NOT NULL,
+    state TEXT NOT NULL,
+    sequence_length INTEGER,
+    annotation_group_count INTEGER NOT NULL,
+    annotation_residue_range_count INTEGER NOT NULL,
+    partner_count INTEGER NOT NULL,
+    linked_pdb_ids_json TEXT NOT NULL,
+    enrichment_json TEXT NOT NULL,
+    PRIMARY KEY(report_commitment_sha256, accession),
+    FOREIGN KEY(report_commitment_sha256)
+        REFERENCES pdbekb_reports(content_commitment_sha256) ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS idx_pdbekb_enrichment_accession
+    ON pdbekb_enrichments(accession);
+CREATE INDEX IF NOT EXISTS idx_pdbekb_enrichment_state
+    ON pdbekb_enrichments(state);
 """
+
+MIGRATION_1_TO_2_STATEMENTS = (
+    """
+    CREATE TABLE schema_migrations (
+        migration_id TEXT PRIMARY KEY,
+        from_version INTEGER NOT NULL,
+        to_version INTEGER NOT NULL,
+        applied_at TEXT NOT NULL,
+        migration_sha256 TEXT NOT NULL,
+        source_sha256_before TEXT NOT NULL,
+        backup_sha256 TEXT NOT NULL
+    )
+    """,
+    """
+    CREATE TABLE pdbekb_reports (
+        content_commitment_sha256 TEXT PRIMARY KEY,
+        source_database_sha256 TEXT NOT NULL,
+        source_database_schema_version INTEGER NOT NULL,
+        source_article_count INTEGER NOT NULL,
+        generated_at TEXT NOT NULL,
+        report_json TEXT NOT NULL
+    )
+    """,
+    """
+    CREATE TABLE pdbekb_enrichments (
+        report_commitment_sha256 TEXT NOT NULL,
+        accession TEXT NOT NULL,
+        state TEXT NOT NULL,
+        sequence_length INTEGER,
+        annotation_group_count INTEGER NOT NULL,
+        annotation_residue_range_count INTEGER NOT NULL,
+        partner_count INTEGER NOT NULL,
+        linked_pdb_ids_json TEXT NOT NULL,
+        enrichment_json TEXT NOT NULL,
+        PRIMARY KEY(report_commitment_sha256, accession),
+        FOREIGN KEY(report_commitment_sha256)
+            REFERENCES pdbekb_reports(content_commitment_sha256) ON DELETE CASCADE
+    )
+    """,
+    """
+    CREATE INDEX idx_pdbekb_enrichment_accession
+        ON pdbekb_enrichments(accession)
+    """,
+    """
+    CREATE INDEX idx_pdbekb_enrichment_state
+        ON pdbekb_enrichments(state)
+    """,
+)
 
 
 class SQLiteRecordStore:
@@ -180,12 +331,31 @@ class SQLiteRecordStore:
         return row is not None
 
     @classmethod
-    def _validate_schema(cls, connection: sqlite3.Connection) -> None:
+    def _validate_schema(
+        cls,
+        connection: sqlite3.Connection,
+        *,
+        expected_version: int = SCHEMA_VERSION,
+    ) -> None:
         version = cls._schema_version(connection)
-        if version != SCHEMA_VERSION:
+        if version != expected_version:
             raise RuntimeError(
-                f"unsupported database schema version {version}; expected {SCHEMA_VERSION}"
+                f"unsupported database schema version {version}; expected {expected_version}"
             )
+        if expected_version == 1:
+            required_tables = _V1_REQUIRED_TABLES
+            expected_columns = _V1_EXPECTED_COLUMNS
+            expected_indexes = _V1_EXPECTED_INDEXES
+            expected_objects = _V1_EXPECTED_USER_OBJECTS
+            expected_foreign_keys = _V1_EXPECTED_FOREIGN_KEYS
+        elif expected_version == SCHEMA_VERSION:
+            required_tables = _REQUIRED_TABLES
+            expected_columns = _EXPECTED_COLUMNS
+            expected_indexes = _EXPECTED_INDEXES
+            expected_objects = _EXPECTED_USER_OBJECTS
+            expected_foreign_keys = _EXPECTED_FOREIGN_KEYS
+        else:
+            raise RuntimeError(f"no schema validator for version {expected_version}")
         object_rows = connection.execute(
             """
             SELECT type, name FROM sqlite_master
@@ -195,22 +365,24 @@ class SQLiteRecordStore:
         ).fetchall()
         objects = {(str(row[0]), str(row[1])) for row in object_rows}
         tables = {name for object_type, name in objects if object_type == "table"}
-        missing = sorted(_REQUIRED_TABLES - tables)
+        missing = sorted(required_tables - tables)
         if missing:
             raise RuntimeError(f"database schema is incomplete; missing tables: {missing}")
-        unexpected = sorted(tables - _REQUIRED_TABLES)
+        unexpected = sorted(tables - required_tables)
         if unexpected:
             raise RuntimeError(
-                f"database schema contains unexpected tables for version 1: {unexpected}"
+                "database schema contains unexpected tables for version "
+                f"{expected_version}: {unexpected}"
             )
-        unexpected_objects = sorted(objects - _EXPECTED_USER_OBJECTS)
+        unexpected_objects = sorted(objects - expected_objects)
         if unexpected_objects:
             rendered = [f"{object_type}:{name}" for object_type, name in unexpected_objects]
             raise RuntimeError(
-                "database schema contains unexpected version 1 objects: " + ", ".join(rendered)
+                f"database schema contains unexpected version {expected_version} objects: "
+                + ", ".join(rendered)
             )
 
-        for table, expected in _EXPECTED_COLUMNS.items():
+        for table, expected in expected_columns.items():
             rows = connection.execute(f"PRAGMA table_info({table})").fetchall()
             actual = tuple(
                 (str(row[1]), str(row[2]).upper(), int(row[3]), int(row[5]))
@@ -219,7 +391,7 @@ class SQLiteRecordStore:
             if actual != expected:
                 raise RuntimeError(f"database table {table} has an incompatible column schema")
 
-        for table in sorted(_FOREIGN_KEY_TABLES):
+        for table, expected in sorted(expected_foreign_keys.items()):
             rows = connection.execute(f"PRAGMA foreign_key_list({table})").fetchall()
             actual = {
                 (
@@ -232,20 +404,10 @@ class SQLiteRecordStore:
                 )
                 for row in rows
             }
-            expected = {
-                (
-                    "articles",
-                    "document_id",
-                    "document_id",
-                    "NO ACTION",
-                    "CASCADE",
-                    "NONE",
-                )
-            }
             if actual != expected:
                 raise RuntimeError(f"database table {table} has incompatible foreign keys")
 
-        for index, (table, expected_columns) in _EXPECTED_INDEXES.items():
+        for index, (table, expected_index_columns) in expected_indexes.items():
             rows = connection.execute(f"PRAGMA index_list({table})").fetchall()
             matching = [row for row in rows if str(row[1]) == index]
             if len(matching) != 1:
@@ -257,7 +419,7 @@ class SQLiteRecordStore:
                 str(item[2])
                 for item in connection.execute(f"PRAGMA index_info({index})").fetchall()
             )
-            if columns != expected_columns:
+            if columns != expected_index_columns:
                 raise RuntimeError(f"database index {index} has incompatible columns")
 
     @contextmanager
@@ -469,6 +631,105 @@ class SQLiteRecordStore:
                 """
             ).fetchall()
         return [str(row["uniprot_accession"]) for row in rows]
+
+    def import_pdbekb_report(self, report_payload: dict[str, object]) -> None:
+        """Persist one compact PDBe-KB batch report after source binding checks."""
+
+        if self.read_only:
+            raise RuntimeError("cannot import through a read-only record store")
+        from .pdbekb import PDBeKBBatchReport
+
+        report = PDBeKBBatchReport.model_validate(report_payload)
+        if report.source_article_count != self.count_articles():
+            raise ValueError("PDBe-KB report article count does not match database")
+        if report.requested_accessions != self.list_uniprot_accessions():
+            raise ValueError("PDBe-KB report accessions do not match database mappings")
+        current_digest = self._file_sha256(self.path)
+        accepted_source_digests = {current_digest}
+        with self._connect() as connection:
+            accepted_source_digests.update(
+                str(row[0])
+                for row in connection.execute(
+                    "SELECT source_sha256_before FROM schema_migrations"
+                ).fetchall()
+            )
+        if report.source_database_sha256 not in accepted_source_digests:
+            raise ValueError("PDBe-KB report is not bound to this database lineage")
+
+        report_json = json.dumps(report.model_dump(mode="json"), sort_keys=True)
+        with self._connect() as connection:
+            connection.execute(
+                """
+                INSERT INTO pdbekb_reports(
+                    content_commitment_sha256, source_database_sha256,
+                    source_database_schema_version, source_article_count,
+                    generated_at, report_json
+                ) VALUES (?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    report.content_commitment_sha256,
+                    report.source_database_sha256,
+                    report.source_database_schema_version,
+                    report.source_article_count,
+                    report.generated_at.isoformat(),
+                    report_json,
+                ),
+            )
+            connection.executemany(
+                """
+                INSERT INTO pdbekb_enrichments(
+                    report_commitment_sha256, accession, state, sequence_length,
+                    annotation_group_count, annotation_residue_range_count,
+                    partner_count, linked_pdb_ids_json, enrichment_json
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                [
+                    (
+                        report.content_commitment_sha256,
+                        item.accession,
+                        item.state.value,
+                        item.sequence_length,
+                        len(item.annotation_groups),
+                        sum(
+                            group.residue_range_count
+                            for group in item.annotation_groups
+                        ),
+                        len(item.partners),
+                        json.dumps(
+                            sorted(
+                                {
+                                    pdb_id
+                                    for group in item.annotation_groups
+                                    for pdb_id in group.pdb_ids
+                                }
+                            )
+                        ),
+                        json.dumps(item.model_dump(mode="json"), sort_keys=True),
+                    )
+                    for item in report.enrichments
+                ],
+            )
+
+    def get_pdbekb_enrichments(self, accession: str) -> list[dict[str, object]]:
+        with self._connect() as connection:
+            rows = connection.execute(
+                """
+                SELECT enrichment_json
+                FROM pdbekb_enrichments
+                WHERE accession = ?
+                ORDER BY report_commitment_sha256
+                """,
+                (accession.upper(),),
+            ).fetchall()
+        return [json.loads(str(row["enrichment_json"])) for row in rows]
+
+    @staticmethod
+    def _file_sha256(path: Path) -> str:
+        digest = hashlib.sha256()
+        with path.open("rb") as handle:
+            for block in iter(lambda: handle.read(1024 * 1024), b""):
+                digest.update(block)
+        return digest.hexdigest()
 
     def verification_rows(self) -> list[dict[str, object]]:
         """Return the stored record and its deliberately redundant article columns."""

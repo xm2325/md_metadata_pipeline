@@ -7,7 +7,7 @@ from http import HTTPStatus
 from pathlib import Path, PurePath, PureWindowsPath
 from typing import Any, Sequence
 
-from fastapi import FastAPI, HTTPException, Query, Request
+from fastapi import FastAPI, HTTPException, Path as PathParameter, Query, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, Response
 from prometheus_client import CONTENT_TYPE_LATEST
@@ -18,6 +18,7 @@ from .api_models import (
     HealthResponse,
     LivenessResponse,
     MetadataResponse,
+    PDBeKBResponse,
     ProblemDetail,
     PublicIntegratedMDRecord,
     ReadinessResponse,
@@ -301,6 +302,28 @@ def create_app(
             PublicIntegratedMDRecord.model_validate(_public_record(row)) for row in records
         ]
         return SearchResponse(count=len(public_records), records=public_records)
+
+    @app.get(
+        "/pdbekb/{accession}",
+        response_model=PDBeKBResponse,
+        responses=_problem_responses(404, 422, 500),
+    )
+    def pdbekb_enrichment(
+        accession: str = PathParameter(pattern=r"^[A-Za-z0-9]{6,10}$"),
+    ) -> PDBeKBResponse:
+        normalized = accession.upper()
+        enrichments = store.get_pdbekb_enrichments(normalized)
+        if not enrichments:
+            raise _http_error(
+                404,
+                code="pdbekb-enrichment-not-found",
+                detail="PDBe-KB enrichment not found",
+            )
+        return PDBeKBResponse(
+            accession=normalized,
+            count=len(enrichments),
+            enrichments=enrichments,
+        )
 
     @app.get("/metrics", include_in_schema=False, response_class=Response)
     def prometheus_metrics() -> Response:

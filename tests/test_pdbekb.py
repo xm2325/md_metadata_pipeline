@@ -155,6 +155,18 @@ def test_pdbekb_missing_accession_is_explicit_conflict() -> None:
     assert enrichment.annotation_result.reason == "accession_missing_from_successful_response"
 
 
+def test_pdbekb_404_is_explicit_no_data_not_network_failure() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(404, json={"detail": "not found"})
+
+    enrichment = fetch_pdbekb_enrichment(_validator(handler), ACCESSION)
+
+    assert enrichment.state is ValidationState.NOT_APPLICABLE
+    assert enrichment.annotation_result.state is ValidationState.NOT_APPLICABLE
+    assert enrichment.partner_result.state is ValidationState.NOT_APPLICABLE
+    assert enrichment.annotation_result.reason == "pdbekb_no_data_for_accession"
+
+
 def test_pdbekb_batch_report_binds_verified_database_and_rejects_tampering(
     tmp_path: Path,
 ) -> None:

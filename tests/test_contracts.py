@@ -43,7 +43,7 @@ def test_committed_contract_schemas_are_current_and_strict() -> None:
     )
     database = release["$defs"]["DatabaseContract"]
     assert database["additionalProperties"] is False
-    assert database["properties"]["schema_version"]["const"] == 1
+    assert database["properties"]["schema_version"]["const"] == 2
     pdbekb = json.loads(
         (ROOT / "schemas" / "pdbekb-enrichment-batch-v1.schema.json").read_text()
     )

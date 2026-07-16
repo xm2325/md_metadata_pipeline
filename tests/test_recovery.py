@@ -121,7 +121,7 @@ def test_store_strictly_validates_columns_foreign_keys_and_indexes(tmp_path: Pat
     with closing(sqlite3.connect(unexpected_view)) as connection:
         connection.execute("CREATE VIEW article_titles AS SELECT title FROM articles")
         connection.commit()
-    with pytest.raises(RuntimeError, match="unexpected version 1 objects"):
+    with pytest.raises(RuntimeError, match="unexpected version 2 objects"):
         SQLiteRecordStore(unexpected_view, read_only=True)
 
 

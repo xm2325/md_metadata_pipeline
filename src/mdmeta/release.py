@@ -86,7 +86,7 @@ class DatabaseContract(BaseModel):
     byte_size: StrictInt = Field(ge=0)
     sha256: str = Field(pattern=_SHA256_PATTERN)
     article_count: StrictInt = Field(ge=0)
-    schema_version: Literal[1] = SCHEMA_VERSION
+    schema_version: Literal[2] = SCHEMA_VERSION
     record_schema: Literal["integrated-md-record-v1"] = RECORD_SCHEMA_VERSION
 
     @field_validator("path", "verification_manifest_path")

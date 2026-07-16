@@ -173,11 +173,11 @@ jobs:
           metadata = json.loads(Path("reports/metadata.json").read_text())
           readiness = json.loads(Path("reports/readyz.json").read_text())
           assert metadata["database_mode"] == "read_only"
-          assert metadata["database_schema_version"] == 1
+          assert metadata["database_schema_version"] == 2
           assert metadata["dataset_sha256"] == os.environ["EXPECTED_DATASET_SHA"]
           assert metadata["build_sha"] == "${{ github.sha }}"
           assert readiness["status"] == "ready"
-          assert readiness["database_schema_version"] == 1
+          assert readiness["database_schema_version"] == 2
           PY
       - name: Stop release-test containers
         if: always()
