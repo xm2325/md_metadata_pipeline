@@ -1,0 +1,185 @@
+{
+  "schema_version": "mdmeta.independent-model-protocol-freeze.v1",
+  "study_id": "mdmeta-independent-100-v1",
+  "study_status": "scale80_passed_model_protocol_frozen_pre_gold_inference",
+  "parent_plan_sha256": "b31d7fd465134ae7d6b884d5186a15945aa9b53c770b237259d09452a51076f2",
+  "parent_audit_sha256": "29cd70ef9e8d74532b77327eae2dbe8eeb404cd04328f33921fd97d1f4e5a400",
+  "source_screen_sha256": "b4addc40b47cdec2a9798a60f2d354a5f4735f51bc041b6b4e328cb3fdb74228",
+  "scale_source_manifest_sha256": "b839f2d19c8c9b75f82f6fbdd52c05afaa2e6a52668f4cce6da6c09d254802a7",
+  "scale_article_count": 80,
+  "scale_result_sha256": "279b9b5f73bd8e684940223df5535f337f90bffda44922042c2a5366f9bc253d",
+  "scale_integration_result_sha256": "9c1adf991e72d0f6942c2ee3adbc6e58e85d0412378a74e2490c63c8e31b208e",
+  "source_commit": "3079d14a4fd50cd0c903ba8bbe07d9bbeac86f01",
+  "source_archive_sha256": "735684305768a07c0cf1799393f97fe1d9a7f675939c46c93bedc238fc31bb76",
+  "scale_evidence_file_sha256": {
+    "source_archive": "735684305768a07c0cf1799393f97fe1d9a7f675939c46c93bedc238fc31bb76",
+    "scale_source_manifest": "1b771bf56ada946dd0cb30e71457ad7f954db402dd9d5e05ce7e7331870056e2",
+    "scale_gpu_result": "570765a7df4b49a50bbdd58dab86d7098a82f4840a156f39381920da36abdfc3",
+    "scale_cpu_integration_result": "44a55e0aec4e897db049ed9ea3aaca428a08f4f050ed9ada1ac054cfafd8de8f",
+    "model_manifest": "57418b2b5f8a5c557a7f8c3a11f3fca767d9692d106e1103f2c4dc7c6a8fc7b3",
+    "gpu_environment": "4e95ee8c9e72d066012e6e6be0c0e366f5a2d67e2df8515d52fb84b90e6619bc",
+    "gpu_summary": "e43c71f8b11e0ed132dbba4c16229bd881efd0f7551fe3d2d2043bb9967d49ee",
+    "integration_environment": "8ef016d0668730ad10d211a216b1e16fade202de9263ee1e97e2dff89b9bbab7",
+    "integration_database": "e2f348b2ece9531b2eb82aefeebed93b4588fb81f89488cd712a864c1dd98ee2"
+  },
+  "model": {
+    "repo_id": "Qwen/Qwen2.5-7B-Instruct",
+    "revision": "a09a35458c702b33eeacc393d103063234e8bc28",
+    "tokenizer_revision": "a09a35458c702b33eeacc393d103063234e8bc28",
+    "license": "apache-2.0",
+    "snapshot_manifest_sha256": "11c3344c8949a7fc682e30bea663e34a7b5e8116450783f7bd813cf76ef6a237"
+  },
+  "prompt_contract": {
+    "version": "mdmeta.protocol-event-prompt.v1",
+    "sha256": "71eb961d0880af6a4c6284adb296e2a20bc6be9c4a0c66e356b20ee151250d53"
+  },
+  "response_schema": {
+    "version": "mdmeta.llm-event-response.v3",
+    "sha256": "3c85798f612a07fb3525dacd3ba0c37cd8458764f394381a4057e453cef51bc9"
+  },
+  "batch_schema_version": "mdmeta.llm-protocol-batch.v7",
+  "configuration": {
+    "batch_size": 32,
+    "determinism_check": true,
+    "gpu_memory_utilization": 0.8,
+    "max_model_len": 16384,
+    "max_tokens": 4096,
+    "maximum_generation_rejection_fraction": 0.01,
+    "maximum_no_task_article_fraction": 0.025,
+    "network_allowed_for_jats": false,
+    "seed": 3997,
+    "source_snapshot_policy": "private_cache_with_frozen_sha256_gate",
+    "task_unit": "one_protocol_relevant_jats_paragraph",
+    "temperature": 0.0
+  },
+  "runtime": {
+    "architecture": "aarch64",
+    "httpx": "0.28.1",
+    "pydantic": "2.13.4",
+    "python": "3.12.12",
+    "torch": "2.10.0+cu129",
+    "transformers": "5.8.0",
+    "vllm": "0.19.1"
+  },
+  "implementation_files": [
+    {
+      "path": "constraints/hpc-stage.txt",
+      "size_bytes": 24,
+      "sha256": "f3c7446061109b4878ff19b59d943b7e2993fcdaaa44ed1f8673ed1d015bea22"
+    },
+    {
+      "path": "hpc/roihu/llm_extract.sbatch",
+      "size_bytes": 10076,
+      "sha256": "de0b4c49acdde1eccceb5e284502d9d0286874e9751e1149fde74078d2f93246"
+    },
+    {
+      "path": "hpc/roihu/model_integration.sbatch",
+      "size_bytes": 8274,
+      "sha256": "cd9654e2b444fccaf1d2cafa544564117f5238448c5a8106e5b66f80ce980b76"
+    },
+    {
+      "path": "hpc/roihu/stage_inputs.sbatch",
+      "size_bytes": 9132,
+      "sha256": "f5639a95b1f3a408cd42d3f35b73680ef1aa71e34c52e7a31cb259eea56ef061"
+    },
+    {
+      "path": "hpc/roihu/stage_model.py",
+      "size_bytes": 2299,
+      "sha256": "8c7b48f1b549edcae0cccef80cb6773876143d88daa68dab44b2bbb38e520ecb"
+    },
+    {
+      "path": "schemas/llm-event-response-v3.schema.json",
+      "size_bytes": 5405,
+      "sha256": "8e6e4855aed489722e1d873e4749530fbf192594c5a36d8880b7d1797ec42b9d"
+    },
+    {
+      "path": "scripts/evaluate_protocol_events.py",
+      "size_bytes": 1428,
+      "sha256": "c4a74ae6969c41c62d6879486156d2e919dd259b3f0b84f1227015d03e022403"
+    },
+    {
+      "path": "scripts/freeze_independent_model.py",
+      "size_bytes": 4896,
+      "sha256": "56017c84d01f81e13a2db57691afffa9ac204f4d93aa0b6c1d70ce20f1642f42"
+    },
+    {
+      "path": "scripts/gold_reference_gate.py",
+      "size_bytes": 4115,
+      "sha256": "e88528bd6ee325e897cb98830f38b9b4ee54c1fac71953fbdf74ad27810d2e48"
+    },
+    {
+      "path": "scripts/run_llm_protocol_batch.py",
+      "size_bytes": 15533,
+      "sha256": "fb2b78c98b5c7b5822dabc4e196aafa2ecd4f2982b1f6fb74e7ebc5886eca5e0"
+    },
+    {
+      "path": "scripts/run_model_backed_integration.py",
+      "size_bytes": 23893,
+      "sha256": "41c44ff9410e7d0343d299b138e2e2945f2e5545edde5572b2de1b81539e1672"
+    },
+    {
+      "path": "scripts/stage_frozen_jats.py",
+      "size_bytes": 4977,
+      "sha256": "5d92ef0674ee7a26cb343d85edb4e73263f4cb77469c60311412602142f902ef"
+    },
+    {
+      "path": "src/mdmeta/benchmark.py",
+      "size_bytes": 6397,
+      "sha256": "5ad71f80ac12286c91d4d352cbb70d822d832e1420379b72e2ab080e81b82a21"
+    },
+    {
+      "path": "src/mdmeta/event_evaluation.py",
+      "size_bytes": 7971,
+      "sha256": "85cef081523ec4d660ecb2d01b5f73b878997a31d7abcd2dc58f09e040214244"
+    },
+    {
+      "path": "src/mdmeta/gold_reference.py",
+      "size_bytes": 26058,
+      "sha256": "b7fc0167ab7ca3b138075454876a3ff82c738f546bf31805e6a99dbd92e7463c"
+    },
+    {
+      "path": "src/mdmeta/integration.py",
+      "size_bytes": 21972,
+      "sha256": "fe048ba6898622faef21c509ef7fcbc44b1df6682cad5666a27bd4b3ded5fffe"
+    },
+    {
+      "path": "src/mdmeta/llm_adapter.py",
+      "size_bytes": 41075,
+      "sha256": "2e2235d312e551fb697f73fa2ab26c2e44a40d33d4df9a29506a04a589bbd780"
+    },
+    {
+      "path": "src/mdmeta/llm_batch.py",
+      "size_bytes": 26798,
+      "sha256": "23830d73ab65fd132b2412eb3fd7a573a855d839af17ee081dfe6c80f1b3f103"
+    },
+    {
+      "path": "src/mdmeta/model_snapshot.py",
+      "size_bytes": 10935,
+      "sha256": "22dfca3fe7b9c379e37e21fbf27e17392d4af93b2acf4285f2ac5b06833bcfd0"
+    },
+    {
+      "path": "src/mdmeta/model_protocol_freeze.py",
+      "size_bytes": 19989,
+      "sha256": "e4661e7373d6e4e5c80777ca7daea65425417859d49b2a5688c8a573e0939410"
+    },
+    {
+      "path": "src/mdmeta/models.py",
+      "size_bytes": 3081,
+      "sha256": "256ef771cbd83fdd8bb26f6489a535937b7975f5f9a763310030325a8f22f2e8"
+    },
+    {
+      "path": "src/mdmeta/protocol_events.py",
+      "size_bytes": 6300,
+      "sha256": "a561128d034010213de0bba4ed20a10c78456b6e7adc572409ebf48e4fd37568"
+    }
+  ],
+  "implementation_bundle_sha256": "c1dcf551bc6da0c530c36fb9aaf258d3601985914c74a206d92054b00238fe71",
+  "frozen_at_utc": "2026-07-16T06:20:44+00:00",
+  "operator_run_id": "independent100-scale80-model-freeze-189640-189845",
+  "contains_locked_test_articles": false,
+  "contains_human_reference_labels": false,
+  "gold_predictions_generated": false,
+  "gold_prediction_authorized": false,
+  "passed": true,
+  "freeze_sha256": "ff8c72c45673fb053cb412cebd5046f4e934fac1a868f603d63bd8cc9d0bddbe"
+}

@@ -56,12 +56,18 @@ def _protocol_rich(section_text: str) -> bool:
     return sum(pattern.search(section_text) is not None for pattern in PROTOCOL_SIGNALS) >= 2
 
 
-def build_packet(plan: dict, screen: dict, xml_cache_dir: Path) -> dict:
+def build_packet(
+    plan: dict,
+    screen: dict,
+    xml_cache_dir: Path,
+    *,
+    splits: tuple[str, ...] = ("development", "validation", "locked_test"),
+) -> dict:
     if plan["screen_sha256"] != canonical_sha256(screen):
         raise ValueError("final plan does not match the supplied full-text screen")
     screen_records = {row["document_id"]: row for row in screen["records"]}
     articles: list[dict] = []
-    for split in ("development", "validation", "locked_test"):
+    for split in splits:
         for article in plan[split]:
             document_id = article["document_id"]
             record = screen_records.get(document_id)
@@ -124,6 +130,7 @@ def build_packet(plan: dict, screen: dict, xml_cache_dir: Path) -> dict:
         "contains_machine_predictions": False,
         "contains_full_article_xml": False,
         "article_count": len(articles),
+        "included_splits": list(splits),
         "articles": articles,
     }
     return {**core, "packet_sha256": canonical_sha256(core)}
@@ -135,10 +142,17 @@ def main() -> None:
     parser.add_argument("--screen", type=Path, required=True)
     parser.add_argument("--xml-cache-dir", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument(
+        "--split",
+        action="append",
+        choices=["development", "validation", "locked_test"],
+        dest="splits",
+    )
     args = parser.parse_args()
     plan = json.loads(args.plan.read_text(encoding="utf-8"))
     screen = json.loads(args.screen.read_text(encoding="utf-8"))
-    packet = build_packet(plan, screen, args.xml_cache_dir)
+    splits = tuple(args.splits or ("development", "validation", "locked_test"))
+    packet = build_packet(plan, screen, args.xml_cache_dir, splits=splits)
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(packet, indent=2), encoding="utf-8")
     print(

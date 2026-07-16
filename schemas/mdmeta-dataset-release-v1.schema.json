@@ -1,0 +1,218 @@
+{
+  "$defs": {
+    "BundleFile": {
+      "additionalProperties": false,
+      "properties": {
+        "byte_size": {
+          "minimum": 0,
+          "title": "Byte Size",
+          "type": "integer"
+        },
+        "path": {
+          "title": "Path",
+          "type": "string"
+        },
+        "sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Sha256",
+          "type": "string"
+        }
+      },
+      "required": [
+        "path",
+        "byte_size",
+        "sha256"
+      ],
+      "title": "BundleFile",
+      "type": "object"
+    },
+    "DatabaseContract": {
+      "additionalProperties": false,
+      "properties": {
+        "article_count": {
+          "minimum": 0,
+          "title": "Article Count",
+          "type": "integer"
+        },
+        "byte_size": {
+          "minimum": 0,
+          "title": "Byte Size",
+          "type": "integer"
+        },
+        "path": {
+          "title": "Path",
+          "type": "string"
+        },
+        "record_schema": {
+          "const": "integrated-md-record-v1",
+          "default": "integrated-md-record-v1",
+          "title": "Record Schema",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": 2,
+          "default": 2,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Sha256",
+          "type": "string"
+        },
+        "verification_manifest_path": {
+          "title": "Verification Manifest Path",
+          "type": "string"
+        }
+      },
+      "required": [
+        "path",
+        "verification_manifest_path",
+        "byte_size",
+        "sha256",
+        "article_count"
+      ],
+      "title": "DatabaseContract",
+      "type": "object"
+    },
+    "ReleaseProvenance": {
+      "additionalProperties": false,
+      "properties": {
+        "dependency_lock_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Dependency Lock Sha256",
+          "type": "string"
+        },
+        "git_commit": {
+          "pattern": "^(?:[0-9a-f]{40}|[0-9a-f]{64})$",
+          "title": "Git Commit",
+          "type": "string"
+        },
+        "package_version": {
+          "pattern": "^(?:0|[1-9][0-9]*)\\.(?:0|[1-9][0-9]*)\\.(?:0|[1-9][0-9]*)$",
+          "title": "Package Version",
+          "type": "string"
+        },
+        "source_manifest_sha256": {
+          "anyOf": [
+            {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Source Manifest Sha256"
+        },
+        "workflow_run_attempt": {
+          "minimum": 1,
+          "title": "Workflow Run Attempt",
+          "type": "integer"
+        },
+        "workflow_run_id": {
+          "minimum": 1,
+          "title": "Workflow Run Id",
+          "type": "integer"
+        },
+        "workflow_run_url": {
+          "title": "Workflow Run Url",
+          "type": "string"
+        }
+      },
+      "required": [
+        "package_version",
+        "git_commit",
+        "workflow_run_url",
+        "workflow_run_id",
+        "workflow_run_attempt",
+        "dependency_lock_sha256",
+        "source_manifest_sha256"
+      ],
+      "title": "ReleaseProvenance",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "bundle_sha256": {
+      "pattern": "^[0-9a-f]{64}$",
+      "title": "Bundle Sha256",
+      "type": "string"
+    },
+    "completion_state": {
+      "const": "complete",
+      "default": "complete",
+      "title": "Completion State",
+      "type": "string"
+    },
+    "created_at": {
+      "format": "date-time",
+      "title": "Created At",
+      "type": "string"
+    },
+    "creators": {
+      "items": {
+        "type": "string"
+      },
+      "minItems": 1,
+      "title": "Creators",
+      "type": "array"
+    },
+    "database": {
+      "$ref": "#/$defs/DatabaseContract"
+    },
+    "dataset_id": {
+      "title": "Dataset Id",
+      "type": "string"
+    },
+    "dataset_version": {
+      "title": "Dataset Version",
+      "type": "string"
+    },
+    "files": {
+      "items": {
+        "$ref": "#/$defs/BundleFile"
+      },
+      "minItems": 2,
+      "title": "Files",
+      "type": "array"
+    },
+    "license": {
+      "title": "License",
+      "type": "string"
+    },
+    "manifest_schema": {
+      "const": "mdmeta-dataset-release-v1",
+      "default": "mdmeta-dataset-release-v1",
+      "title": "Manifest Schema",
+      "type": "string"
+    },
+    "provenance": {
+      "$ref": "#/$defs/ReleaseProvenance"
+    },
+    "publisher": {
+      "title": "Publisher",
+      "type": "string"
+    },
+    "title": {
+      "title": "Title",
+      "type": "string"
+    }
+  },
+  "required": [
+    "dataset_id",
+    "dataset_version",
+    "title",
+    "license",
+    "creators",
+    "publisher",
+    "created_at",
+    "database",
+    "files",
+    "provenance",
+    "bundle_sha256"
+  ],
+  "title": "ReleaseManifest",
+  "type": "object"
+}

@@ -10,7 +10,7 @@ The returned dictionary is parsed with a strict Pydantic schema. Unknown fields 
 
 ## Acceptance sequence
 
-A proposed event enters the pipeline only after all checks pass:
+A proposed event enters the pipeline only after its phase, quote and at least one attribute pass:
 
 1. The paragraph identifier exists in the supplied input.
 2. Character offsets fall within the paragraph.
@@ -18,11 +18,22 @@ A proposed event enters the pipeline only after all checks pass:
 4. Every numeric attribute includes an exact `raw_text` expression copied from the quote.
 5. Python parses the number and unit from `raw_text` and verifies that they agree with the model-proposed value and unit.
 6. Python performs unit conversion to ps, K, bar, or fs.
-7. Ensemble, restraint text, and replicate expressions must occur in the quote.
-8. The event must contain at least one protocol attribute.
-9. A stable event identifier is derived from the document, evidence span, event type, and normalized attributes.
+7. Ensemble and replicate expressions must occur in the quote; restraint text must also contain an explicit restraint/constraint cue, so arbitrary substrings such as `N` cannot become metadata.
+8. Unsupported attributes are rejected individually and recorded with stable reason codes. They are never copied into the normalized event.
+9. The event must retain at least one evidence-valid protocol attribute after filtering.
+10. A stable event identifier is derived from the document, evidence span, event type, and normalized attributes.
 
-A failure raises `EvidenceIntegrityError`; the candidate is not written as a `ProtocolEvent`.
+The original structured response and its hash remain unchanged. A candidate with a supported phase and at least one valid attribute may survive conservative removal of unsupported attributes; the private result records candidate indices, candidate hashes, repairs and rejection reason codes. A candidate with no valid attribute is rejected. One rejected candidate does not erase an independently valid candidate from the same schema-valid response. A structurally invalid response is still rejected as a whole.
+
+Batch result schema v7 also isolates an unclean completion to its own task. A token-limited,
+missing, or non-strict-JSON response is retained privately as raw text (or an explicit null), bound
+to a SHA-256 commitment, and classified as `generation_rejected`; valid peer responses in the
+same inference batch continue through validation. Compact summaries contain only aggregate stable
+reason codes. The default run gate permits generation rejection for at most 1% of tasks (integer
+floor), so the 1- and 5-article gates still require zero while a large batch can preserve a small,
+explicit partial-coverage tail.
+
+An incorrect `event_type_raw_text` can be repaired only when it is an exact substring of the quote and the quote contains exactly one non-conflicting explicit cue for the already-declared phase. The phase label is never changed automatically. Exact offset repair remains limited to one unique byte-for-byte quote occurrence.
 
 ## Supported raw quantities
 
@@ -32,11 +43,17 @@ A failure raises `EvidenceIntegrityError`; the candidate is not written as a `Pr
 - timestep: fs, ps;
 - replicate counts: integers or English words one through ten.
 
-The adapter currently treats one exact quote as the evidence unit for one event. Cross-paragraph relation extraction is not accepted.
+The adapter currently treats one exact quote as the evidence unit for one event. Cross-paragraph relation extraction is not accepted. Response schema v3 permits at most 16 candidate events from one paragraph, preventing unbounded schema-constrained enumeration. Batch result schema v7 distinguishes fully accepted tasks from `accepted_with_evidence_rejections` and `generation_rejected`, and publishes only aggregate reason counts in compact summaries. The cap is enforced by the schema but its numeric value is deliberately absent from the prompt because a completed Roihu gate showed that a numeric prompt hint encouraged cap-filling output.
 
 ## Prompt rule
 
-The generated prompt instructs the model to extract only explicit MD protocol events, avoid outside knowledge, return exact paragraph-relative offsets, and return an empty list when no supported event is present.
+The generated prompt instructs the model to extract only explicit MD protocol events, avoid outside knowledge, return exact paragraph-relative offsets, and return an empty list when no supported event is present. It also forbids phase-only or duplicate events, requires at least one supported protocol attribute per event, and requires every supported attribute explicitly stated in the chosen quote to be populated instead of silently omitted.
+
+The source-independent instruction, paragraph serialization format, separator and source heading
+form `mdmeta.protocol-event-prompt.v1`. Batch v7 records its canonical SHA-256 in the checkpoint,
+private result and compact summary. CPU replay rejects a missing or changed prompt-contract
+commitment before integrating any event. Per-task prompt hashes remain separate because each one
+also commits the frozen paragraph text.
 
 ## Evaluation rule
 

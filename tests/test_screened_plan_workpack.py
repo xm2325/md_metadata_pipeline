@@ -11,6 +11,7 @@ def _article(index: int) -> dict:
         "doi": f"10.1/{index}",
         "year": 2019,
         "source_uri": f"https://example.org/{index}",
+        "software_family": ("gromacs", "amber", "unknown")[index % 3],
     }
 
 
@@ -94,3 +95,12 @@ def test_workpack_rejects_missing_screen_record() -> None:
     screen["records"] = [row for row in screen["records"] if row["document_id"] != selected_id]
     with pytest.raises(ValueError, match="missing screen record"):
         build_workpack(plan, screen)
+
+
+def test_workpack_can_be_restricted_to_sealed_gold_split() -> None:
+    screen = _screen(ineligible={1, 3, 5})
+    plan = finalize_screened_plan(_pool(), screen)
+    rows, metadata = build_workpack(plan, screen, splits=("locked_test",))
+    assert len(rows) == 20
+    assert {row["split"] for row in rows} == {"locked_test"}
+    assert metadata["included_splits"] == ["locked_test"]

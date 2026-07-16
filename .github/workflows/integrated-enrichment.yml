@@ -2,39 +2,64 @@ name: Integrated MD metadata enrichment
 
 on:
   push:
-    branches: [main, "feature/**"]
+    branches: [main]
   pull_request:
+    paths:
+      - .github/workflows/integrated-enrichment.yml
+      - pyproject.toml
+      - src/mdmeta/api.py
+      - src/mdmeta/integration.py
+      - src/mdmeta/storage.py
+      - src/mdmeta/validation.py
+      - src/mdmeta/verify.py
+      - scripts/run_integrated_case.py
+      - scripts/run_integrated_60.py
+      - tests/test_integration.py
+      - examples/woo_2020/**
+      - study/integration_60/source_manifest.json
   workflow_dispatch:
 
 permissions:
   contents: read
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
+
 jobs:
   offline-integration-tests:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
     strategy:
       matrix:
         python-version: ["3.11", "3.12"]
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
           python-version: ${{ matrix.python-version }}
           cache: pip
+          cache-dependency-path: pyproject.toml
       - run: python -m pip install -e '.[dev]'
       - run: ruff check src/mdmeta/integration.py src/mdmeta/storage.py src/mdmeta/api.py scripts/run_integrated_case.py scripts/run_integrated_60.py tests/test_integration.py
       - run: pytest tests/test_integration.py
 
   golden-live-validation:
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
     needs: offline-integration-tests
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
           python-version: "3.12"
           cache: pip
+          cache-dependency-path: pyproject.toml
       - run: python -m pip install -e '.[dev]'
       - name: Run Woo 2020 integration case against live services
         run: |
@@ -48,26 +73,55 @@ jobs:
             --cache-dir results/golden/cache \
             --expect-pdb 6VSB --expect-pdb 6VXX \
             --expect-uniprot P0DTC2
+      - name: Verify and hash the golden SQLite snapshot
+        run: |
+          mdmeta-verify-database \
+            --database results/golden/records.sqlite \
+            --checkpoint \
+            --expected-articles 1 \
+            --output results/golden/database-manifest.json
+          (
+            cd results/golden
+            find . -type f ! -name SHA256SUMS.txt -print0 \
+              | sort -z \
+              | xargs -0 sha256sum \
+              > SHA256SUMS.txt
+          )
       - name: Upload golden result when artifact storage is available
+        id: golden_artifact
         continue-on-error: true
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
-          name: golden-live-integration
+          name: golden-live-integration-${{ github.run_id }}-${{ github.run_attempt }}
           path: results/golden
           if-no-files-found: error
-          retention-days: 1
+          retention-days: 7
+          compression-level: 9
+      - name: Report golden artifact persistence
+        if: always()
+        env:
+          ARTIFACT_OUTCOME: ${{ steps.golden_artifact.outcome }}
+        run: |
+          echo "## Golden integration artifact" >> "$GITHUB_STEP_SUMMARY"
+          echo "- upload: ${ARTIFACT_OUTCOME}" >> "$GITHUB_STEP_SUMMARY"
+          if [ "${ARTIFACT_OUTCOME}" != "success" ]; then
+            echo "- WARNING: live validation ran without a persisted result bundle." >> "$GITHUB_STEP_SUMMARY"
+          fi
 
   integrate-frozen-60:
     if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
     needs: golden-live-validation
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 45
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
           python-version: "3.12"
           cache: pip
+          cache-dependency-path: pyproject.toml
       - run: python -m pip install -e '.[dev]'
       - name: Integrate the frozen 60-article corpus
         run: |
@@ -76,12 +130,27 @@ jobs:
             --output-dir results/integrated_60 \
             --database results/integrated_60/records.sqlite \
             --cache-dir results/integrated_60/cache
+      - name: Verify and hash the frozen SQLite snapshot
+        if: always()
+        run: |
+          mdmeta-verify-database \
+            --database results/integrated_60/records.sqlite \
+            --checkpoint \
+            --expected-articles 60 \
+            --output results/integrated_60/database-manifest.json
+          (
+            cd results/integrated_60
+            find . -type f ! -name SHA256SUMS.txt -print0 \
+              | sort -z \
+              | xargs -0 sha256sum \
+              > SHA256SUMS.txt
+          )
       - name: Upload 60-article records or failure diagnostics when artifact storage is available
         if: always()
-        continue-on-error: true
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
-          name: integrated-60-records
+          name: integrated-60-records-${{ github.run_id }}-${{ github.run_attempt }}
           path: results/integrated_60
           if-no-files-found: error
-          retention-days: 1
+          retention-days: 14
+          compression-level: 9

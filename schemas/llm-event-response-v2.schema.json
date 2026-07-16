@@ -1,0 +1,220 @@
+{
+  "$defs": {
+    "EventType": {
+      "enum": [
+        "minimisation",
+        "heating",
+        "equilibration",
+        "production",
+        "analysis_window",
+        "sampling_interval",
+        "unknown"
+      ],
+      "title": "EventType",
+      "type": "string"
+    },
+    "LLMEventCandidate": {
+      "additionalProperties": false,
+      "properties": {
+        "confidence": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Confidence",
+          "type": "number"
+        },
+        "duration": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RawQuantity"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "end_char": {
+          "description": "Exclusive zero-based index immediately after the quote in the paragraph.",
+          "exclusiveMinimum": 0,
+          "title": "End Char",
+          "type": "integer"
+        },
+        "ensemble": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Exact supported ensemble token copied from the evidence quote.",
+          "title": "Ensemble"
+        },
+        "event_type": {
+          "$ref": "#/$defs/EventType",
+          "description": "Protocol phase explicitly supported by event_type_raw_text in the quote."
+        },
+        "event_type_raw_text": {
+          "description": "Exact phrase in the quote that supports the declared protocol phase.",
+          "minLength": 1,
+          "title": "Event Type Raw Text",
+          "type": "string"
+        },
+        "paragraph_id": {
+          "description": "Identifier of the one supplied paragraph containing the quote.",
+          "minLength": 1,
+          "title": "Paragraph Id",
+          "type": "string"
+        },
+        "pressure": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RawQuantity"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "quote": {
+          "description": "One exact contiguous paragraph substring containing the phase cue and every non-null attribute's source text.",
+          "minLength": 1,
+          "title": "Quote",
+          "type": "string"
+        },
+        "replicates": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RawCount"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "restraints": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "pattern": "\\S",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Exact non-blank restraint wording copied from the evidence quote.",
+          "title": "Restraints"
+        },
+        "start_char": {
+          "description": "Zero-based index of the quote's first character in the paragraph.",
+          "minimum": 0,
+          "title": "Start Char",
+          "type": "integer"
+        },
+        "temperature": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RawQuantity"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "timestep": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RawQuantity"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "event_type",
+        "event_type_raw_text",
+        "paragraph_id",
+        "start_char",
+        "end_char",
+        "quote",
+        "confidence"
+      ],
+      "title": "LLMEventCandidate",
+      "type": "object"
+    },
+    "RawCount": {
+      "additionalProperties": false,
+      "properties": {
+        "raw_text": {
+          "description": "Exact count substring copied from this event's evidence quote.",
+          "minLength": 1,
+          "title": "Raw Text",
+          "type": "string"
+        },
+        "value": {
+          "minimum": 1,
+          "title": "Value",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "raw_text",
+        "value"
+      ],
+      "title": "RawCount",
+      "type": "object"
+    },
+    "RawQuantity": {
+      "additionalProperties": false,
+      "properties": {
+        "raw_text": {
+          "description": "Exact numeric-unit substring copied from this event's evidence quote.",
+          "minLength": 1,
+          "title": "Raw Text",
+          "type": "string"
+        },
+        "unit": {
+          "minLength": 1,
+          "title": "Unit",
+          "type": "string"
+        },
+        "value": {
+          "title": "Value",
+          "type": "number"
+        }
+      },
+      "required": [
+        "raw_text",
+        "value",
+        "unit"
+      ],
+      "title": "RawQuantity",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "events": {
+      "items": {
+        "$ref": "#/$defs/LLMEventCandidate"
+      },
+      "title": "Events",
+      "type": "array"
+    }
+  },
+  "required": [
+    "events"
+  ],
+  "title": "LLMEventResponse",
+  "type": "object"
+}

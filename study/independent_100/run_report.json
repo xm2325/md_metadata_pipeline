@@ -1,0 +1,153 @@
+{
+  "schema_version": "mdmeta.independent100-run-report.v1",
+  "study_id": "mdmeta-independent-100-v1",
+  "study_status": "scale80_passed_model_protocol_frozen_pre_gold_inference",
+  "collected_at_utc": "2026-07-15T23:04:04Z",
+  "source_commit": "5cbbc8d8b16d466054f7132cc8a43d508da74f56",
+  "github_run_id": 29457386366,
+  "github_run_url": "https://github.com/xm2325/md_metadata_pipeline/actions/runs/29457386366",
+  "seed": 3997,
+  "candidate_metadata": {
+    "articles": 750,
+    "pages": 8,
+    "manifest_sha256": "d9a0d73450e751c951d80e25f5da3becb855f97b661a05e233787bfdbbec121f"
+  },
+  "prior_exclusions": {
+    "source_count": 7,
+    "unique_article_count": 93,
+    "registry_sha256": "8ea259d739b65ecfc63c6a7974cfd0c44c500172ecb17590ea381ec4416e2014"
+  },
+  "fulltext_rule_screen": {
+    "requested": 160,
+    "screened": 160,
+    "failures": 0,
+    "machine_eligible": 153,
+    "status_counts": {
+      "strong_biomolecular_protocol_signal": 142,
+      "generic_biomolecular_protocol_signal": 11,
+      "non_biomolecular_or_weak_signal": 7
+    },
+    "engine_mention_counts": {
+      "amber": 56,
+      "charmm": 52,
+      "desmond": 26,
+      "gromacs": 93,
+      "namd": 19,
+      "openmm": 13
+    }
+  },
+  "frozen_plan": {
+    "plan_sha256": "b31d7fd465134ae7d6b884d5186a15945aa9b53c770b237259d09452a51076f2",
+    "source_pool_plan_sha256": "713b4d112c51d7816b630917b27f7c745b01eee0ebb1012ac1a9d6771a17dbf2",
+    "screen_sha256": "b4addc40b47cdec2a9798a60f2d354a5f4735f51bc041b6b4e328cb3fdb74228",
+    "scale_articles": 80,
+    "validation_articles": 0,
+    "sealed_gold_articles": 20,
+    "rejected_or_reserve_articles": 60,
+    "selected_licence_missing_count": 0,
+    "prior_article_overlap": [],
+    "model_output_used_for_selection": false,
+    "gold_predictions_generated": false
+  },
+  "audit": {
+    "passed": true,
+    "failures": [],
+    "audit_sha256": "29cd70ef9e8d74532b77327eae2dbe8eeb404cd04328f33921fd97d1f4e5a400"
+  },
+  "progress": {
+    "corpus_construction": "100/100",
+    "human_eligibility_review": "0/100",
+    "roihu_scale_inference": "80/80",
+    "roihu_scale_integration": "80/80",
+    "model_protocol_freeze": "passed",
+    "gold_dual_annotation_and_adjudication": "0/20",
+    "sealed_gold_prediction_and_evaluation": "0/20",
+    "accuracy_evaluated": false
+  },
+  "scale80_execution": {
+    "source_commit": "3079d14a4fd50cd0c903ba8bbe07d9bbeac86f01",
+    "source_archive_sha256": "735684305768a07c0cf1799393f97fe1d9a7f675939c46c93bedc238fc31bb76",
+    "source_manifest_file_sha256": "1b771bf56ada946dd0cb30e71457ad7f954db402dd9d5e05ce7e7331870056e2",
+    "source_manifest_sha256": "b839f2d19c8c9b75f82f6fbdd52c05afaa2e6a52668f4cce6da6c09d254802a7",
+    "stage_job_id": 189633,
+    "gpu_job_id": 189640,
+    "integration_job_id": 189845,
+    "freeze_job_id": 190247,
+    "articles_requested": 80,
+    "articles_integrated": 80,
+    "integration_failures": 0,
+    "task_count": 1216,
+    "task_count_classified": 1216,
+    "protocol_event_count": 98,
+    "classification_counts": {
+      "accepted": 1097,
+      "accepted_with_evidence_rejections": 58,
+      "evidence_rejected": 59,
+      "generation_rejected": 2
+    },
+    "no_task_article_gate": {
+      "observed": 1,
+      "maximum": 2,
+      "article_ids": [
+        "PMC12683627"
+      ],
+      "treatment": "retained_as_explicit_zero_event_record",
+      "passed": true
+    },
+    "identifier_integration": {
+      "unique_pdb_ids": 99,
+      "validated_pdb_references": 108,
+      "unique_uniprot_accessions": 107,
+      "validated_mappings": 198,
+      "residue_mapping_segments": 352
+    },
+    "cross_job_repeatability": {
+      "task_set_match": "1216/1216",
+      "response_sha256_match": "1190/1216",
+      "classification_match": "1213/1216",
+      "event_count_match": "1212/1216",
+      "bitwise_repeatable": false
+    },
+    "model_result_sha256": "279b9b5f73bd8e684940223df5535f337f90bffda44922042c2a5366f9bc253d",
+    "integration_result_sha256": "9c1adf991e72d0f6942c2ee3adbc6e58e85d0412378a74e2490c63c8e31b208e",
+    "model_protocol_freeze_sha256": "ff8c72c45673fb053cb412cebd5046f4e934fac1a868f603d63bd8cc9d0bddbe",
+    "public_evidence_file_sha256": {
+      "scale80_source_manifest.json": "1b771bf56ada946dd0cb30e71457ad7f954db402dd9d5e05ce7e7331870056e2",
+      "scale80_gpu_summary.json": "a2f669d15c0291b25eb8b7773345fbabde152a17208484368ef707105d676a4b",
+      "scale80_gpu_hardware_summary.json": "e43c71f8b11e0ed132dbba4c16229bd881efd0f7551fe3d2d2043bb9967d49ee",
+      "scale80_integration_summary.json": "44a55e0aec4e897db049ed9ea3aaca428a08f4f050ed9ada1ac054cfafd8de8f",
+      "model_protocol_freeze.json": "7297d8d400a827bed70ddd4a4ca4d34b3d61ddbbc7ed58cd96c02b5944a9f4d1"
+    },
+    "gold_prediction_authorized": false,
+    "human_reference_used": false,
+    "accuracy_evaluated": false
+  },
+  "artifacts": [
+    {
+      "id": 8359895439,
+      "name": "independent100-corpus-metadata-29457386366-1",
+      "size_in_bytes": 112379,
+      "zip_sha256": "bbe45e1f358039ac57d98d51d6af6f82c2cb917d4691b49a1e07aaec9c81b197",
+      "internal_checksums_verified": true,
+      "expires_at": "2026-10-13T23:03:28Z"
+    },
+    {
+      "id": 8359895802,
+      "name": "independent100-eligibility-workpack-29457386366-1",
+      "size_in_bytes": 19008,
+      "zip_sha256": "ecd2984ec6adec110f6e561f5563c1aeb8a62944eed6fa0bfa1df7f857d45d8c",
+      "downloaded_or_inspected_by_model_developer": false,
+      "expires_at": "2026-10-13T23:03:28Z"
+    },
+    {
+      "id": 8359896228,
+      "name": "sealed-gold20-blind-workpack-29457386366-1",
+      "size_in_bytes": 163483,
+      "zip_sha256": "1ea7cf2ed7a82d8b02ab3a6225841847ade0330345f8e5661ff8f35b800f6d31",
+      "downloaded_or_inspected_by_model_developer": false,
+      "contains_machine_predictions": false,
+      "contains_full_article_xml": false,
+      "expires_at": "2026-10-13T23:03:28Z"
+    }
+  ]
+}

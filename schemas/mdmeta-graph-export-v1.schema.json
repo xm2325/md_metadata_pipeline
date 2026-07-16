@@ -1,0 +1,98 @@
+{
+  "additionalProperties": false,
+  "description": "Content-bound manifest for a deterministic Neo4j bulk-import export.",
+  "properties": {
+    "graph_commitment_sha256": {
+      "pattern": "^[0-9a-f]{64}$",
+      "title": "Graph Commitment Sha256",
+      "type": "string"
+    },
+    "node_count": {
+      "minimum": 0,
+      "title": "Node Count",
+      "type": "integer"
+    },
+    "node_label_counts": {
+      "additionalProperties": {
+        "type": "integer"
+      },
+      "title": "Node Label Counts",
+      "type": "object"
+    },
+    "nodes_file": {
+      "const": "nodes.csv",
+      "default": "nodes.csv",
+      "title": "Nodes File",
+      "type": "string"
+    },
+    "nodes_sha256": {
+      "pattern": "^[0-9a-f]{64}$",
+      "title": "Nodes Sha256",
+      "type": "string"
+    },
+    "relationship_count": {
+      "minimum": 0,
+      "title": "Relationship Count",
+      "type": "integer"
+    },
+    "relationship_type_counts": {
+      "additionalProperties": {
+        "type": "integer"
+      },
+      "title": "Relationship Type Counts",
+      "type": "object"
+    },
+    "relationships_file": {
+      "const": "relationships.csv",
+      "default": "relationships.csv",
+      "title": "Relationships File",
+      "type": "string"
+    },
+    "relationships_sha256": {
+      "pattern": "^[0-9a-f]{64}$",
+      "title": "Relationships Sha256",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "mdmeta-graph-export-v1",
+      "default": "mdmeta-graph-export-v1",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "source_article_count": {
+      "minimum": 0,
+      "title": "Source Article Count",
+      "type": "integer"
+    },
+    "source_database_schema_version": {
+      "const": 2,
+      "title": "Source Database Schema Version",
+      "type": "integer"
+    },
+    "source_database_sha256": {
+      "pattern": "^[0-9a-f]{64}$",
+      "title": "Source Database Sha256",
+      "type": "string"
+    },
+    "source_pdbekb_report_count": {
+      "minimum": 0,
+      "title": "Source Pdbekb Report Count",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "source_database_sha256",
+    "source_database_schema_version",
+    "source_article_count",
+    "source_pdbekb_report_count",
+    "node_count",
+    "relationship_count",
+    "node_label_counts",
+    "relationship_type_counts",
+    "nodes_sha256",
+    "relationships_sha256",
+    "graph_commitment_sha256"
+  ],
+  "title": "GraphExportManifest",
+  "type": "object"
+}

@@ -6,6 +6,7 @@ from pathlib import Path
 
 import httpx
 
+from mdmeta import user_agent
 from mdmeta.integration import integrate_article, summarize_integrated_records
 from mdmeta.storage import SQLiteRecordStore
 from mdmeta.validation import IdentifierValidator
@@ -36,7 +37,7 @@ def main() -> None:
     with httpx.Client(
         timeout=args.timeout,
         follow_redirects=True,
-        headers={"User-Agent": "md-metadata-pipeline/0.8 golden-live"},
+        headers={"User-Agent": user_agent("golden-live")},
     ) as client:
         validator = IdentifierValidator(client, cache_dir=args.cache_dir)
         record = integrate_article(

@@ -1,0 +1,1321 @@
+{
+  "accuracy_evaluated": false,
+  "article_count_requested": 80,
+  "database": {
+    "checkpoint": {
+      "busy": 0,
+      "checkpointed_frames": 0,
+      "log_frames": 0
+    },
+    "integrity": {
+      "foreign_key_violations": [],
+      "integrity": [
+        "ok"
+      ],
+      "journal_mode": "delete",
+      "schema_version": 1
+    },
+    "portable_single_file_snapshot": true
+  },
+  "generated_at": "2026-07-16T06:17:43.197184Z",
+  "human_reference_used": false,
+  "identifier_integration_gate": {
+    "passed": true,
+    "require_residue_mapping": true,
+    "require_validated_pdb": true,
+    "residue_mapping_segment_count": 352,
+    "validated_mapping_count": 198,
+    "validated_pdb_count": 108
+  },
+  "interpretation": "model-backed end-to-end integration coverage, not extraction accuracy",
+  "model": {
+    "backend": {
+      "backend": "vllm_offline_chat",
+      "engine": {
+        "dtype": "bfloat16",
+        "gpu_memory_utilization": 0.8,
+        "max_model_len": 16384,
+        "tensor_parallel_size": 1
+      },
+      "local_snapshot_path_recorded": false,
+      "model": "Qwen/Qwen2.5-7B-Instruct",
+      "revision": "a09a35458c702b33eeacc393d103063234e8bc28",
+      "runtime_versions": {
+        "torch": "2.10.0+cu129",
+        "transformers": "5.8.0",
+        "vllm": "0.19.1"
+      },
+      "sampling": {
+        "max_tokens": 4096,
+        "n": 1,
+        "seed": 3997,
+        "temperature": 0.0
+      },
+      "tokenizer_revision": "a09a35458c702b33eeacc393d103063234e8bc28",
+      "trust_remote_code": false
+    },
+    "file_count": 14,
+    "gated": false,
+    "license": "apache-2.0",
+    "repo_id": "Qwen/Qwen2.5-7B-Instruct",
+    "revision": "a09a35458c702b33eeacc393d103063234e8bc28",
+    "snapshot_manifest_sha256": "11c3344c8949a7fc682e30bea663e34a7b5e8116450783f7bd813cf76ef6a237",
+    "tokenizer_revision": "a09a35458c702b33eeacc393d103063234e8bc28",
+    "total_size_bytes": 15242807270,
+    "trust_remote_code": false,
+    "weight_file_count": 4,
+    "weight_size_bytes": 15231271888
+  },
+  "model_result_sha256": "279b9b5f73bd8e684940223df5535f337f90bffda44922042c2a5366f9bc253d",
+  "no_task_article_gate": {
+    "maximum_no_task_article_count": 2,
+    "no_task_article_count": 1,
+    "no_task_article_ids": [
+      "PMC12683627"
+    ],
+    "passed": true,
+    "selected_article_count": 80,
+    "treatment": "retained_as_explicit_zero_event_record"
+  },
+  "record_index": [
+    {
+      "completeness": {
+        "literature_extraction": "complete",
+        "md_file_provenance": "not_provided",
+        "pdb_validation": "complete",
+        "protocol_event_extraction": "complete",
+        "residue_mapping_scope": "pdb_to_uniprot_only",
+        "sifts_mapping": "complete",
+        "uniprot_enrichment": "complete"
+      },
+      "document_id": "PMC13111638",
+      "doi": "10.1038/s41598-026-42662-1",
+      "record_path": "records/PMC13111638.json",
+      "title": "Computational screening of AI-derived cyclotides as putative VEGFR2 binders for wound-site angiogenesis"
+    },
+    {
+      "completeness": {
+        "literature_extraction": "no_supported_fact",
+        "md_file_provenance": "not_provided",
+        "pdb_validation": "not_applicable",
+        "protocol_event_extraction": "no_protocol_paragraphs_detected",
+        "residue_mapping_scope": "not_computable",
+        "sifts_mapping": "not_applicable",
+        "uniprot_enrichment": "not_applicable"
+      },
+      "document_id": "PMC12683627",
+      "doi": "10.1021/acs.jpclett.5c02867",
+      "record_path": "records/PMC12683627.json",
+      "title": "Membrane Constriction by Dynamin through GTP-Driven Conformational Changes from Coarse-Grained Molecular Dynamics Simulations"
+    },
+    {
+      "completeness": {
+        "literature_extraction": "complete",
+        "md_file_provenance": "not_provided",
+        "pdb_validation": "complete",
+        "protocol_event_extraction": "complete_with_evidence_rejections",
+        "residue_mapping_scope": "pdb_to_uniprot_only",
+        "sifts_mapping": "complete",
+        "uniprot_enrichment": "complete"
+      },
+      "document_id": "PMC12618679",
+      "doi": "10.1038/s41598-025-22955-7",
+      "record_path": "records/PMC12618679.json",
+      "title": "Identification of novel neuraminidase 1 modulators as potential therapeutics for Alzheimer’s disease using virtual screening and molecular dynamics simulations"
+    },
+    {
+      "completeness": {
+        "literature_extraction": "complete",
+        "md_file_provenance": "not_provided",
+        "pdb_validation": "complete",
+        "protocol_event_extraction": "complete_with_evidence_rejections",
+        "residue_mapping_scope": "pdb_to_uniprot_only",
+        "sifts_mapping": "complete",
+        "uniprot_enrichment": "complete"
+      },
+      "document_id": "PMC12033256",
+      "doi": "10.1038/s41598-025-98835-x",
+      "record_path": "records/PMC12033256.json",
+      "title": "Unveiling Berberine analogues as potential inhibitors of Escherichia coli FtsZ through machine learning molecular docking and molecular dynamics approach"
+    },
+    {
+      "completeness": {
+        "literature_extraction": "complete",
+        "md_file_provenance": "not_provided",
+        "pdb_validation": "complete",
+        "protocol_event_extraction": "complete_with_evidence_rejections",
+        "residue_mapping_scope": "pdb_to_uniprot_only",
+        "sifts_mapping": "complete",
+        "uniprot_enrichment": "complete"
+      },
+      "document_id": "PMC12749439",
+      "doi": "10.1038/s41598-025-29197-7",
+      "record_path": "records/PMC12749439.json",
+      "title": "Computational screening and molecular modeling of probiotic-derived peptides targeting the conserved HR1 domain of SARS-CoV-2 spike protein"
+    },
+    {
+      "completeness": {
+        "literature_extraction": "complete",
+        "md_file_provenance": "not_provided",
+        "pdb_validation": "complete",
+        "protocol_event_extraction": "complete_with_evidence_rejections",
+        "residue_mapping_scope": "pdb_to_uniprot_only",
+        "sifts_mapping": "complete",
+        "uniprot_enrichment": "complete"
+      },
+      "document_id": "PMC12270019",
+      "doi": "10.1016/j.csbj.2025.06.029",
+      "record_path": "records/PMC12270019.json",
+      "title": "Predicting receptor-ligand pairing preferences in plant-microbe interfaces via molecular dynamics and machine learning"
+    },
+    {
+      "completeness": {
+        "literature_extraction": "complete",
+        "md_file_provenance": "not_provided",
+        "pdb_validation": "not_applicable",
+        "protocol_event_extraction": "complete_with_evidence_rejections",
+        "residue_mapping_scope": "not_computable",
+        "sifts_mapping": "not_applicable",
+        "uniprot_enrichment": "not_applicable"
+      },
+      "document_id": "PMC13262345",
+      "doi": "10.1021/acs.jctc.5c01862",
+      "record_path": "records/PMC13262345.json",
+      "title": "Fast Generation of Simulation-Quality Structural Ensembles of Mixed-Chirality Cyclic Peptides via Diffusion Models"
+    },
+    {
+      "completeness": {
+        "literature_extraction": "complete",
+        "md_file_provenance": "not_provided",
+        "pdb_validation": "not_applicable",
+        "protocol_event_extraction": "complete_with_evidence_rejections",
+        "residue_mapping_scope": "not_computable",
+        "sifts_mapping": "not_applicable",
+        "uniprot_enrichment": "not_applicable"
+      },
+      "document_id": "PMC12249859",
+      "doi": "10.3390/ijms26136098",
+      "record_path": "records/PMC12249859.json",
+      "title": "Deciphering the 3D Structural Characterization of Gonadotropin-Releasing Hormone in Tenualosa ilisha Using Homology Modeling, Molecular Dynamics, and Docking Approaches"
+    },
+    {
+      "completeness": {
+        "literature_extraction": "complete",
+        "md_file_provenance": "not_provided",
+        "pdb_validation": "complete",
+        "protocol_event_extraction": "complete",
+        "residue_mapping_scope": "pdb_to_uniprot_only",
+        "sifts_mapping": "complete",
+        "uniprot_enrichment": "complete"
+      },
+      "document_id": "PMC12648654",
+      "doi": "10.1021/acs.jcim.5c02066",
+      "record_path": "records/PMC12648654.json",
+      "title": "CCD2MD: A Suite of Packages for Preparing Co-Folded Outputs for Molecular Dynamics Simulations"
+    },
+    {
+      "completeness": {
+        "literature_extraction": "complete",
+        "md_file_provenance": "not_provided",
+        "pdb_validation": "not_applicable",
+        "protocol_event_extraction": "complete_with_evidence_rejections",
+        "residue_mapping_scope": "not_computable",
+        "sifts_mapping": "not_applicable",
+        "uniprot_enrichment": "not_applicable"
+      },
+      "document_id": "PMC12829411",
+      "doi": "10.1080/14756366.2026.2613518",
+      "record_path": "records/PMC12829411.json",
+      "title": "Discovery of novel and highly potent XIAP-targeted peptide inhibitors using virtual screening"
+    },
+    {
+      "completeness": {
+        "literature_extraction": "complete",
+        "md_file_provenance": "not_provided",
+        "pdb_validation": "complete",
+        "protocol_event_extraction": "complete",
+        "residue_mapping_scope": "pdb_to_uniprot_only",
+        "sifts_mapping": "complete",
+        "uniprot_enrichment": "complete"
+      },
+      "document_id": "PMC12848303",
+      "doi": "10.1038/s41467-025-67808-z",
+      "record_path": "records/PMC12848303.json",
+      "title": "A multi-grained symmetric differential equation model for learning protein-ligand binding dynamics"
+    },
+    {
+      "completeness": {
+        "literature_extraction": "complete",
+        "md_file_provenance": "not_provided",
+        "pdb_validation": "not_applicable",
+        "protocol_event_extraction": "complete_with_evidence_rejections",
+        "residue_mapping_scope": "not_computable",
+        "sifts_mapping": "not_applicable",
+        "uniprot_enrichment": "not_applicable"
+      },
+      "document_id": "PMC12977040",
+      "doi": "10.1021/acs.jcim.5c03185",
+      "record_path": "records/PMC12977040.json",
+      "title": "MiMiCPy-FM: A User-Friendly Force Matching Tool for Extending the Time Scale of QM/MM MD MiMiC Simulations"
+    },
+    {
+      "completeness": {
+        "literature_extraction": "complete",
+        "md_file_provenance": "not_provided",
+        "pdb_validation": "not_applicable",
+        "protocol_event_extraction": "complete_with_evidence_rejections",
+        "residue_mapping_scope": "not_computable",
+        "sifts_mapping": "not_applicable",
+        "uniprot_enrichment": "not_applicable"
+      },
+      "document_id": "PMC13026764",
+      "doi": "10.3390/ijms27062896",
+      "record_path": "records/PMC13026764.json",
+      "title": "Assessing the Performance of BioEmu in Understanding Protein Dynamics"
+    },
+    {
+      "completeness": {
+        "literature_extraction": "complete",
+        "md_file_provenance": "not_provided",
+        "pdb_validation": "complete",
+        "protocol_event_extraction": "complete_with_evidence_rejections",
+        "residue_mapping_scope": "pdb_to_uniprot_only",
+        "sifts_mapping": "complete",
+        "uniprot_enrichment": "complete"
+      },
+      "document_id": "PMC13230628",
+      "doi": "10.1038/s41598-026-47205-2",
+      "record_path": "records/PMC13230628.json",
+      "title": "A comparative in silico and in vitro analysis of antiviral agents targeting estrogen and progesterone receptors in breast cancer"
+    },
+    {
+      "completeness": {
+        "literature_extraction": "complete",
+        "md_file_provenance": "not_provided",
+        "pdb_validation": "complete",
+        "protocol_event_extraction": "complete_with_evidence_rejections",
+        "residue_mapping_scope": "pdb_to_uniprot_only",
+        "sifts_mapping": "complete",
+        "uniprot_enrichment": "complete"
+      },
+      "document_id": "PMC13168583",
+      "doi": "10.1038/s41598-026-44568-4",
+      "record_path": "records/PMC13168583.json",
+      "title": "Multifaceted biological and computational assessment of aromatic and N-heteroaromatic non-substituted thiosemicarbazones"
+    },
+    {
+      "completeness": {
+        "literature_extraction": "complete",
+        "md_file_provenance": "not_provided",
+        "pdb_validation": "complete",
+        "protocol_event_extraction": "complete",
+        "residue_mapping_scope": "pdb_to_uniprot_only",
+        "sifts_mapping": "complete",
+        "uniprot_enrichment": "complete"
+      },
+      "document_id": "PMC12693327",
+      "doi": "10.3390/molecules30234633",
+      "record_path": "records/PMC12693327.json",
+      "title": "SERAAK2 as a Serotonin Receptor Ligand: Structural and Pharmacological In Vitro and In Vivo Evaluation"
+    },
+    {
+      "completeness": {
+        "literature_extraction": "complete",
+        "md_file_provenance": "not_provided",
+        "pdb_validation": "complete",
+        "protocol_event_extraction": "complete_with_evidence_rejections",
+        "residue_mapping_scope": "pdb_to_uniprot_only",
+        "sifts_mapping": "complete",
+        "uniprot_enrichment": "complete"
+      },
+      "document_id": "PMC12460605",
+      "doi": "10.1038/s42004-025-01648-2",
+      "record_path": "records/PMC12460605.json",
+      "title": "Ligand-induced conformations and dynamic allosteric motions of IDO1 affecting the recruitment of a protein signaling partner"
+    },
+    {
+      "completeness": {
+        "literature_extraction": "complete",
+        "md_file_provenance": "not_provided",
+        "pdb_validation": "complete",
+        "protocol_event_extraction": "complete_with_evidence_rejections",
+        "residue_mapping_scope": "pdb_to_uniprot_only",
+        "sifts_mapping": "complete",
+        "uniprot_enrichment": "complete"
+      },
+      "document_id": "PMC13296518",
+      "doi": "10.1021/acs.jctc.6c00640",
+      "record_path": "records/PMC13296518.json",
+      "title": "Implementation and Validation of Titratable Cysteine in GROMACS-Based Constant-pH Molecular Dynamics"
+    },
+    {
+      "completeness": {
+        "literature_extraction": "complete",
+        "md_file_provenance": "not_provided",
+        "pdb_validation": "complete",
+        "protocol_event_extraction": "complete_with_evidence_rejections",
+        "residue_mapping_scope": "pdb_to_uniprot_only",
+        "sifts_mapping": "complete",
+        "uniprot_enrichment": "complete"
+      },
+      "document_id": "PMC11992384",
+      "doi": "10.1016/j.csbj.2025.03.036",
+      "record_path": "records/PMC11992384.json",
+      "title": "Modeling the different conformations of the human mitochondrial ADP/ATP carrier using AlphaFold and molecular dynamics simulations of the protein-ligand complexes"
+    },
+    {
+      "completeness": {
+        "literature_extraction": "complete",
+        "md_file_provenance": "not_provided",
+        "pdb_validation": "complete",
+        "protocol_event_extraction": "complete_with_evidence_rejections",
+        "residue_mapping_scope": "pdb_to_uniprot_only",
+        "sifts_mapping": "complete",
+        "uniprot_enrichment": "complete"
+      },
+      "document_id": "PMC12043319",
+      "doi": "10.7554/eLife.96513",
+      "record_path": "records/PMC12043319.json",
+      "title": "Hidden GPCR structural transitions addressed by multiple walker supervised molecular dynamics (mwSuMD)"
+    },
+    {
+      "completeness": {
+        "literature_extraction": "complete",
+        "md_file_provenance": "not_provided",
+        "pdb_validation": "not_applicable",
+        "protocol_event_extraction": "complete_with_evidence_rejections",
+        "residue_mapping_scope": "not_computable",
+        "sifts_mapping": "not_applicable",
+        "uniprot_enrichment": "not_applicable"
+      },
+      "document_id": "PMC13157491",
+      "doi": "10.1038/s41598-026-50895-3",
+      "record_path": "records/PMC13157491.json",
+      "title": "Design, synthesis, and insecticidal potency of novel 3-methyl-pyrazole derivatives against Culex pipiens larvae"
+    },
+    {
+      "completeness": {
+        "literature_extraction": "complete",
+        "md_file_provenance": "not_provided",
+        "pdb_validation": "complete",
+        "protocol_event_extraction": "complete_with_evidence_rejections",
+        "residue_mapping_scope": "pdb_to_uniprot_only",
+        "sifts_mapping": "complete",
+        "uniprot_enrichment": "complete"
+      },
+      "document_id": "PMC12711574",
+      "doi": "10.1038/s41586-025-09677-6",
+      "record_path": "records/PMC12711574.json",
+      "title": "Structural snapshots capture nucleotide release at the μ-opioid receptor"
+    },
+    {
+      "completeness": {
+        "literature_extraction": "complete",
+        "md_file_provenance": "not_provided",
+        "pdb_validation": "not_applicable",
+        "protocol_event_extraction": "complete_with_evidence_rejections",
+        "residue_mapping_scope": "not_computable",
+        "sifts_mapping": "not_applicable",
+        "uniprot_enrichment": "not_applicable"
+      },
+      "document_id": "PMC12364316",
+      "doi": "10.1371/journal.pcbi.1013367",
+      "record_path": "records/PMC12364316.json",
+      "title": "Cryo-EM ligand building using AlphaFold3-like model and molecular dynamics"
+    },
+    {
+      "completeness": {
+        "literature_extraction": "complete",
+        "md_file_provenance": "not_provided",
+        "pdb_validation": "complete",
+        "protocol_event_extraction": "partial_with_generation_rejections",
+        "residue_mapping_scope": "pdb_to_uniprot_only",
+        "sifts_mapping": "complete",
+        "uniprot_enrichment": "complete"
+      },
+      "document_id": "PMC12606203",
+      "doi": "10.1038/s41598-025-23203-8",
+      "record_path": "records/PMC12606203.json",
+      "title": "Structure-based identification of novel FAK1 inhibitors using pharmacophore modeling, molecular dynamics, and MM/PBSA calculations"
+    },
+    {
+      "completeness": {
+        "literature_extraction": "complete",
+        "md_file_provenance": "not_provided",
+        "pdb_validation": "complete",
+        "protocol_event_extraction": "complete_with_evidence_rejections",
+        "residue_mapping_scope": "pdb_to_uniprot_only",
+        "sifts_mapping": "complete",
+        "uniprot_enrichment": "complete"
+      },
+      "document_id": "PMC12936092",
+      "doi": "10.1038/s42003-025-09445-2",
+      "record_path": "records/PMC12936092.json",
+      "title": "Human class B1 GPCR modulation by plasma membrane lipids"
+    },
+    {
+      "completeness": {
+        "literature_extraction": "complete",
+        "md_file_provenance": "not_provided",
+        "pdb_validation": "complete",
+        "protocol_event_extraction": "complete_with_evidence_rejections",
+        "residue_mapping_scope": "pdb_to_uniprot_only",
+        "sifts_mapping": "complete",
+        "uniprot_enrichment": "complete"
+      },
+      "document_id": "PMC12855856",
+      "doi": "10.1038/s41540-026-00653-y",
+      "record_path": "records/PMC12855856.json",
+      "title": "Dynamical network analysis reveals long-range residue couplings at the pMHC interface underlying enhanced immunogenicity"
+    },
+    {
+      "completeness": {
+        "literature_extraction": "complete",
+        "md_file_provenance": "not_provided",
+        "pdb_validation": "complete",
+        "protocol_event_extraction": "complete_with_evidence_rejections",
+        "residue_mapping_scope": "pdb_to_uniprot_only",
+        "sifts_mapping": "complete",
+        "uniprot_enrichment": "complete"
+      },
+      "document_id": "PMC13279770",
+      "doi": "10.1038/s41598-026-49187-7",
+      "record_path": "records/PMC13279770.json",
+      "title": "Exploring potential VEGF receptor 2 inhibitors: a molecular modeling and pharmacophore-based screening approach"
+    },
+    {
+      "completeness": {
+        "literature_extraction": "no_supported_fact",
+        "md_file_provenance": "not_provided",
+        "pdb_validation": "not_applicable",
+        "protocol_event_extraction": "complete_with_evidence_rejections",
+        "residue_mapping_scope": "not_computable",
+        "sifts_mapping": "not_applicable",
+        "uniprot_enrichment": "not_applicable"
+      },
+      "document_id": "PMC13173313",
+      "doi": "10.1002/smll.202512308",
+      "record_path": "records/PMC13173313.json",
+      "title": "Computational Mechanics Model to Evaluate the Structural Maintenance of Catenated Hydrogen‐Bonded Organic Frameworks"
+    },
+    {
+      "completeness": {
+        "literature_extraction": "complete",
+        "md_file_provenance": "not_provided",
+        "pdb_validation": "complete",
+        "protocol_event_extraction": "complete_with_evidence_rejections",
+        "residue_mapping_scope": "pdb_to_uniprot_only",
+        "sifts_mapping": "complete",
+        "uniprot_enrichment": "complete"
+      },
+      "document_id": "PMC13001101",
+      "doi": "10.1021/acs.biochem.5c00570",
+      "record_path": "records/PMC13001101.json",
+      "title": "Allostery between Distant Structural Regions Dictates Selectivity in GPCR:G Protein Coupling"
+    },
+    {
+      "completeness": {
+        "literature_extraction": "complete",
+        "md_file_provenance": "not_provided",
+        "pdb_validation": "not_applicable",
+        "protocol_event_extraction": "complete_with_evidence_rejections",
+        "residue_mapping_scope": "not_computable",
+        "sifts_mapping": "not_applicable",
+        "uniprot_enrichment": "not_applicable"
+      },
+      "document_id": "PMC12673628",
+      "doi": "10.22099/mbrc.2025.53301.2171",
+      "record_path": "records/PMC12673628.json",
+      "title": "Molecular dynamics simulation of thermal activation of human TRPV1"
+    },
+    {
+      "completeness": {
+        "literature_extraction": "no_supported_fact",
+        "md_file_provenance": "not_provided",
+        "pdb_validation": "not_applicable",
+        "protocol_event_extraction": "complete_with_evidence_rejections",
+        "residue_mapping_scope": "not_computable",
+        "sifts_mapping": "not_applicable",
+        "uniprot_enrichment": "not_applicable"
+      },
+      "document_id": "PMC12781881",
+      "doi": "10.1093/nar/gkaf1428",
+      "record_path": "records/PMC12781881.json",
+      "title": "Sequence-dependent co-condensation of Lsr2 with DNA elucidates the mechanism of genome compaction in Mycobacterium tuberculosis"
+    },
+    {
+      "completeness": {
+        "literature_extraction": "complete",
+        "md_file_provenance": "not_provided",
+        "pdb_validation": "complete",
+        "protocol_event_extraction": "complete_with_evidence_rejections",
+        "residue_mapping_scope": "pdb_to_uniprot_only",
+        "sifts_mapping": "complete",
+        "uniprot_enrichment": "complete"
+      },
+      "document_id": "PMC12429002",
+      "doi": "10.3390/ijms26178631",
+      "record_path": "records/PMC12429002.json",
+      "title": "Theoretical Methods for Assessing the Density of Protein Nanodroplets"
+    },
+    {
+      "completeness": {
+        "literature_extraction": "complete",
+        "md_file_provenance": "not_provided",
+        "pdb_validation": "complete",
+        "protocol_event_extraction": "complete_with_evidence_rejections",
+        "residue_mapping_scope": "pdb_to_uniprot_only",
+        "sifts_mapping": "complete",
+        "uniprot_enrichment": "complete"
+      },
+      "document_id": "PMC12872208",
+      "doi": "10.1002/cmdc.202500960",
+      "record_path": "records/PMC12872208.json",
+      "title": "Structure‐Based Discovery of Obeticholic Acid Derivatives as Novel Farnesoid X Receptor Partial Agonists with Improved Selectivity and Reduced Off‐Target Effects"
+    },
+    {
+      "completeness": {
+        "literature_extraction": "complete",
+        "md_file_provenance": "not_provided",
+        "pdb_validation": "complete",
+        "protocol_event_extraction": "complete_with_evidence_rejections",
+        "residue_mapping_scope": "pdb_to_uniprot_only",
+        "sifts_mapping": "complete",
+        "uniprot_enrichment": "complete"
+      },
+      "document_id": "PMC12635368",
+      "doi": "10.1038/s41598-025-24925-5",
+      "record_path": "records/PMC12635368.json",
+      "title": "Molecular docking and dynamics simulation of antimicrobial peptides against adhesion proteins of peri-implant pathogens"
+    },
+    {
+      "completeness": {
+        "literature_extraction": "complete",
+        "md_file_provenance": "not_provided",
+        "pdb_validation": "not_applicable",
+        "protocol_event_extraction": "complete_with_evidence_rejections",
+        "residue_mapping_scope": "not_computable",
+        "sifts_mapping": "not_applicable",
+        "uniprot_enrichment": "not_applicable"
+      },
+      "document_id": "PMC12732718",
+      "doi": "10.3390/ijms262411960",
+      "record_path": "records/PMC12732718.json",
+      "title": "Coarse-Grained Molecular Dynamics Simulations of Lipid Nanodroplets and Endosomal Membranes: Focusing on the Fusion Mechanisms"
+    },
+    {
+      "completeness": {
+        "literature_extraction": "complete",
+        "md_file_provenance": "not_provided",
+        "pdb_validation": "complete",
+        "protocol_event_extraction": "complete",
+        "residue_mapping_scope": "pdb_to_uniprot_only",
+        "sifts_mapping": "complete",
+        "uniprot_enrichment": "complete"
+      },
+      "document_id": "PMC12570144",
+      "doi": "10.1021/acs.jcim.5c01488",
+      "record_path": "records/PMC12570144.json",
+      "title": "A Multiscale Simulation Approach to Compute Protein–Ligand Association Rate Constants by Combining Brownian Dynamics and Molecular Dynamics"
+    },
+    {
+      "completeness": {
+        "literature_extraction": "complete",
+        "md_file_provenance": "not_provided",
+        "pdb_validation": "complete",
+        "protocol_event_extraction": "complete_with_evidence_rejections",
+        "residue_mapping_scope": "pdb_to_uniprot_only",
+        "sifts_mapping": "complete",
+        "uniprot_enrichment": "complete"
+      },
+      "document_id": "PMC11112286",
+      "doi": "10.1016/j.crstbi.2024.100150",
+      "record_path": "records/PMC11112286.json",
+      "title": "Stability and dynamics of extradenticle modulates its function"
+    },
+    {
+      "completeness": {
+        "literature_extraction": "complete",
+        "md_file_provenance": "not_provided",
+        "pdb_validation": "not_applicable",
+        "protocol_event_extraction": "complete_with_evidence_rejections",
+        "residue_mapping_scope": "not_computable",
+        "sifts_mapping": "not_applicable",
+        "uniprot_enrichment": "not_applicable"
+      },
+      "document_id": "PMC13139053",
+      "doi": "10.1002/mbo3.70299",
+      "record_path": "records/PMC13139053.json",
+      "title": "Targeting Middle East Respiratory Syndrome Coronavirus Spike Fusion Machinery With Antiviral Peptides: In Silico Exploration of the Heptad Repeat 2 Domain"
+    },
+    {
+      "completeness": {
+        "literature_extraction": "complete",
+        "md_file_provenance": "not_provided",
+        "pdb_validation": "not_applicable",
+        "protocol_event_extraction": "complete_with_evidence_rejections",
+        "residue_mapping_scope": "not_computable",
+        "sifts_mapping": "not_applicable",
+        "uniprot_enrichment": "not_applicable"
+      },
+      "document_id": "PMC11150300",
+      "doi": "10.1007/s10856-024-06799-7",
+      "record_path": "records/PMC11150300.json",
+      "title": "In silico assessment of biocompatibility and toxicity: molecular docking and dynamics simulation of PMMA-based dental materials for interim prosthetic restorations"
+    },
+    {
+      "completeness": {
+        "literature_extraction": "complete",
+        "md_file_provenance": "not_provided",
+        "pdb_validation": "not_applicable",
+        "protocol_event_extraction": "complete_with_evidence_rejections",
+        "residue_mapping_scope": "not_computable",
+        "sifts_mapping": "not_applicable",
+        "uniprot_enrichment": "not_applicable"
+      },
+      "document_id": "PMC12951455",
+      "doi": "10.1021/acs.jmedchem.5c02796",
+      "record_path": "records/PMC12951455.json",
+      "title": "Drug Repurposing: Conversion of the Peripherally Restricted HIV Protease Inhibitor Amprenavir to Potent, Selective, and CNS-Penetrant Agonists for the Cannabinoid Receptor 2"
+    },
+    {
+      "completeness": {
+        "literature_extraction": "complete",
+        "md_file_provenance": "not_provided",
+        "pdb_validation": "not_applicable",
+        "protocol_event_extraction": "complete_with_evidence_rejections",
+        "residue_mapping_scope": "not_computable",
+        "sifts_mapping": "not_applicable",
+        "uniprot_enrichment": "not_applicable"
+      },
+      "document_id": "PMC13042762",
+      "doi": "10.1002/advs.202513911",
+      "record_path": "records/PMC13042762.json",
+      "title": "Identification and Characterization of an In Silico Designed Membrane‐Active Peptide with Antiviral Properties"
+    },
+    {
+      "completeness": {
+        "literature_extraction": "complete",
+        "md_file_provenance": "not_provided",
+        "pdb_validation": "complete",
+        "protocol_event_extraction": "complete_with_evidence_rejections",
+        "residue_mapping_scope": "pdb_to_uniprot_only",
+        "sifts_mapping": "complete",
+        "uniprot_enrichment": "complete"
+      },
+      "document_id": "PMC13207710",
+      "doi": "10.3390/ijms27104404",
+      "record_path": "records/PMC13207710.json",
+      "title": "Molecular Modeling of N-Acetylglucosamine Binding to the I154R Mutant of NAGLU: Pathogenic Insights into Sanfilippo Syndrome Type B"
+    },
+    {
+      "completeness": {
+        "literature_extraction": "complete",
+        "md_file_provenance": "not_provided",
+        "pdb_validation": "complete",
+        "protocol_event_extraction": "complete_with_evidence_rejections",
+        "residue_mapping_scope": "pdb_to_uniprot_only",
+        "sifts_mapping": "complete",
+        "uniprot_enrichment": "complete"
+      },
+      "document_id": "PMC12802266",
+      "doi": "10.1186/s40360-025-01065-0",
+      "record_path": "records/PMC12802266.json",
+      "title": "Exploring the toxicological impact of DEHP exposure on colorectal cancer through network toxicology, machine learning and bioinformatics analysis"
+    },
+    {
+      "completeness": {
+        "literature_extraction": "complete",
+        "md_file_provenance": "not_provided",
+        "pdb_validation": "complete",
+        "protocol_event_extraction": "complete_with_evidence_rejections",
+        "residue_mapping_scope": "pdb_to_uniprot_only",
+        "sifts_mapping": "complete",
+        "uniprot_enrichment": "complete"
+      },
+      "document_id": "PMC12606881",
+      "doi": "10.1186/s40246-025-00848-0",
+      "record_path": "records/PMC12606881.json",
+      "title": "Structural and functional impact of the POLD1 Ser605del variant in MDPL syndrome: insights from protein–protein interactions"
+    },
+    {
+      "completeness": {
+        "literature_extraction": "complete",
+        "md_file_provenance": "not_provided",
+        "pdb_validation": "not_applicable",
+        "protocol_event_extraction": "complete_with_evidence_rejections",
+        "residue_mapping_scope": "not_computable",
+        "sifts_mapping": "not_applicable",
+        "uniprot_enrichment": "not_applicable"
+      },
+      "document_id": "PMC12152953",
+      "doi": "10.1021/acs.jcim.5c00342",
+      "record_path": "records/PMC12152953.json",
+      "title": "Investigating the Nature of PRM:SH3 Interactions Using Artificial Intelligence and Molecular Dynamics"
+    },
+    {
+      "completeness": {
+        "literature_extraction": "complete",
+        "md_file_provenance": "not_provided",
+        "pdb_validation": "complete",
+        "protocol_event_extraction": "complete_with_evidence_rejections",
+        "residue_mapping_scope": "pdb_to_uniprot_only",
+        "sifts_mapping": "complete",
+        "uniprot_enrichment": "complete"
+      },
+      "document_id": "PMC12598867",
+      "doi": "10.1021/acs.jpcb.5c04391",
+      "record_path": "records/PMC12598867.json",
+      "title": "Molecular Dynamics Simulations of the Spike Protein Receptor Binding Domain Adsorption to Material Surfaces"
+    },
+    {
+      "completeness": {
+        "literature_extraction": "complete",
+        "md_file_provenance": "not_provided",
+        "pdb_validation": "complete",
+        "protocol_event_extraction": "complete_with_evidence_rejections",
+        "residue_mapping_scope": "not_computable",
+        "sifts_mapping": "not_applicable",
+        "uniprot_enrichment": "not_applicable"
+      },
+      "document_id": "PMC12983370",
+      "doi": "10.1039/d6ra00032k",
+      "record_path": "records/PMC12983370.json",
+      "title": "Ensemble molecular dynamics for predicting binding energies of DNA intercalators"
+    },
+    {
+      "completeness": {
+        "literature_extraction": "complete",
+        "md_file_provenance": "not_provided",
+        "pdb_validation": "not_applicable",
+        "protocol_event_extraction": "complete_with_evidence_rejections",
+        "residue_mapping_scope": "not_computable",
+        "sifts_mapping": "not_applicable",
+        "uniprot_enrichment": "not_applicable"
+      },
+      "document_id": "PMC12292407",
+      "doi": "10.3390/biom15070999",
+      "record_path": "records/PMC12292407.json",
+      "title": "3-O Sulfated Heparan Sulfate (G2) Peptide Ligand Impairs the Infectivity of Chlamydia muridarum"
+    },
+    {
+      "completeness": {
+        "literature_extraction": "complete",
+        "md_file_provenance": "not_provided",
+        "pdb_validation": "complete",
+        "protocol_event_extraction": "complete_with_evidence_rejections",
+        "residue_mapping_scope": "pdb_to_uniprot_only",
+        "sifts_mapping": "complete",
+        "uniprot_enrichment": "complete"
+      },
+      "document_id": "PMC12992696",
+      "doi": "10.1038/s42004-026-01936-5",
+      "record_path": "records/PMC12992696.json",
+      "title": "Binding pose depth modulates photoswitchable ligands’ efficacy at the 5-HT2A receptor"
+    },
+    {
+      "completeness": {
+        "literature_extraction": "complete",
+        "md_file_provenance": "not_provided",
+        "pdb_validation": "complete",
+        "protocol_event_extraction": "complete_with_evidence_rejections",
+        "residue_mapping_scope": "pdb_to_uniprot_only",
+        "sifts_mapping": "complete",
+        "uniprot_enrichment": "complete"
+      },
+      "document_id": "PMC13269710",
+      "doi": "10.1038/s44318-026-00802-3",
+      "record_path": "records/PMC13269710.json",
+      "title": "Atg18 interaction positions Atg2 for efficient lipid transfer into phagophore elongation"
+    },
+    {
+      "completeness": {
+        "literature_extraction": "complete",
+        "md_file_provenance": "not_provided",
+        "pdb_validation": "complete",
+        "protocol_event_extraction": "complete_with_evidence_rejections",
+        "residue_mapping_scope": "pdb_to_uniprot_only",
+        "sifts_mapping": "complete",
+        "uniprot_enrichment": "complete"
+      },
+      "document_id": "PMC13184935",
+      "doi": "10.1021/acschembio.5c00993",
+      "record_path": "records/PMC13184935.json",
+      "title": "Targeting the Protein–Membrane Interface Enables Design of Long-Acting CFTR Potentiators"
+    },
+    {
+      "completeness": {
+        "literature_extraction": "complete",
+        "md_file_provenance": "not_provided",
+        "pdb_validation": "complete",
+        "protocol_event_extraction": "complete_with_evidence_rejections",
+        "residue_mapping_scope": "pdb_to_uniprot_only",
+        "sifts_mapping": "complete",
+        "uniprot_enrichment": "complete"
+      },
+      "document_id": "PMC13250908",
+      "doi": "10.1021/acs.biomac.5c02743",
+      "record_path": "records/PMC13250908.json",
+      "title": "PAS-Domain Protein Orientation at a Polyelectrolyte Surface Revealed by Infrared Nanospectroscopy, Chiral Vibrational Spectroscopy, and Molecular Dynamics Simulations"
+    },
+    {
+      "completeness": {
+        "literature_extraction": "complete",
+        "md_file_provenance": "not_provided",
+        "pdb_validation": "not_applicable",
+        "protocol_event_extraction": "complete_with_evidence_rejections",
+        "residue_mapping_scope": "not_computable",
+        "sifts_mapping": "not_applicable",
+        "uniprot_enrichment": "not_applicable"
+      },
+      "document_id": "PMC12795828",
+      "doi": "10.18699/vjgb-25-111",
+      "record_path": "records/PMC12795828.json",
+      "title": "Molecular dynamic analysis of the functional role of amino acid residues V99, F124 and S125 of human DNA dioxygenase ABH2"
+    },
+    {
+      "completeness": {
+        "literature_extraction": "complete",
+        "md_file_provenance": "not_provided",
+        "pdb_validation": "complete",
+        "protocol_event_extraction": "complete_with_evidence_rejections",
+        "residue_mapping_scope": "pdb_to_uniprot_only",
+        "sifts_mapping": "complete",
+        "uniprot_enrichment": "complete"
+      },
+      "document_id": "PMC13185690",
+      "doi": "10.1039/d5ra09902a",
+      "record_path": "records/PMC13185690.json",
+      "title": "Synthesis, molecular modelling, and evaluation of new mono- and bis-isoxazolines as antibacterial agents: in vitro and in silico analysis"
+    },
+    {
+      "completeness": {
+        "literature_extraction": "complete",
+        "md_file_provenance": "not_provided",
+        "pdb_validation": "complete",
+        "protocol_event_extraction": "complete_with_evidence_rejections",
+        "residue_mapping_scope": "pdb_to_uniprot_only",
+        "sifts_mapping": "complete",
+        "uniprot_enrichment": "complete"
+      },
+      "document_id": "PMC12096210",
+      "doi": "10.1021/acsomega.5c01968",
+      "record_path": "records/PMC12096210.json",
+      "title": "Discovery of Sphingosine-1-Phosphate Receptor Modulators as Potential CHI3L1 Inhibitors by Ligand-Based Virtual Screening and Molecular Dynamics Simulations"
+    },
+    {
+      "completeness": {
+        "literature_extraction": "complete",
+        "md_file_provenance": "not_provided",
+        "pdb_validation": "not_applicable",
+        "protocol_event_extraction": "complete_with_evidence_rejections",
+        "residue_mapping_scope": "not_computable",
+        "sifts_mapping": "not_applicable",
+        "uniprot_enrichment": "not_applicable"
+      },
+      "document_id": "PMC13161068",
+      "doi": "10.3389/fbinf.2026.1822250",
+      "record_path": "records/PMC13161068.json",
+      "title": "In silico identification of phytocompounds derived from Glycyrrhiza glabra as potential inhibitors of actin assembly-inducing protein in Listeria monocytogenes: a virtual screening and molecular dynamics study"
+    },
+    {
+      "completeness": {
+        "literature_extraction": "complete",
+        "md_file_provenance": "not_provided",
+        "pdb_validation": "not_applicable",
+        "protocol_event_extraction": "complete_with_evidence_rejections",
+        "residue_mapping_scope": "not_computable",
+        "sifts_mapping": "not_applicable",
+        "uniprot_enrichment": "not_applicable"
+      },
+      "document_id": "PMC13267075",
+      "doi": "10.1021/acs.jpcb.5c08132",
+      "record_path": "records/PMC13267075.json",
+      "title": "Confinement-Induced Dielectric Behavior of Water in Polymeric Nanofiltration Membranes: A Molecular Dynamics Study"
+    },
+    {
+      "completeness": {
+        "literature_extraction": "complete",
+        "md_file_provenance": "not_provided",
+        "pdb_validation": "complete",
+        "protocol_event_extraction": "complete_with_evidence_rejections",
+        "residue_mapping_scope": "pdb_to_uniprot_only",
+        "sifts_mapping": "complete",
+        "uniprot_enrichment": "complete"
+      },
+      "document_id": "PMC12310011",
+      "doi": "10.1371/journal.pone.0329126",
+      "record_path": "records/PMC12310011.json",
+      "title": "Computational prediction of the pathogenic variants of arachidonate 5-lipoxygenase activating protein using Molecular Dynamics simulation"
+    },
+    {
+      "completeness": {
+        "literature_extraction": "complete",
+        "md_file_provenance": "not_provided",
+        "pdb_validation": "complete",
+        "protocol_event_extraction": "complete_with_evidence_rejections",
+        "residue_mapping_scope": "pdb_to_uniprot_only",
+        "sifts_mapping": "complete",
+        "uniprot_enrichment": "complete"
+      },
+      "document_id": "PMC12749864",
+      "doi": "10.1038/s41598-025-29092-1",
+      "record_path": "records/PMC12749864.json",
+      "title": "In silico analysis of sodium ion permeation mechanisms in transient receptor potential vanilloid 1"
+    },
+    {
+      "completeness": {
+        "literature_extraction": "complete",
+        "md_file_provenance": "not_provided",
+        "pdb_validation": "complete",
+        "protocol_event_extraction": "complete_with_evidence_rejections",
+        "residue_mapping_scope": "pdb_to_uniprot_only",
+        "sifts_mapping": "complete",
+        "uniprot_enrichment": "complete"
+      },
+      "document_id": "PMC12339985",
+      "doi": "10.1038/s41598-025-15038-0",
+      "record_path": "records/PMC12339985.json",
+      "title": "In Silico discovery of novel androgen receptor inhibitors for prostate cancer therapy using virtual screening, molecular docking, and molecular dynamics simulations"
+    },
+    {
+      "completeness": {
+        "literature_extraction": "complete",
+        "md_file_provenance": "not_provided",
+        "pdb_validation": "complete",
+        "protocol_event_extraction": "complete_with_evidence_rejections",
+        "residue_mapping_scope": "pdb_to_uniprot_only",
+        "sifts_mapping": "complete",
+        "uniprot_enrichment": "complete"
+      },
+      "document_id": "PMC12916992",
+      "doi": "10.1038/s41598-026-37638-0",
+      "record_path": "records/PMC12916992.json",
+      "title": "Exploring the mechanism of Platycladi Cacumen in intervening androgenetic alopecia based on network pharmacology, molecular docking, and molecular dynamics simulation"
+    },
+    {
+      "completeness": {
+        "literature_extraction": "complete",
+        "md_file_provenance": "not_provided",
+        "pdb_validation": "complete",
+        "protocol_event_extraction": "complete_with_evidence_rejections",
+        "residue_mapping_scope": "pdb_to_uniprot_only",
+        "sifts_mapping": "complete",
+        "uniprot_enrichment": "complete"
+      },
+      "document_id": "PMC12680577",
+      "doi": "10.1002/open.202500360",
+      "record_path": "records/PMC12680577.json",
+      "title": "Discovery of Potential GPRC5D Inhibitors through Virtual Screening and Molecular Dynamics Simulations"
+    },
+    {
+      "completeness": {
+        "literature_extraction": "complete",
+        "md_file_provenance": "not_provided",
+        "pdb_validation": "complete",
+        "protocol_event_extraction": "complete_with_evidence_rejections",
+        "residue_mapping_scope": "pdb_to_uniprot_only",
+        "sifts_mapping": "complete",
+        "uniprot_enrichment": "complete"
+      },
+      "document_id": "PMC13132450",
+      "doi": "10.1371/journal.pcbi.1013825",
+      "record_path": "records/PMC13132450.json",
+      "title": "Structural mechanisms underlying distinct binding and activities of 18:0 and 18:1 lysophosphatidic acids at LPA1 receptor"
+    },
+    {
+      "completeness": {
+        "literature_extraction": "complete",
+        "md_file_provenance": "not_provided",
+        "pdb_validation": "complete",
+        "protocol_event_extraction": "complete_with_evidence_rejections",
+        "residue_mapping_scope": "pdb_to_uniprot_only",
+        "sifts_mapping": "complete",
+        "uniprot_enrichment": "complete"
+      },
+      "document_id": "PMC13213911",
+      "doi": "10.1021/acs.jcim.5c03135",
+      "record_path": "records/PMC13213911.json",
+      "title": "Structuring Disorder via Supervised Molecular Dynamics: Uncovering Arginine-Glycine-Glycine-Mediated Ribonucleic Acid-Intrinsically Disordered Region Recognition Mechanisms"
+    },
+    {
+      "completeness": {
+        "literature_extraction": "complete",
+        "md_file_provenance": "not_provided",
+        "pdb_validation": "complete",
+        "protocol_event_extraction": "complete",
+        "residue_mapping_scope": "pdb_to_uniprot_only",
+        "sifts_mapping": "complete",
+        "uniprot_enrichment": "complete"
+      },
+      "document_id": "PMC13224387",
+      "doi": "10.1016/j.fochms.2026.100419",
+      "record_path": "records/PMC13224387.json",
+      "title": "In silico rational investigation of C-terminal arginine-containing white Lupin (Lupinus albus) protein-derived peptides as arginase inhibitors"
+    },
+    {
+      "completeness": {
+        "literature_extraction": "complete",
+        "md_file_provenance": "not_provided",
+        "pdb_validation": "not_applicable",
+        "protocol_event_extraction": "complete_with_evidence_rejections",
+        "residue_mapping_scope": "not_computable",
+        "sifts_mapping": "not_applicable",
+        "uniprot_enrichment": "not_applicable"
+      },
+      "document_id": "PMC11997171",
+      "doi": "10.1038/s41598-025-97513-2",
+      "record_path": "records/PMC11997171.json",
+      "title": "Identification of novel inhibitors targeting Mycobacterium abscessus InhA through virtual screening, docking, and molecular dynamic simulations"
+    },
+    {
+      "completeness": {
+        "literature_extraction": "complete",
+        "md_file_provenance": "not_provided",
+        "pdb_validation": "complete",
+        "protocol_event_extraction": "complete_with_evidence_rejections",
+        "residue_mapping_scope": "pdb_to_uniprot_only",
+        "sifts_mapping": "complete",
+        "uniprot_enrichment": "complete"
+      },
+      "document_id": "PMC12481941",
+      "doi": "10.1016/j.virusres.2025.199630",
+      "record_path": "records/PMC12481941.json",
+      "title": "Evaluation of Potential Inhibitors of Zika Virus Envelope Protein Through Molecular Docking and Molecular Dynamics Simulation"
+    },
+    {
+      "completeness": {
+        "literature_extraction": "complete",
+        "md_file_provenance": "not_provided",
+        "pdb_validation": "complete",
+        "protocol_event_extraction": "complete",
+        "residue_mapping_scope": "pdb_to_uniprot_only",
+        "sifts_mapping": "complete",
+        "uniprot_enrichment": "complete"
+      },
+      "document_id": "PMC12327591",
+      "doi": "10.1371/journal.pone.0329314",
+      "record_path": "records/PMC12327591.json",
+      "title": "ProProtein: A platform for fully automated identification of 3D structure fluctuations in MD simulation trajectories"
+    },
+    {
+      "completeness": {
+        "literature_extraction": "complete",
+        "md_file_provenance": "not_provided",
+        "pdb_validation": "complete",
+        "protocol_event_extraction": "complete_with_evidence_rejections",
+        "residue_mapping_scope": "pdb_to_uniprot_only",
+        "sifts_mapping": "complete",
+        "uniprot_enrichment": "complete"
+      },
+      "document_id": "PMC12686642",
+      "doi": "10.1016/j.csbj.2025.11.034",
+      "record_path": "records/PMC12686642.json",
+      "title": "EquilibraTor streamlines molecular dynamics simulations in a single execution"
+    },
+    {
+      "completeness": {
+        "literature_extraction": "complete",
+        "md_file_provenance": "not_provided",
+        "pdb_validation": "complete",
+        "protocol_event_extraction": "complete",
+        "residue_mapping_scope": "pdb_to_uniprot_only",
+        "sifts_mapping": "complete",
+        "uniprot_enrichment": "complete"
+      },
+      "document_id": "PMC13098134",
+      "doi": "10.1002/open.202500452",
+      "record_path": "records/PMC13098134.json",
+      "title": "Dual Inhibition of COX‐2/5‐LOX Through Novel Hybrids of NSAIDs and Peptides: Insights from Molecular Dynamics Simulation and Per‐Residue Decomposition"
+    },
+    {
+      "completeness": {
+        "literature_extraction": "complete",
+        "md_file_provenance": "not_provided",
+        "pdb_validation": "complete",
+        "protocol_event_extraction": "complete_with_evidence_rejections",
+        "residue_mapping_scope": "pdb_to_uniprot_only",
+        "sifts_mapping": "complete",
+        "uniprot_enrichment": "complete"
+      },
+      "document_id": "PMC13074599",
+      "doi": "10.3390/molecules31071168",
+      "record_path": "records/PMC13074599.json",
+      "title": "Molecular Dynamics Simulations Cyclotide Kalata B1 Interactions with Lipid Bilayers"
+    },
+    {
+      "completeness": {
+        "literature_extraction": "complete",
+        "md_file_provenance": "not_provided",
+        "pdb_validation": "complete",
+        "protocol_event_extraction": "complete_with_evidence_rejections",
+        "residue_mapping_scope": "pdb_to_uniprot_only",
+        "sifts_mapping": "complete",
+        "uniprot_enrichment": "complete"
+      },
+      "document_id": "PMC13115257",
+      "doi": "10.3390/cimb48040347",
+      "record_path": "records/PMC13115257.json",
+      "title": "Computational Discovery of Novel Monkeypox Virus DNA Polymerase Inhibitors from the Zinc20 Database"
+    },
+    {
+      "completeness": {
+        "literature_extraction": "complete",
+        "md_file_provenance": "not_provided",
+        "pdb_validation": "not_applicable",
+        "protocol_event_extraction": "partial_with_generation_rejections",
+        "residue_mapping_scope": "not_computable",
+        "sifts_mapping": "not_applicable",
+        "uniprot_enrichment": "not_applicable"
+      },
+      "document_id": "PMC13151066",
+      "doi": "10.1021/acsnano.6c02811",
+      "record_path": "records/PMC13151066.json",
+      "title": "Morphology-Aware Peptide Discovery via Masked Conditional Generative Modeling"
+    },
+    {
+      "completeness": {
+        "literature_extraction": "complete",
+        "md_file_provenance": "not_provided",
+        "pdb_validation": "not_applicable",
+        "protocol_event_extraction": "complete_with_evidence_rejections",
+        "residue_mapping_scope": "not_computable",
+        "sifts_mapping": "not_applicable",
+        "uniprot_enrichment": "not_applicable"
+      },
+      "document_id": "PMC13211340",
+      "doi": "10.3390/vaccines14050385",
+      "record_path": "records/PMC13211340.json",
+      "title": "Exploring the Vaccine Adjuvant Effect and Mechanism of Epimedium Using Network Pharmacology, Molecular Docking, and Molecular Dynamics Simulations"
+    },
+    {
+      "completeness": {
+        "literature_extraction": "complete",
+        "md_file_provenance": "not_provided",
+        "pdb_validation": "not_applicable",
+        "protocol_event_extraction": "complete_with_evidence_rejections",
+        "residue_mapping_scope": "not_computable",
+        "sifts_mapping": "not_applicable",
+        "uniprot_enrichment": "not_applicable"
+      },
+      "document_id": "PMC12222492",
+      "doi": "10.1038/s41598-025-08148-2",
+      "record_path": "records/PMC12222492.json",
+      "title": "In-silico drug repositioning studies of Candida albicans Nitrogen permease reactivator 1 (Npr1) kinase"
+    },
+    {
+      "completeness": {
+        "literature_extraction": "complete",
+        "md_file_provenance": "not_provided",
+        "pdb_validation": "not_applicable",
+        "protocol_event_extraction": "complete_with_evidence_rejections",
+        "residue_mapping_scope": "not_computable",
+        "sifts_mapping": "not_applicable",
+        "uniprot_enrichment": "not_applicable"
+      },
+      "document_id": "PMC13011192",
+      "doi": "10.1016/j.jgeb.2026.100676",
+      "record_path": "records/PMC13011192.json",
+      "title": "Biocatalytic potential of Ensifer adhaerens S-5 D-Carbamoylase: Insights from in silico and in vitro analyses"
+    },
+    {
+      "completeness": {
+        "literature_extraction": "complete",
+        "md_file_provenance": "not_provided",
+        "pdb_validation": "not_applicable",
+        "protocol_event_extraction": "complete_with_evidence_rejections",
+        "residue_mapping_scope": "not_computable",
+        "sifts_mapping": "not_applicable",
+        "uniprot_enrichment": "not_applicable"
+      },
+      "document_id": "PMC13262343",
+      "doi": "10.1021/acs.jpcb.5c06368",
+      "record_path": "records/PMC13262343.json",
+      "title": "StrEAMM-Thioether: Efficient Structure Prediction for Thioether-Linked Cyclic Peptides"
+    },
+    {
+      "completeness": {
+        "literature_extraction": "complete",
+        "md_file_provenance": "not_provided",
+        "pdb_validation": "complete",
+        "protocol_event_extraction": "complete_with_evidence_rejections",
+        "residue_mapping_scope": "pdb_to_uniprot_only",
+        "sifts_mapping": "complete",
+        "uniprot_enrichment": "complete"
+      },
+      "document_id": "PMC12122940",
+      "doi": "10.1038/s42003-025-08207-4",
+      "record_path": "records/PMC12122940.json",
+      "title": "Investigation and design of the dual specificity of the PRDM9 protein lysine methyltransferase"
+    },
+    {
+      "completeness": {
+        "literature_extraction": "complete",
+        "md_file_provenance": "not_provided",
+        "pdb_validation": "complete",
+        "protocol_event_extraction": "complete_with_evidence_rejections",
+        "residue_mapping_scope": "pdb_to_uniprot_only",
+        "sifts_mapping": "complete",
+        "uniprot_enrichment": "complete"
+      },
+      "document_id": "PMC12751887",
+      "doi": "10.1186/s12964-025-02541-0",
+      "record_path": "records/PMC12751887.json",
+      "title": "The polybasic puzzle: how N-terminal charges modulate Gαi1 membrane behavior and signaling output"
+    },
+    {
+      "completeness": {
+        "literature_extraction": "complete",
+        "md_file_provenance": "not_provided",
+        "pdb_validation": "not_applicable",
+        "protocol_event_extraction": "complete_with_evidence_rejections",
+        "residue_mapping_scope": "not_computable",
+        "sifts_mapping": "not_applicable",
+        "uniprot_enrichment": "not_applicable"
+      },
+      "document_id": "PMC12934285",
+      "doi": "10.1016/j.jbc.2026.111207",
+      "record_path": "records/PMC12934285.json",
+      "title": "A new functional assay reveals that membrane binding is critical for overactivation of the phosphoinositide 3-kinase H1047R mutant"
+    }
+  ],
+  "result_sha256": "9c1adf991e72d0f6942c2ee3adbc6e58e85d0412378a74e2490c63c8e31b208e",
+  "schema_version": "mdmeta.model-backed-integration.v1",
+  "slurm": {
+    "account": "project_2012997",
+    "job_id": "189845",
+    "node": "rc4135",
+    "partition": "small"
+  },
+  "source": {
+    "archive_sha256": "735684305768a07c0cf1799393f97fe1d9a7f675939c46c93bedc238fc31bb76",
+    "commit": "3079d14a4fd50cd0c903ba8bbe07d9bbeac86f01"
+  },
+  "source_manifest_sha256": "b839f2d19c8c9b75f82f6fbdd52c05afaa2e6a52668f4cce6da6c09d254802a7",
+  "status": "pass",
+  "summary": {
+    "article_count_succeeded": 80,
+    "article_count_with_pdb": 52,
+    "failure_count": 0,
+    "failures": [],
+    "mapping_validation_state_counts": {
+      "validated": 198
+    },
+    "md_file_provenance_counts": {
+      "not_provided": 80
+    },
+    "pdb_validation_state_counts": {
+      "validated": 108
+    },
+    "protocol_event_count": 98,
+    "residue_mapping_segment_count": 352,
+    "unique_pdb_id_count": 99,
+    "unique_uniprot_accession_count": 107
+  },
+  "task_classification_counts": {
+    "accepted": 1097,
+    "accepted_with_evidence_rejections": 58,
+    "evidence_rejected": 59,
+    "generation_rejected": 2
+  }
+}

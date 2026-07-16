@@ -4,7 +4,13 @@ from datetime import datetime, timezone
 from enum import StrEnum
 from typing import Any, Literal
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
+
+
+class StrictModel(BaseModel):
+    """Reject schema drift instead of silently discarding unknown scientific fields."""
+
+    model_config = ConfigDict(extra="forbid")
 
 
 class EventType(StrEnum):
@@ -17,7 +23,7 @@ class EventType(StrEnum):
     UNKNOWN = "unknown"
 
 
-class Evidence(BaseModel):
+class Evidence(StrictModel):
     document_id: str
     section: str
     paragraph_id: str
@@ -35,7 +41,7 @@ class Evidence(BaseModel):
         return self
 
 
-class ProtocolEvent(BaseModel):
+class ProtocolEvent(StrictModel):
     event_id: str
     event_type: EventType
     duration_ps: float | None = Field(default=None, gt=0)
@@ -57,7 +63,7 @@ class ValidationState(StrEnum):
     NOT_APPLICABLE = "not_applicable"
 
 
-class RequestAttempt(BaseModel):
+class RequestAttempt(StrictModel):
     attempt: int = Field(ge=0)
     outcome: Literal["cache", "response", "network_error"]
     http_status: int | None = None
@@ -65,7 +71,7 @@ class RequestAttempt(BaseModel):
     retry_after_seconds: float | None = Field(default=None, ge=0)
 
 
-class MappingSegment(BaseModel):
+class MappingSegment(StrictModel):
     pdb_id: str
     uniprot_accession: str
     chain_id: str
@@ -75,7 +81,7 @@ class MappingSegment(BaseModel):
     uniprot_end: int | None = None
 
 
-class ValidationRecord(BaseModel):
+class ValidationRecord(StrictModel):
     identifier_type: Literal["pdb", "uniprot", "pdb_uniprot_mapping"]
     query: dict[str, str]
     state: ValidationState

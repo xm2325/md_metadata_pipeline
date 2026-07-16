@@ -12,6 +12,8 @@ from typing import Callable
 
 import httpx
 
+from mdmeta import user_agent
+
 FULLTEXT_URL = "https://www.ebi.ac.uk/europepmc/webservices/rest/{pmcid}/fullTextXML"
 ENGINE_PATTERNS = {
     "gromacs": re.compile(r"\bgromacs\b", re.I),
@@ -186,7 +188,7 @@ def main() -> None:
     parser.add_argument("--delay", type=float, default=0.05)
     args = parser.parse_args()
     plan = json.loads(args.plan.read_text(encoding="utf-8"))
-    headers = {"User-Agent": "md-metadata-pipeline/0.7 fulltext-screen"}
+    headers = {"User-Agent": user_agent("fulltext-screen")}
     with httpx.Client(
         timeout=args.timeout,
         headers=headers,

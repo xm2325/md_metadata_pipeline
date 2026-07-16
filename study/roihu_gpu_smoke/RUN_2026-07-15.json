@@ -1,0 +1,63 @@
+{
+  "checks": {
+    "bf16_gemm": {
+      "dtype": "bfloat16",
+      "elapsed_seconds": 8.006058625003789,
+      "estimated_tflops": 576.8067725905535,
+      "iterations": 4200,
+      "matrix_size": 8192,
+      "output_finite": true,
+      "output_mean": -0.017201140522956848,
+      "peak_memory_bytes": 771751936,
+      "status": "pass"
+    },
+    "fp32_correctness": {
+      "maximum_absolute_error": 0.0,
+      "shape": [
+        128,
+        128
+      ],
+      "status": "pass"
+    },
+    "scaled_dot_product_attention": {
+      "dtype": "bfloat16",
+      "elapsed_seconds": 0.5731031490140595,
+      "output_finite": true,
+      "output_mean": -0.0004037695180159062,
+      "shape": [
+        1,
+        8,
+        1024,
+        128
+      ],
+      "status": "pass"
+    }
+  },
+  "completed_at": "2026-07-15T14:49:41.475717Z",
+  "gpu": {
+    "compute_capability": "9.0",
+    "name": "NVIDIA GH200 120GB",
+    "total_memory_bytes": 102005473280,
+    "visible_device_count": 1
+  },
+  "runtime": {
+    "architecture": "aarch64",
+    "cuda": "13.0",
+    "cudnn": 91501,
+    "python": "3.12.12",
+    "torch": "2.10.0+cu130"
+  },
+  "schema_version": "mdmeta.roihu.gpu-smoke.v1",
+  "slurm": {
+    "account": "project_2012997",
+    "job_id": "184708",
+    "node": "rg2101",
+    "partition": "gputest"
+  },
+  "source": {
+    "archive_sha256": "85ac7b70f4145ab4993184d9f804258abc7f4ffc74328eec35ad3829d150150c",
+    "commit": "cc87d7ac0c72e0edaef2f3243bb050e86df444df"
+  },
+  "started_at": "2026-07-15T14:49:29.728541Z",
+  "status": "pass"
+}

@@ -8,9 +8,11 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
+from uuid import uuid4
 
 import httpx
 
+from . import user_agent
 from .models import (
     MappingSegment,
     RequestAttempt,
@@ -48,7 +50,12 @@ class ResponseCache:
         path = self._path(endpoint)
         if not path.exists():
             return None
-        payload = json.loads(path.read_text(encoding="utf-8"))
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            return None
+        if not isinstance(payload, dict):
+            return None
         if payload.get("endpoint") != endpoint:
             return None
         response_payload = payload.get("payload")
@@ -57,7 +64,13 @@ class ResponseCache:
         digest = _hash_payload(response_payload)
         if digest != payload.get("response_sha256"):
             return None
-        return int(payload["http_status"]), response_payload, digest
+        try:
+            http_status = int(payload["http_status"])
+        except (KeyError, TypeError, ValueError):
+            return None
+        if not 100 <= http_status <= 599:
+            return None
+        return http_status, response_payload, digest
 
     def store(self, endpoint: str, http_status: int, payload: dict[str, Any]) -> str:
         digest = _hash_payload(payload)
@@ -68,9 +81,15 @@ class ResponseCache:
             "payload": payload,
         }
         path = self._path(endpoint)
-        temporary = path.with_suffix(".tmp")
-        temporary.write_text(json.dumps(record, sort_keys=True, indent=2), encoding="utf-8")
-        temporary.replace(path)
+        temporary = path.with_name(f".{path.name}.{uuid4().hex}.tmp")
+        try:
+            temporary.write_text(
+                json.dumps(record, sort_keys=True, indent=2),
+                encoding="utf-8",
+            )
+            temporary.replace(path)
+        finally:
+            temporary.unlink(missing_ok=True)
         return digest
 
 
@@ -83,6 +102,7 @@ class _Retrieved:
     attempts: int
     cache_hit: bool
     request_log: list[RequestAttempt]
+    payload_valid: bool = True
     terminal_error: str | None = None
 
 
@@ -100,7 +120,7 @@ class IdentifierValidator:
     ) -> None:
         self.client = client or httpx.Client(
             timeout=timeout,
-            headers={"User-Agent": "md-metadata-pipeline/0.5"},
+            headers={"User-Agent": user_agent("identifier-validation")},
         )
         self.retries = retries
         self.backoff_seconds = backoff_seconds
@@ -183,9 +203,29 @@ class IdentifierValidator:
             try:
                 payload = response.json()
             except ValueError:
-                payload = {}
+                return _Retrieved(
+                    response_received=True,
+                    http_status=response.status_code,
+                    payload=None,
+                    response_sha256=hashlib.sha256(response.content).hexdigest(),
+                    attempts=attempt,
+                    cache_hit=False,
+                    request_log=request_log,
+                    payload_valid=False,
+                    terminal_error="invalid_json_response",
+                )
             if not isinstance(payload, dict):
-                payload = {"response": payload}
+                return _Retrieved(
+                    response_received=True,
+                    http_status=response.status_code,
+                    payload=None,
+                    response_sha256=hashlib.sha256(response.content).hexdigest(),
+                    attempts=attempt,
+                    cache_hit=False,
+                    request_log=request_log,
+                    payload_valid=False,
+                    terminal_error=f"unexpected_json_type:{type(payload).__name__}",
+                )
             digest = _hash_payload(payload)
             if self.cache is not None and response.status_code == 200:
                 digest = self.cache.store(endpoint, response.status_code, payload)
@@ -258,16 +298,27 @@ class IdentifierValidator:
                 reason="non_success_service_response",
                 retrieved=retrieved,
             )
-        state = (
-            ValidationState.VALIDATED
-            if pdb_id in (retrieved.payload or {})
-            else ValidationState.CONFLICT
-        )
-        reason = (
-            "entry_exists"
-            if state is ValidationState.VALIDATED
-            else "response_does_not_contain_requested_entry"
-        )
+        if not retrieved.payload_valid:
+            return self._record(
+                identifier_type="pdb",
+                query=query,
+                state=ValidationState.UNRESOLVED,
+                endpoint=endpoint,
+                reason=retrieved.terminal_error or "invalid_service_payload",
+                retrieved=retrieved,
+            )
+        payload = retrieved.payload or {}
+        if pdb_id not in payload:
+            state = ValidationState.CONFLICT
+            reason = "response_does_not_contain_requested_entry"
+        elif not isinstance(payload[pdb_id], list) or not payload[pdb_id] or not all(
+            isinstance(item, dict) for item in payload[pdb_id]
+        ):
+            state = ValidationState.UNRESOLVED
+            reason = "malformed_pdb_summary_payload"
+        else:
+            state = ValidationState.VALIDATED
+            reason = "entry_exists"
         return self._record(
             identifier_type="pdb",
             query=query,
@@ -308,7 +359,25 @@ class IdentifierValidator:
                 reason="non_success_service_response",
                 retrieved=retrieved,
             )
+        if not retrieved.payload_valid:
+            return self._record(
+                identifier_type="uniprot",
+                query=query,
+                state=ValidationState.UNRESOLVED,
+                endpoint=endpoint,
+                reason=retrieved.terminal_error or "invalid_service_payload",
+                retrieved=retrieved,
+            )
         returned = (retrieved.payload or {}).get("primaryAccession")
+        if not isinstance(returned, str):
+            return self._record(
+                identifier_type="uniprot",
+                query=query,
+                state=ValidationState.UNRESOLVED,
+                endpoint=endpoint,
+                reason="malformed_uniprot_payload",
+                retrieved=retrieved,
+            )
         state = ValidationState.VALIDATED if returned == accession else ValidationState.CONFLICT
         return self._record(
             identifier_type="uniprot",
@@ -358,7 +427,11 @@ class IdentifierValidator:
             "chain_id": chain_id or "",
         }
         retrieved = self._retrieve(endpoint)
-        if not retrieved.response_received or retrieved.http_status != 200:
+        if (
+            not retrieved.response_received
+            or not retrieved.payload_valid
+            or retrieved.http_status != 200
+        ):
             return self._record(
                 identifier_type="pdb_uniprot_mapping",
                 query=query,
@@ -367,8 +440,49 @@ class IdentifierValidator:
                 reason=retrieved.terminal_error or "mapping_response_unavailable",
                 retrieved=retrieved,
             )
-        uniprot = (retrieved.payload or {}).get(pdb_id, {}).get("UniProt", {})
-        mappings = uniprot.get(accession, {}).get("mappings", [])
+        payload = retrieved.payload or {}
+        pdb_payload = payload.get(pdb_id)
+        if pdb_payload is not None and not isinstance(pdb_payload, dict):
+            return self._record(
+                identifier_type="pdb_uniprot_mapping",
+                query=query,
+                state=ValidationState.UNRESOLVED,
+                endpoint=endpoint,
+                reason="malformed_mapping_payload",
+                retrieved=retrieved,
+            )
+        uniprot = (pdb_payload or {}).get("UniProt", {})
+        if not isinstance(uniprot, dict):
+            return self._record(
+                identifier_type="pdb_uniprot_mapping",
+                query=query,
+                state=ValidationState.UNRESOLVED,
+                endpoint=endpoint,
+                reason="malformed_mapping_payload",
+                retrieved=retrieved,
+            )
+        accession_payload = uniprot.get(accession)
+        if accession_payload is not None and not isinstance(accession_payload, dict):
+            return self._record(
+                identifier_type="pdb_uniprot_mapping",
+                query=query,
+                state=ValidationState.UNRESOLVED,
+                endpoint=endpoint,
+                reason="malformed_mapping_payload",
+                retrieved=retrieved,
+            )
+        mappings = (accession_payload or {}).get("mappings", [])
+        if not isinstance(mappings, list) or not all(
+            isinstance(item, dict) for item in mappings
+        ):
+            return self._record(
+                identifier_type="pdb_uniprot_mapping",
+                query=query,
+                state=ValidationState.UNRESOLVED,
+                endpoint=endpoint,
+                reason="malformed_mapping_payload",
+                retrieved=retrieved,
+            )
         segments = self._mapping_segments(pdb_id, accession, mappings)
         if not segments:
             state = ValidationState.CONFLICT

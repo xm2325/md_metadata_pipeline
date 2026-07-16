@@ -1,0 +1,212 @@
+{
+  "schema_version": "mdmeta.roihu-llm-run-report.v1",
+  "status": "pass",
+  "generated_at": "2026-07-15T22:45:49Z",
+  "accuracy_evaluated": false,
+  "human_reference_used": false,
+  "interpretation": "model-backed coverage, evidence validation, identifier integration and throughput evidence; not extraction accuracy",
+  "source": {
+    "commit": "bb8b42550befe4af2c522374c62dd8d023350cbd",
+    "archive_sha256": "afbe3fdebb9688f198caa94823cc1722b47bd88207dcea3874622ea52c122211",
+    "manifest_file_sha256": "2c0e0275b2b3303607ccb30e9632994d86a2d71367dcc3cd73581e59d1bbd74e",
+    "manifest_sha256": "b73387925f866162c42863aa7957c759c1404b5ed9229c8d6b57ed4707a2bdfe",
+    "article_count": 60,
+    "jats_cache_hit_count": 60,
+    "jats_downloaded_count": 0,
+    "jats_total_size_bytes": 7481308,
+    "all_frozen_jats_sha256_matched": true
+  },
+  "model": {
+    "repo_id": "Qwen/Qwen2.5-7B-Instruct",
+    "revision": "a09a35458c702b33eeacc393d103063234e8bc28",
+    "license": "apache-2.0",
+    "gated": false,
+    "trust_remote_code": false,
+    "snapshot_manifest_sha256": "11c3344c8949a7fc682e30bea663e34a7b5e8116450783f7bd813cf76ef6a237",
+    "runtime": {
+      "vllm": "0.19.1",
+      "torch": "2.10.0+cu129",
+      "transformers": "5.8.0",
+      "dtype": "bfloat16",
+      "gpu_count": 1,
+      "gpu_type": "GH200"
+    }
+  },
+  "contracts": {
+    "batch_schema_version": "mdmeta.llm-protocol-batch.v6",
+    "response_schema_version": "mdmeta.llm-event-response.v3",
+    "response_schema_canonical_sha256": "3c85798f612a07fb3525dacd3ba0c37cd8458764f394381a4057e453cef51bc9",
+    "response_schema_file_sha256": "8e6e4855aed489722e1d873e4749530fbf192594c5a36d8880b7d1797ec42b9d",
+    "maximum_candidates_per_paragraph": 16,
+    "maximum_generation_rejection_fraction": 0.01
+  },
+  "accepted_chain": {
+    "gpu_one": {
+      "slurm_job_id": "189325",
+      "status": "pass",
+      "result_sha256": "a745a7c69248789e5d950db2a244913919a52b68e44ef9dd2a4e3dd4ab573c8d",
+      "article_count": 1,
+      "task_count": 7,
+      "event_count": 1,
+      "generation_rejection_count": 0
+    },
+    "cpu_one": {
+      "slurm_job_id": "189330",
+      "status": "pass",
+      "result_sha256": "4ff7713692207516b9425697d2895e7a9ccb48bc0446476aff34bff515e14b8c",
+      "article_count_succeeded": 1,
+      "failure_count": 0
+    },
+    "gpu_five": {
+      "slurm_job_id": "189333",
+      "status": "pass",
+      "result_sha256": "c7fc25ad4d384d644bbcc62ef3fdac5f8f8740bba222618025d3fde7b091d826",
+      "article_count": 5,
+      "task_count": 64,
+      "event_count": 4,
+      "generation_rejection_count": 0
+    },
+    "cpu_five": {
+      "slurm_job_id": "189352",
+      "status": "pass",
+      "result_sha256": "f113cfd2e5e555ef8eca850dabe81877df3a207a5a89a912c5b633065dd77725",
+      "article_count_succeeded": 5,
+      "failure_count": 0
+    },
+    "gpu_sixty": {
+      "slurm_job_id": "189353",
+      "status": "pass",
+      "result_sha256": "3ab390732c8636e49706ed81436f068c8ff622d19f86314dd37f1d48bb0289fb",
+      "article_count": 60,
+      "task_count": 740,
+      "task_count_classified": 740,
+      "classification_counts": {
+        "accepted": 670,
+        "accepted_with_evidence_rejections": 40,
+        "evidence_rejected": 30
+      },
+      "generation_rejection_count": 0,
+      "candidate_cap_hit_count": 7,
+      "candidate_cap_hit_classification_counts": {
+        "accepted_with_evidence_rejections": 4,
+        "evidence_rejected": 3
+      },
+      "event_count": 66,
+      "phase_counts": {
+        "equilibration": 27,
+        "heating": 5,
+        "minimisation": 4,
+        "production": 18,
+        "unknown": 12
+      },
+      "attribute_counts": {
+        "duration_ps": 51,
+        "ensemble": 3,
+        "pressure_bar": 13,
+        "temperature_k": 18,
+        "timestep_fs": 10
+      },
+      "slurm_elapsed_seconds": 280,
+      "generation_seconds": 220.64404009800637,
+      "prompt_tokens": 519604,
+      "completion_tokens": 79186,
+      "total_tokens": 598790,
+      "tokens_per_second": 2713.8281176052956,
+      "gpu_samples": 264,
+      "mean_gpu_utilization_percent": 81.35227272727273,
+      "max_gpu_utilization_percent": 100.0,
+      "max_memory_used_mib": 79907.0,
+      "max_power_draw_watts": 513.51,
+      "max_temperature_celsius": 61.0
+    },
+    "cpu_sixty": {
+      "slurm_job_id": "189371",
+      "status": "pass",
+      "result_sha256": "92261c643c568024f2328ed3a00e35e78fbd510fd6f37e94191b57b3ff118d9c",
+      "model_result_sha256": "3ab390732c8636e49706ed81436f068c8ff622d19f86314dd37f1d48bb0289fb",
+      "article_count_requested": 60,
+      "article_count_succeeded": 60,
+      "failure_count": 0,
+      "article_count_with_pdb": 31,
+      "unique_pdb_id_count": 62,
+      "validated_pdb_count": 64,
+      "unique_uniprot_accession_count": 69,
+      "validated_mapping_count": 92,
+      "residue_mapping_segment_count": 274,
+      "protocol_event_count": 66,
+      "sqlite_integrity": "ok",
+      "sqlite_foreign_key_violation_count": 0,
+      "portable_single_file_snapshot": true
+    }
+  },
+  "cross_run_reproducibility": {
+    "in_run_duplicate": {
+      "performed": true,
+      "identical": true
+    },
+    "gpu_one_to_gpu_five": {
+      "overlap_task_count": 7,
+      "response_sha256_difference_count": 1,
+      "classification_difference_count": 0,
+      "event_count_difference_count": 0
+    },
+    "gpu_five_to_gpu_sixty": {
+      "overlap_task_count": 64,
+      "response_sha256_difference_count": 3,
+      "classification_difference_count": 0,
+      "event_count_difference_count": 1,
+      "normalized_event_difference_task_count": 1
+    },
+    "interpretation": "temperature-zero inference was identical inside each duplicate call but was not bitwise deterministic across separate Slurm runs; classifications were stable for all repeated tasks and one of 64 five-to-sixty tasks retained one additional evidence-valid event"
+  },
+  "preserved_failure_lineage": [
+    {
+      "slurm_job_id": "187227",
+      "status": "fail",
+      "reason": "pre-v3 evidence validation yielded zero accepted events"
+    },
+    {
+      "slurm_job_id": "187984",
+      "status": "fail",
+      "source_commit_prefix": "5045f8a",
+      "reason": "response v2 run yielded zero accepted events"
+    },
+    {
+      "slurm_job_id": "188199",
+      "status": "fail",
+      "source_commit_prefix": "c24b3c3",
+      "reason": "prompt-only remediation still yielded zero accepted events"
+    },
+    {
+      "slurm_job_id": "188846",
+      "status": "fail",
+      "source_commit_prefix": "e77b9f9",
+      "reason": "one unclean response aborted a whole batch after 64 classified tasks"
+    },
+    {
+      "slurm_job_id": "189276",
+      "status": "fail",
+      "source_commit_prefix": "eb5533b",
+      "result_sha256": "fd77304bd633996cc8ba8d71b73291ff8c0521c8ac8d0e3276e412e8fc7a7a9e",
+      "task_count": 740,
+      "generation_rejection_count": 9,
+      "allowed_generation_rejection_count": 7,
+      "reason": "all nine unclean completions stopped at the 4096-token limit"
+    },
+    {
+      "slurm_job_id": "189318",
+      "status": "fail",
+      "source_commit_prefix": "e72381b",
+      "result_sha256": "8422fa6a0f858111c2a1c180832e7a46def6d22eaf12fb0c24c46c147ffe71c0",
+      "reason": "a numeric prompt hint encouraged one task to fill the 16-candidate cap and left zero accepted events"
+    }
+  ],
+  "independent_100": {
+    "completed_article_count": 0,
+    "target_article_count": 100,
+    "scale_article_count": 80,
+    "sealed_dual_human_gold_article_count": 20,
+    "status": "not_started",
+    "accuracy_claim_available": false
+  }
+}

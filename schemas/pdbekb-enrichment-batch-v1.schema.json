@@ -1,0 +1,366 @@
+{
+  "$defs": {
+    "PDBeKBAnnotationGroup": {
+      "additionalProperties": false,
+      "properties": {
+        "accession": {
+          "title": "Accession",
+          "type": "string"
+        },
+        "confidence_classifications": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Confidence Classifications",
+          "type": "array"
+        },
+        "covered_sequence_position_count": {
+          "minimum": 0,
+          "title": "Covered Sequence Position Count",
+          "type": "integer"
+        },
+        "data_type": {
+          "title": "Data Type",
+          "type": "string"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "pdb_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Pdb Ids",
+          "type": "array"
+        },
+        "residue_range_count": {
+          "minimum": 0,
+          "title": "Residue Range Count",
+          "type": "integer"
+        },
+        "resource_urls": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Resource Urls",
+          "type": "array"
+        }
+      },
+      "required": [
+        "name",
+        "accession",
+        "data_type",
+        "residue_range_count",
+        "covered_sequence_position_count"
+      ],
+      "title": "PDBeKBAnnotationGroup",
+      "type": "object"
+    },
+    "PDBeKBEndpointResult": {
+      "additionalProperties": false,
+      "properties": {
+        "attempts": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Attempts",
+          "type": "integer"
+        },
+        "cache_hit": {
+          "default": false,
+          "title": "Cache Hit",
+          "type": "boolean"
+        },
+        "endpoint": {
+          "title": "Endpoint",
+          "type": "string"
+        },
+        "http_status": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Http Status"
+        },
+        "reason": {
+          "title": "Reason",
+          "type": "string"
+        },
+        "request_log": {
+          "items": {
+            "$ref": "#/$defs/RequestAttempt"
+          },
+          "title": "Request Log",
+          "type": "array"
+        },
+        "response_sha256": {
+          "anyOf": [
+            {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Response Sha256"
+        },
+        "state": {
+          "$ref": "#/$defs/ValidationState"
+        }
+      },
+      "required": [
+        "state",
+        "endpoint",
+        "reason"
+      ],
+      "title": "PDBeKBEndpointResult",
+      "type": "object"
+    },
+    "PDBeKBEnrichment": {
+      "additionalProperties": false,
+      "properties": {
+        "accession": {
+          "title": "Accession",
+          "type": "string"
+        },
+        "annotation_groups": {
+          "items": {
+            "$ref": "#/$defs/PDBeKBAnnotationGroup"
+          },
+          "title": "Annotation Groups",
+          "type": "array"
+        },
+        "annotation_result": {
+          "$ref": "#/$defs/PDBeKBEndpointResult"
+        },
+        "partner_result": {
+          "$ref": "#/$defs/PDBeKBEndpointResult"
+        },
+        "partners": {
+          "items": {
+            "$ref": "#/$defs/PDBeKBPartner"
+          },
+          "title": "Partners",
+          "type": "array"
+        },
+        "sequence_length": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Sequence Length"
+        },
+        "state": {
+          "$ref": "#/$defs/ValidationState"
+        }
+      },
+      "required": [
+        "accession",
+        "state",
+        "annotation_result",
+        "partner_result"
+      ],
+      "title": "PDBeKBEnrichment",
+      "type": "object"
+    },
+    "PDBeKBPartner": {
+      "additionalProperties": false,
+      "properties": {
+        "annotation_category": {
+          "title": "Annotation Category",
+          "type": "string"
+        },
+        "resource_name": {
+          "title": "Resource Name",
+          "type": "string"
+        },
+        "url": {
+          "title": "Url",
+          "type": "string"
+        }
+      },
+      "required": [
+        "resource_name",
+        "url",
+        "annotation_category"
+      ],
+      "title": "PDBeKBPartner",
+      "type": "object"
+    },
+    "RequestAttempt": {
+      "additionalProperties": false,
+      "properties": {
+        "attempt": {
+          "minimum": 0,
+          "title": "Attempt",
+          "type": "integer"
+        },
+        "error_type": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Error Type"
+        },
+        "http_status": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Http Status"
+        },
+        "outcome": {
+          "enum": [
+            "cache",
+            "response",
+            "network_error"
+          ],
+          "title": "Outcome",
+          "type": "string"
+        },
+        "retry_after_seconds": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Retry After Seconds"
+        }
+      },
+      "required": [
+        "attempt",
+        "outcome"
+      ],
+      "title": "RequestAttempt",
+      "type": "object"
+    },
+    "ValidationState": {
+      "enum": [
+        "validated",
+        "conflict",
+        "unresolved",
+        "not_applicable"
+      ],
+      "title": "ValidationState",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "annotation_group_count": {
+      "minimum": 0,
+      "title": "Annotation Group Count",
+      "type": "integer"
+    },
+    "annotation_residue_range_count": {
+      "minimum": 0,
+      "title": "Annotation Residue Range Count",
+      "type": "integer"
+    },
+    "content_commitment_sha256": {
+      "pattern": "^[0-9a-f]{64}$",
+      "title": "Content Commitment Sha256",
+      "type": "string"
+    },
+    "enrichments": {
+      "items": {
+        "$ref": "#/$defs/PDBeKBEnrichment"
+      },
+      "title": "Enrichments",
+      "type": "array"
+    },
+    "generated_at": {
+      "format": "date-time",
+      "title": "Generated At",
+      "type": "string"
+    },
+    "linked_pdb_id_count": {
+      "minimum": 0,
+      "title": "Linked Pdb Id Count",
+      "type": "integer"
+    },
+    "partner_count": {
+      "minimum": 0,
+      "title": "Partner Count",
+      "type": "integer"
+    },
+    "requested_accessions": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Requested Accessions",
+      "type": "array"
+    },
+    "schema_version": {
+      "const": "pdbekb-enrichment-batch-v1",
+      "default": "pdbekb-enrichment-batch-v1",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "source_article_count": {
+      "minimum": 0,
+      "title": "Source Article Count",
+      "type": "integer"
+    },
+    "source_database_schema_version": {
+      "minimum": 1,
+      "title": "Source Database Schema Version",
+      "type": "integer"
+    },
+    "source_database_sha256": {
+      "pattern": "^[0-9a-f]{64}$",
+      "title": "Source Database Sha256",
+      "type": "string"
+    },
+    "state_counts": {
+      "additionalProperties": {
+        "type": "integer"
+      },
+      "title": "State Counts",
+      "type": "object"
+    }
+  },
+  "required": [
+    "source_database_sha256",
+    "source_database_schema_version",
+    "source_article_count",
+    "requested_accessions",
+    "enrichments",
+    "state_counts",
+    "annotation_group_count",
+    "annotation_residue_range_count",
+    "partner_count",
+    "linked_pdb_id_count",
+    "content_commitment_sha256"
+  ],
+  "title": "PDBeKBBatchReport",
+  "type": "object"
+}

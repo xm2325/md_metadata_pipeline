@@ -1,0 +1,57 @@
+name: Python security gates
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    paths:
+      - .github/workflows/security.yml
+      - .github/workflows/container-release.yml
+      - .github/workflows/server-readiness.yml
+      - constraints/**
+      - Dockerfile
+      - pyproject.toml
+      - scripts/check_runtime_lock.py
+      - src/**
+      - tests/test_runtime_lock.py
+  schedule:
+    - cron: "17 4 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
+
+jobs:
+  python-security:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: "3.12.13"
+          cache: pip
+          cache-dependency-path: |
+            constraints/runtime.txt
+            constraints/security.txt
+      - name: Validate exact production constraints
+        run: python scripts/check_runtime_lock.py
+      - name: Install exact top-level security tools
+        run: python -m pip install -r constraints/security.txt
+      - name: Audit production Python dependencies
+        run: >-
+          python -m pip_audit
+          --strict
+          --progress-spinner off
+          --requirement constraints/runtime.txt
+      - name: Scan application source with Bandit
+        run: python -m bandit -r src/mdmeta -ll -ii
+
+# Secret-history and container-CVE jobs intentionally remain absent until their
+# third-party scanners can be verified and pinned to full immutable SHAs.

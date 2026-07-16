@@ -1,0 +1,459 @@
+{
+  "$defs": {
+    "HumanReviewItem": {
+      "additionalProperties": false,
+      "properties": {
+        "audit_sample": {
+          "default": false,
+          "title": "Audit Sample",
+          "type": "boolean"
+        },
+        "document_id": {
+          "minLength": 1,
+          "title": "Document Id",
+          "type": "string"
+        },
+        "priority_score": {
+          "maximum": 100,
+          "minimum": 0,
+          "title": "Priority Score",
+          "type": "integer"
+        },
+        "review_prompts": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Review Prompts",
+          "type": "array"
+        },
+        "review_reasons": {
+          "items": {
+            "$ref": "#/$defs/ReviewReason"
+          },
+          "title": "Review Reasons",
+          "type": "array"
+        },
+        "review_tier": {
+          "$ref": "#/$defs/ReviewTier"
+        },
+        "second_review_triggers": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Second Review Triggers",
+          "type": "array"
+        },
+        "source_uri": {
+          "title": "Source Uri",
+          "type": "string"
+        },
+        "title": {
+          "title": "Title",
+          "type": "string"
+        }
+      },
+      "required": [
+        "document_id",
+        "title",
+        "source_uri",
+        "review_tier",
+        "priority_score",
+        "review_reasons",
+        "review_prompts",
+        "second_review_triggers"
+      ],
+      "title": "HumanReviewItem",
+      "type": "object"
+    },
+    "HumanReviewPolicy": {
+      "additionalProperties": false,
+      "description": "Versioned policy separating production triage from reference annotation.",
+      "properties": {
+        "audit_salt": {
+          "default": "mdmeta-production-audit-v1",
+          "minLength": 1,
+          "title": "Audit Salt",
+          "type": "string"
+        },
+        "audit_sample_rate": {
+          "default": 0.05,
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Audit Sample Rate",
+          "type": "number"
+        },
+        "confidence_threshold": {
+          "default": 0.8,
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Confidence Threshold",
+          "type": "number"
+        },
+        "policy_version": {
+          "const": "mdmeta-risk-review-policy-v1",
+          "default": "mdmeta-risk-review-policy-v1",
+          "title": "Policy Version",
+          "type": "string"
+        },
+        "purpose": {
+          "$ref": "#/$defs/ReviewPurpose",
+          "default": "production_triage"
+        },
+        "require_pdbekb": {
+          "default": true,
+          "title": "Require Pdbekb",
+          "type": "boolean"
+        },
+        "single_value_fields": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Single Value Fields",
+          "type": "array"
+        }
+      },
+      "title": "HumanReviewPolicy",
+      "type": "object"
+    },
+    "ReviewEvidenceBinding": {
+      "additionalProperties": false,
+      "description": "Minimal locator for review; deliberately excludes evidence quotes and payloads.",
+      "properties": {
+        "context_sha256": {
+          "anyOf": [
+            {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Context Sha256"
+        },
+        "end_char": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "End Char"
+        },
+        "endpoint": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Endpoint"
+        },
+        "event_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Event Id"
+        },
+        "field": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Field"
+        },
+        "identifier": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Identifier"
+        },
+        "paragraph_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Paragraph Id"
+        },
+        "report_commitment_sha256": {
+          "anyOf": [
+            {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Report Commitment Sha256"
+        },
+        "source": {
+          "enum": [
+            "literature_fact",
+            "protocol_event",
+            "identifier_validation",
+            "mapping_discovery",
+            "residue_mapping",
+            "pdbekb",
+            "completeness",
+            "model_batch",
+            "policy"
+          ],
+          "title": "Source",
+          "type": "string"
+        },
+        "start_char": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Start Char"
+        },
+        "state": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "State"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Value"
+        }
+      },
+      "required": [
+        "source"
+      ],
+      "title": "ReviewEvidenceBinding",
+      "type": "object"
+    },
+    "ReviewPurpose": {
+      "enum": [
+        "production_triage",
+        "benchmark_reference"
+      ],
+      "title": "ReviewPurpose",
+      "type": "string"
+    },
+    "ReviewReason": {
+      "additionalProperties": false,
+      "properties": {
+        "category": {
+          "enum": [
+            "extraction",
+            "evidence",
+            "external_validation",
+            "residue_mapping",
+            "coverage",
+            "pdbekb",
+            "quality_control",
+            "benchmark"
+          ],
+          "title": "Category",
+          "type": "string"
+        },
+        "code": {
+          "minLength": 1,
+          "title": "Code",
+          "type": "string"
+        },
+        "evidence_bindings": {
+          "items": {
+            "$ref": "#/$defs/ReviewEvidenceBinding"
+          },
+          "title": "Evidence Bindings",
+          "type": "array"
+        },
+        "review_prompt": {
+          "minLength": 1,
+          "title": "Review Prompt",
+          "type": "string"
+        },
+        "severity": {
+          "$ref": "#/$defs/ReviewSeverity"
+        },
+        "summary": {
+          "minLength": 1,
+          "title": "Summary",
+          "type": "string"
+        }
+      },
+      "required": [
+        "code",
+        "category",
+        "severity",
+        "summary",
+        "review_prompt"
+      ],
+      "title": "ReviewReason",
+      "type": "object"
+    },
+    "ReviewSeverity": {
+      "enum": [
+        "routine",
+        "elevated",
+        "critical"
+      ],
+      "title": "ReviewSeverity",
+      "type": "string"
+    },
+    "ReviewTier": {
+      "enum": [
+        "auto_accept",
+        "single_review",
+        "dual_independent"
+      ],
+      "title": "ReviewTier",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "content_commitment_sha256": {
+      "pattern": "^[0-9a-f]{64}$",
+      "title": "Content Commitment Sha256",
+      "type": "string"
+    },
+    "implementation_git_commit": {
+      "pattern": "^[0-9a-f]{40}$",
+      "title": "Implementation Git Commit",
+      "type": "string"
+    },
+    "items": {
+      "items": {
+        "$ref": "#/$defs/HumanReviewItem"
+      },
+      "title": "Items",
+      "type": "array"
+    },
+    "model_summary_sha256": {
+      "anyOf": [
+        {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Model Summary Sha256"
+    },
+    "policy": {
+      "$ref": "#/$defs/HumanReviewPolicy"
+    },
+    "review_reason_counts": {
+      "additionalProperties": {
+        "type": "integer"
+      },
+      "title": "Review Reason Counts",
+      "type": "object"
+    },
+    "review_tier_counts": {
+      "additionalProperties": {
+        "type": "integer"
+      },
+      "title": "Review Tier Counts",
+      "type": "object"
+    },
+    "schema_version": {
+      "const": "mdmeta-human-review-queue-v1",
+      "default": "mdmeta-human-review-queue-v1",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "software_version": {
+      "minLength": 1,
+      "title": "Software Version",
+      "type": "string"
+    },
+    "source_article_count": {
+      "minimum": 0,
+      "title": "Source Article Count",
+      "type": "integer"
+    },
+    "source_database_schema_version": {
+      "const": 2,
+      "default": 2,
+      "title": "Source Database Schema Version",
+      "type": "integer"
+    },
+    "source_database_sha256": {
+      "pattern": "^[0-9a-f]{64}$",
+      "title": "Source Database Sha256",
+      "type": "string"
+    }
+  },
+  "required": [
+    "source_database_sha256",
+    "source_article_count",
+    "software_version",
+    "implementation_git_commit",
+    "policy",
+    "items",
+    "review_tier_counts",
+    "review_reason_counts",
+    "content_commitment_sha256"
+  ],
+  "title": "HumanReviewQueue",
+  "type": "object"
+}

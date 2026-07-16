@@ -1,0 +1,99 @@
+{
+  "accepted_audit_file_sha256": "ab4f6fc8a799aec35c5fdb177f67e82fba1482935ac1df9931a80eb820340eca",
+  "accepted_audit_sha256": "62d9c0063a47c0b86a52723a2262c72116f5902c0997c32ee49cf9e5ff57f5ea",
+  "audit_job_id": 185845,
+  "decision_key_sha256": "64faec325f62728594cba726910561356e713fef5737a68a5afdb2631c0b56e6",
+  "failed_stage_job_ids": [
+    185329,
+    185656
+  ],
+  "full_text_included": false,
+  "fulltext_screen_file_sha256": "3cfcfeb7c74e4beb3d4b7bd69c9ff97c2f837a78314a2e71fc3c38ae1353b877",
+  "fulltext_screen_sha256": "e0ee9603978d511bed049abea027ac039f478a0bf6ea8e47bc92bee38eb49e1a",
+  "generated_at": "2026-07-15T20:14:57.889379Z",
+  "invariants": {
+    "article_count": 60,
+    "first_n_currently_valid_original_reserves": true,
+    "positions_preserved": true,
+    "selection_parent_is_original_manifest": true,
+    "split_counts": {
+      "development": 30,
+      "locked_test": 20,
+      "validation": 10
+    },
+    "unique_document_ids": true
+  },
+  "model_output_used": false,
+  "new_manifest_sha256": "b73387925f866162c42863aa7957c759c1404b5ed9229c8d6b57ed4707a2bdfe",
+  "output_manifest_created": true,
+  "private_paths_recorded": false,
+  "provisional_plan_file_sha256": "49f2608deff0641a47c87e7be4e65c1d34f2df33f63b8dc218797f12a52b3737",
+  "provisional_plan_sha256": "1dcbab03ddb447a6aad2a7be2f54277912f3cad05d1f426b13d226de695e012b",
+  "rebuild_generation": 1,
+  "rebuild_job_id": 187089,
+  "rebuild_policy": "all_drifted_positions_to_first_n_currently_valid_original_reserves.v1",
+  "replacement_count": 2,
+  "replacements": [
+    {
+      "new": {
+        "classification": "current_exact_match",
+        "document_id": "PMC6994855",
+        "full_text_sha256": "169ced75f7adf4ed9ab18bf28ec08ecd8ab76414dd81367ae9f277702ddc5a4d",
+        "original_reserve_rank": 1,
+        "xml_size_bytes": 87028
+      },
+      "old": {
+        "classification": "frozen_payload_drift",
+        "document_id": "PMC6316748",
+        "frozen_full_text_sha256": "cdbfd10f7e85a4042ebda7317b06cf963061f05e00d99168c03a5ed7e03a337d",
+        "frozen_size_bytes": 105780,
+        "observed_current_full_text_sha256": "51d20c7e8b35720e9150d2118d274cf2e5048a64fdaf7905552210530a87d52a",
+        "observed_current_size_bytes": 102369
+      },
+      "position": 1,
+      "split": "development"
+    },
+    {
+      "new": {
+        "classification": "current_exact_match",
+        "document_id": "PMC7603383",
+        "full_text_sha256": "8684fec5432ca305f1c3960fca5ae1432f4bcc6b67086669f294344c14eccd8c",
+        "original_reserve_rank": 2,
+        "xml_size_bytes": 115199
+      },
+      "old": {
+        "classification": "frozen_payload_drift",
+        "document_id": "PMC6423238",
+        "frozen_full_text_sha256": "84f16b7c412c5f233fca4fe46346bf0ae8e21cea5b0f14df0fac9f9bbce60c30",
+        "frozen_size_bytes": 103808,
+        "observed_current_full_text_sha256": "726228d1c9f293b5703b01cbe8f7b0e806bf384dbadc841a91f02349bdbf5b37",
+        "observed_current_size_bytes": 112203
+      },
+      "position": 42,
+      "split": "locked_test"
+    }
+  ],
+  "report_sha256": "1bae366076d02f606238424796957576d56d15e5727d4ee37ef5f324bec5a491",
+  "schema_version": "mdmeta.frozen-source-multi-rebuild-report.v1",
+  "selection_parent_manifest_file_sha256": "252174ea1f6936287b71cde78787e310564b81736148d19eeb6b325f21e15b2d",
+  "selection_parent_manifest_sha256": "03f4bc46caf60071db8dc9fca63e0ddf9a7734ac3232a87737d6d32f7630a7a6",
+  "source_archive_sha256": "79e8ef5f7a168885b083dcad8c0466d79e2f05cb6e93f6ca97ed389aa830aa76",
+  "source_commit": "c5f3018f686c0adf8ed212b7c71b3a3decf87ec5",
+  "source_workflow_artifact_digest": "sha256:470bb9fb223703413a3e0f287ce410adcdb9e5c7ea09c1d3bd15687437ef0966",
+  "source_workflow_artifact_id": 8225494475,
+  "source_workflow_run": 29087844703,
+  "status": "pass",
+  "study_id": "mdmeta-provisional-temporal-screened-60-v1",
+  "superseded_remediations": [
+    {
+      "failed_stage_job_id": 185329,
+      "manifest_file_sha256": "404a43cd1297b8803f75d4a50d356887adbecdd7cdc0b29d6d1fe196e1cb6a23",
+      "manifest_sha256": "b88942f8959fe85ca18b3fe333d9a4fc06aef93a1103a080a6c6ad3ff9aac96b",
+      "status": "superseded_by_complete_pool_rebuild",
+      "substitution_job_id": 185650,
+      "substitution_report_file_sha256": "81695496dda707dcb715b90877123a5030eed3793a8027c7c123b9d0eca51fa4",
+      "substitution_report_sha256": "e1987d67e5aef0b51f80047970efcb501a9faa3f14116e946ac3a9423193086b"
+    }
+  ],
+  "unchanged_article_count": 58
+}

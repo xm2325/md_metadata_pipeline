@@ -10,6 +10,8 @@ from typing import Any, Callable
 
 import httpx
 
+from mdmeta import user_agent
+
 DEFAULT_QUERY = (
     'OPEN_ACCESS:Y AND HAS_FT:Y AND '
     '(TITLE_ABS:"molecular dynamics" OR TITLE_ABS:"MD simulation")'
@@ -113,7 +115,7 @@ def query_articles(
     articles: list[dict[str, Any]] = []
     pages: list[dict[str, Any]] = []
     cursor = "*"
-    headers = {"User-Agent": "md-metadata-pipeline/0.7 confirmatory-corpus"}
+    headers = {"User-Agent": user_agent("confirmatory-corpus")}
     with httpx.Client(timeout=timeout, headers=headers, follow_redirects=True) as client:
         while len(articles) < max_candidates:
             response = _get_page_with_retry(

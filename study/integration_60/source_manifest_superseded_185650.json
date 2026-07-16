@@ -1,0 +1,405 @@
+{
+  "articles": [
+    {
+      "document_id": "PMC6994855",
+      "full_text_sha256": "169ced75f7adf4ed9ab18bf28ec08ecd8ab76414dd81367ae9f277702ddc5a4d",
+      "source_uri": "https://europepmc.org/articles/PMC6994855",
+      "split": "development"
+    },
+    {
+      "document_id": "PMC7560594",
+      "full_text_sha256": "a0ee20a463074aea0d258a01a1a899898edf430a18fb10986d4385c8f0595abe",
+      "source_uri": "https://europepmc.org/articles/PMC7560594",
+      "split": "development"
+    },
+    {
+      "document_id": "PMC6962038",
+      "full_text_sha256": "3fa338d628c4332b76c9e5dbfe4f951f91e854b404b8ffea7c84251750f7edf2",
+      "source_uri": "https://europepmc.org/articles/PMC6962038",
+      "split": "development"
+    },
+    {
+      "document_id": "PMC7439393",
+      "full_text_sha256": "330a23501d6735f22497e071aeddc89f01294e15b277f53389f85216eb21f753",
+      "source_uri": "https://europepmc.org/articles/PMC7439393",
+      "split": "development"
+    },
+    {
+      "document_id": "PMC5743237",
+      "full_text_sha256": "4a35ad125ad35b51d674143ee9c4f0eda3d7c931f8796d15061b4048c8d448ba",
+      "source_uri": "https://europepmc.org/articles/PMC5743237",
+      "split": "development"
+    },
+    {
+      "document_id": "PMC6843686",
+      "full_text_sha256": "66dd7c2b341fce24cd7eafebc3d2566c0b261620368ba6348af434f33622ce89",
+      "source_uri": "https://europepmc.org/articles/PMC6843686",
+      "split": "development"
+    },
+    {
+      "document_id": "PMC6977751",
+      "full_text_sha256": "a216f610ff9919f03d8b661de2c1ca77943920c81507a710694146e392f80816",
+      "source_uri": "https://europepmc.org/articles/PMC6977751",
+      "split": "development"
+    },
+    {
+      "document_id": "PMC7563791",
+      "full_text_sha256": "559607b8d47465d187066e80a461352aa1a751160c5e6149c20763ee50d413a8",
+      "source_uri": "https://europepmc.org/articles/PMC7563791",
+      "split": "development"
+    },
+    {
+      "document_id": "PMC7504379",
+      "full_text_sha256": "876a5ff4f9ff8360c8eba289f1c6e638e0a66934bf2d33feff3b4c576b7be109",
+      "source_uri": "https://europepmc.org/articles/PMC7504379",
+      "split": "development"
+    },
+    {
+      "document_id": "PMC7599640",
+      "full_text_sha256": "22ada6a6f21cf3b0346ae2a86839a0a78ae55fe6350794447e1304d2e3f58372",
+      "source_uri": "https://europepmc.org/articles/PMC7599640",
+      "split": "development"
+    },
+    {
+      "document_id": "PMC7650771",
+      "full_text_sha256": "0fb3502d9e417d4ac6f19045aa423055be4e1334c4af5ad5f2c904dab462e88b",
+      "source_uri": "https://europepmc.org/articles/PMC7650771",
+      "split": "development"
+    },
+    {
+      "document_id": "PMC7341691",
+      "full_text_sha256": "e988b6c34fd134a23f81dabb8ea1f8bb72f62564ce5d44eafa96d057ca4bbac5",
+      "source_uri": "https://europepmc.org/articles/PMC7341691",
+      "split": "development"
+    },
+    {
+      "document_id": "PMC8015004",
+      "full_text_sha256": "63c21c88f26a5ccaa0fac1ddc87fbcdcb95192cf7cba6b3f38487d43ae62cd70",
+      "source_uri": "https://europepmc.org/articles/PMC8015004",
+      "split": "development"
+    },
+    {
+      "document_id": "PMC7496166",
+      "full_text_sha256": "8249325f27a7d041dfabe9c383889833e4f31760161526fcd1927099ecb56035",
+      "source_uri": "https://europepmc.org/articles/PMC7496166",
+      "split": "development"
+    },
+    {
+      "document_id": "PMC7333769",
+      "full_text_sha256": "ff591bbbe548996e480fab2be2938980d40e94a2743dceacf173e8bbaccb7182",
+      "source_uri": "https://europepmc.org/articles/PMC7333769",
+      "split": "development"
+    },
+    {
+      "document_id": "PMC7679957",
+      "full_text_sha256": "792ae582c4ee4de5385a802aca176e2d2bcbad47254d4dd92cf1ddfbf41c89d0",
+      "source_uri": "https://europepmc.org/articles/PMC7679957",
+      "split": "development"
+    },
+    {
+      "document_id": "PMC4835421",
+      "full_text_sha256": "049777ed1311e3cf4e29d15ab783cfffd2584a88ef178e782383c78b17d37c03",
+      "source_uri": "https://europepmc.org/articles/PMC4835421",
+      "split": "development"
+    },
+    {
+      "document_id": "PMC6222312",
+      "full_text_sha256": "a9f7f2c3c38d8cb5791196c9bfc00cfbe67fa76040889f3e79ce60c818612fa5",
+      "source_uri": "https://europepmc.org/articles/PMC6222312",
+      "split": "development"
+    },
+    {
+      "document_id": "PMC6808499",
+      "full_text_sha256": "4c7fd49987826e001417c15f411716cc065dfc6d5906d831e131378bfb5b8cf3",
+      "source_uri": "https://europepmc.org/articles/PMC6808499",
+      "split": "development"
+    },
+    {
+      "document_id": "PMC7290946",
+      "full_text_sha256": "86f427b65b56bdb66bff9a4c6bf982253538f6f75d745cb462c7a770fe24c49a",
+      "source_uri": "https://europepmc.org/articles/PMC7290946",
+      "split": "development"
+    },
+    {
+      "document_id": "PMC5735144",
+      "full_text_sha256": "b21750b6b4f21445c944dadef7d1ea36deac657d19f1ce5e0f370329a78b046d",
+      "source_uri": "https://europepmc.org/articles/PMC5735144",
+      "split": "development"
+    },
+    {
+      "document_id": "PMC7338781",
+      "full_text_sha256": "858f0d1cde5228bad7d41243eb9dd97fa929e2dca03b8ff1d74cf967f27f07db",
+      "source_uri": "https://europepmc.org/articles/PMC7338781",
+      "split": "development"
+    },
+    {
+      "document_id": "PMC5680715",
+      "full_text_sha256": "300337945032f42df82062ff3a9e76dafaaf126fcb534f6cb25afb9578253430",
+      "source_uri": "https://europepmc.org/articles/PMC5680715",
+      "split": "development"
+    },
+    {
+      "document_id": "PMC9074135",
+      "full_text_sha256": "ef222898036f2400437f1c105ca95985e93995922ccf563279592951b19db2ad",
+      "source_uri": "https://europepmc.org/articles/PMC9074135",
+      "split": "development"
+    },
+    {
+      "document_id": "PMC5632872",
+      "full_text_sha256": "49b88d921b1fe6929c562ea064ea46d2910435944fd2bb149e0d19466449cf79",
+      "source_uri": "https://europepmc.org/articles/PMC5632872",
+      "split": "development"
+    },
+    {
+      "document_id": "PMC6235531",
+      "full_text_sha256": "6dde0c0413d0f95fac467f62296d8194a20c8316398804e052ff94366962cd8d",
+      "source_uri": "https://europepmc.org/articles/PMC6235531",
+      "split": "development"
+    },
+    {
+      "document_id": "PMC7065745",
+      "full_text_sha256": "c549a788768b9568d62af926c6753c4db6b52468320018ce80266e115ab77f5f",
+      "source_uri": "https://europepmc.org/articles/PMC7065745",
+      "split": "development"
+    },
+    {
+      "document_id": "PMC6928090",
+      "full_text_sha256": "cb66e35c0a78f69a9ceaff996a0b65b1d67c97464d6f2fd440f830bd72346859",
+      "source_uri": "https://europepmc.org/articles/PMC6928090",
+      "split": "development"
+    },
+    {
+      "document_id": "PMC8179138",
+      "full_text_sha256": "f2997eea79473795df1f6e9943367de525a68b10515daa36bdb7467853541550",
+      "source_uri": "https://europepmc.org/articles/PMC8179138",
+      "split": "development"
+    },
+    {
+      "document_id": "PMC7478258",
+      "full_text_sha256": "33599b029d83469adcd458bbba3c478acb959c7cd3caee82924c77b023b0add3",
+      "source_uri": "https://europepmc.org/articles/PMC7478258",
+      "split": "development"
+    },
+    {
+      "document_id": "PMC7590620",
+      "full_text_sha256": "768ac3e73a54a6a87eb571fa120a3d2e64beae4660e747263501b2cb2fcc136f",
+      "source_uri": "https://europepmc.org/articles/PMC7590620",
+      "split": "validation"
+    },
+    {
+      "document_id": "PMC9055499",
+      "full_text_sha256": "ba2d072a22e20ed672e180d82d84713623460fef028b77304ab5202454da2a64",
+      "source_uri": "https://europepmc.org/articles/PMC9055499",
+      "split": "validation"
+    },
+    {
+      "document_id": "PMC8039493",
+      "full_text_sha256": "3d003b3b8448237fc85b44f7dcd38194016665e01ee27d43739648f43d86897d",
+      "source_uri": "https://europepmc.org/articles/PMC8039493",
+      "split": "validation"
+    },
+    {
+      "document_id": "PMC9048594",
+      "full_text_sha256": "f8a708fc0cf4db254fa67b224921f72e167ef8fe84b387b185e991de6d2b3fc4",
+      "source_uri": "https://europepmc.org/articles/PMC9048594",
+      "split": "validation"
+    },
+    {
+      "document_id": "PMC7345908",
+      "full_text_sha256": "2101543eec75c5228eb61965c6b087d68fac4e4015db8240d2ff436563f05c63",
+      "source_uri": "https://europepmc.org/articles/PMC7345908",
+      "split": "validation"
+    },
+    {
+      "document_id": "PMC7408236",
+      "full_text_sha256": "ed0d14381d5f70db1db7d048a5d8f0e5393a749c864c026fe54f2111182e032d",
+      "source_uri": "https://europepmc.org/articles/PMC7408236",
+      "split": "validation"
+    },
+    {
+      "document_id": "PMC7407137",
+      "full_text_sha256": "ffce95132ed6dbd4c0152fd6ae4c4c953a4069e9a154053e1be2ecf0bcf342f7",
+      "source_uri": "https://europepmc.org/articles/PMC7407137",
+      "split": "validation"
+    },
+    {
+      "document_id": "PMC6222447",
+      "full_text_sha256": "572f0b831328123ce3755f49eb5038ec81c1f171fdb1197dfbcf5e6b0944c2ff",
+      "source_uri": "https://europepmc.org/articles/PMC6222447",
+      "split": "validation"
+    },
+    {
+      "document_id": "PMC6691143",
+      "full_text_sha256": "54b62c4d79ac7ada3598a153a9dc4912c1660732c0a53664f24adafed26b4b13",
+      "source_uri": "https://europepmc.org/articles/PMC6691143",
+      "split": "validation"
+    },
+    {
+      "document_id": "PMC7190701",
+      "full_text_sha256": "b6c3af0edbb02fed6b77fd19e6b174ef931fe1ad99bb1db80b8385b6388951ff",
+      "source_uri": "https://europepmc.org/articles/PMC7190701",
+      "split": "validation"
+    },
+    {
+      "document_id": "PMC6695286",
+      "full_text_sha256": "b19f086a33ba83cfeacbc2b5f2e05efeea40006f1c4e03992612b21cbdd0ae3b",
+      "source_uri": "https://europepmc.org/articles/PMC6695286",
+      "split": "locked_test"
+    },
+    {
+      "document_id": "PMC6423238",
+      "full_text_sha256": "84f16b7c412c5f233fca4fe46346bf0ae8e21cea5b0f14df0fac9f9bbce60c30",
+      "source_uri": "https://europepmc.org/articles/PMC6423238",
+      "split": "locked_test"
+    },
+    {
+      "document_id": "PMC7690218",
+      "full_text_sha256": "23cca6efec8fc4f1192b2c9f02b8c9bcc1ea98d0978ae0833156565952891a87",
+      "source_uri": "https://europepmc.org/articles/PMC7690218",
+      "split": "locked_test"
+    },
+    {
+      "document_id": "PMC6956055",
+      "full_text_sha256": "d7ec913e331761c4b5a0b1672f88f581fe7907296b94a68b8e18d08c722ac5ab",
+      "source_uri": "https://europepmc.org/articles/PMC6956055",
+      "split": "locked_test"
+    },
+    {
+      "document_id": "PMC6045391",
+      "full_text_sha256": "e7b75d41add40d72529b1fab6fb42b2a83453c97eee36e309b79d9ff5f56ef7c",
+      "source_uri": "https://europepmc.org/articles/PMC6045391",
+      "split": "locked_test"
+    },
+    {
+      "document_id": "PMC6794311",
+      "full_text_sha256": "4ca4e768f60d993304dcb26ed60d107e72e81abc5d05fecc219ffb77d9446104",
+      "source_uri": "https://europepmc.org/articles/PMC6794311",
+      "split": "locked_test"
+    },
+    {
+      "document_id": "PMC7387922",
+      "full_text_sha256": "a4c1ffa2bdd2700617f6b0aa9b5ad2f0bd53efb084a98fed3066d7025c5e4e23",
+      "source_uri": "https://europepmc.org/articles/PMC7387922",
+      "split": "locked_test"
+    },
+    {
+      "document_id": "PMC7005706",
+      "full_text_sha256": "4c68d70a44c7f65835f3d150a70565e84fcd0ac9b85e5250b4e8bc59831cdece",
+      "source_uri": "https://europepmc.org/articles/PMC7005706",
+      "split": "locked_test"
+    },
+    {
+      "document_id": "PMC7587340",
+      "full_text_sha256": "644f12e3dcb842a1f6ee9237eadb0579b2c6efc48b51588afb96c95933307dd3",
+      "source_uri": "https://europepmc.org/articles/PMC7587340",
+      "split": "locked_test"
+    },
+    {
+      "document_id": "PMC6722442",
+      "full_text_sha256": "389a5ba81e5f5e8bb0ce1425f9e59bfc95fdcfe048e65c69ba51e87ff0f2dede",
+      "source_uri": "https://europepmc.org/articles/PMC6722442",
+      "split": "locked_test"
+    },
+    {
+      "document_id": "PMC9052371",
+      "full_text_sha256": "04636b6104bed4dd60a2ec24c066868e72514f63c1134e7ad64c76057df7b8e1",
+      "source_uri": "https://europepmc.org/articles/PMC9052371",
+      "split": "locked_test"
+    },
+    {
+      "document_id": "PMC7219429",
+      "full_text_sha256": "2fe1eaf102170b8e1a4336bb38b571a93d01d57af49631f051dc9876dade6ae8",
+      "source_uri": "https://europepmc.org/articles/PMC7219429",
+      "split": "locked_test"
+    },
+    {
+      "document_id": "PMC7729015",
+      "full_text_sha256": "21d135d7dbcd973404a51de7d2ef55c99e13f48c46c26ce188ccbd50a24a0bf4",
+      "source_uri": "https://europepmc.org/articles/PMC7729015",
+      "split": "locked_test"
+    },
+    {
+      "document_id": "PMC8148638",
+      "full_text_sha256": "b8b68348cf1be6af1f16b7235300ee34685415f3627d687b62fe5b91159457cd",
+      "source_uri": "https://europepmc.org/articles/PMC8148638",
+      "split": "locked_test"
+    },
+    {
+      "document_id": "PMC4979035",
+      "full_text_sha256": "c60ebd601377ab31cb465dfb99ad3436a4825fe4126958f82b36f821e495f660",
+      "source_uri": "https://europepmc.org/articles/PMC4979035",
+      "split": "locked_test"
+    },
+    {
+      "document_id": "PMC7550916",
+      "full_text_sha256": "8b795935c5cfec47b842164815753eb33cab25f06ba44d8cc676f20d81fd0d4f",
+      "source_uri": "https://europepmc.org/articles/PMC7550916",
+      "split": "locked_test"
+    },
+    {
+      "document_id": "PMC7249184",
+      "full_text_sha256": "3e0d7dab0c3d22162e578a4fcefeb1f24667d39ccfd7d38768bacc6b048acca2",
+      "source_uri": "https://europepmc.org/articles/PMC7249184",
+      "split": "locked_test"
+    },
+    {
+      "document_id": "PMC5829097",
+      "full_text_sha256": "342f5d588bd73a9869134b54fc10d7a0d8537ee2ea7459ff593d07290856b418",
+      "source_uri": "https://europepmc.org/articles/PMC5829097",
+      "split": "locked_test"
+    },
+    {
+      "document_id": "PMC6530890",
+      "full_text_sha256": "cc0af9104741d6df94189c53b6000ff0a5b8537ebbf09bae0c2732172e3cabfd",
+      "source_uri": "https://europepmc.org/articles/PMC6530890",
+      "split": "locked_test"
+    },
+    {
+      "document_id": "PMC7590020",
+      "full_text_sha256": "dfcbe4d6e6cc90669f6e85189518faaf71d2c5abaae4190c5eef922d9107ad69",
+      "source_uri": "https://europepmc.org/articles/PMC7590020",
+      "split": "locked_test"
+    }
+  ],
+  "failed_stage_job_id": 185329,
+  "fulltext_screen_file_sha256": "3cfcfeb7c74e4beb3d4b7bd69c9ff97c2f837a78314a2e71fc3c38ae1353b877",
+  "generated_at": "2026-07-15T16:59:37.832624Z",
+  "manifest_sha256": "b88942f8959fe85ca18b3fe333d9a4fc06aef93a1103a080a6c6ad3ff9aac96b",
+  "model_output_used_for_substitution": false,
+  "parent_manifest_file_sha256": "252174ea1f6936287b71cde78787e310564b81736148d19eeb6b325f21e15b2d",
+  "parent_manifest_sha256": "03f4bc46caf60071db8dc9fca63e0ddf9a7734ac3232a87737d6d32f7630a7a6",
+  "plan_sha256": "1dcbab03ddb447a6aad2a7be2f54277912f3cad05d1f426b13d226de695e012b",
+  "provisional_plan_file_sha256": "49f2608deff0641a47c87e7be4e65c1d34f2df33f63b8dc218797f12a52b3737",
+  "schema_version": "mdmeta.frozen-source-substitution.v1",
+  "source_screen_sha256": "e0ee9603978d511bed049abea027ac039f478a0bf6ea8e47bc92bee38eb49e1a",
+  "source_workflow_artifact_digest": "sha256:470bb9fb223703413a3e0f287ce410adcdb9e5c7ea09c1d3bd15687437ef0966",
+  "source_workflow_artifact_id": 8225494475,
+  "source_workflow_run": 29087844703,
+  "study_id": "mdmeta-provisional-temporal-screened-60-v1",
+  "study_status": "provisional_temporal_isolation_machine_screened",
+  "substitution_job_id": 185650,
+  "substitution_new": {
+    "document_id": "PMC6994855",
+    "full_text_sha256": "169ced75f7adf4ed9ab18bf28ec08ecd8ab76414dd81367ae9f277702ddc5a4d",
+    "original_plan_reserve_rank": 1,
+    "original_plan_reserve_reason": "eligible_reserve_not_selected",
+    "position": 1,
+    "source_uri": "https://europepmc.org/articles/PMC6994855",
+    "split": "development",
+    "xml_size_bytes": 87028
+  },
+  "substitution_old": {
+    "document_id": "PMC6316748",
+    "frozen_full_text_sha256": "cdbfd10f7e85a4042ebda7317b06cf963061f05e00d99168c03a5ed7e03a337d",
+    "frozen_size_bytes": 105780,
+    "observed_current_full_text_sha256": "51d20c7e8b35720e9150d2118d274cf2e5048a64fdaf7905552210530a87d52a",
+    "observed_current_size_bytes": 102369,
+    "position": 1,
+    "source_uri": "https://europepmc.org/articles/PMC6316748",
+    "split": "development"
+  },
+  "substitution_policy": "first_original_plan_eligible_reserve_not_selected",
+  "substitution_reason": "frozen_jats_unrecoverable_sha256_drift",
+  "unchanged_article_count_expected": 59,
+  "unchanged_article_count_observed": 59
+}

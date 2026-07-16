@@ -1,0 +1,137 @@
+{
+  "schema_version": "mdmeta-nextflow-scale80-run-v1",
+  "status": "passed",
+  "run_date": "2026-07-16",
+  "implementation_git_commit": "38b90bfa0ccd8d93ca42dc08ed66c54cb8ad42d4",
+  "source_archive_sha256": "cfc2028f1e6f6fbe6ecb7a9c1c9b033f7ea64902d069ee1cc962f09f628cd220",
+  "workflow_source_sha256": {
+    "main.nf": "8f85fef873e92b88081ea3b32f305c2adbc6cf1c4d7a9a03fb1bd275171e22a1",
+    "nextflow.config": "ab57ba9401150bf192636bffcb29015bb83fc3094c14e4a4d5953630e15045d5"
+  },
+  "runtimes": {
+    "github_nextflow": "26.04.6",
+    "csc_nextflow": "26.04.4.12445",
+    "csc_python_data": "3.12-31.03",
+    "csc_executor": "slurm",
+    "csc_account": "project_2012997",
+    "csc_partition": "small"
+  },
+  "inputs": {
+    "article_count": 80,
+    "database_sha256": "c5a71de85981d51cce75c666b60ecbbb297ffc2b2d0716b1f0cabbf875ba28d6",
+    "model_summary_sha256": "a2f669d15c0291b25eb8b7773345fbabde152a17208484368ef707105d676a4b",
+    "database_unchanged_after_run": true
+  },
+  "first_run": {
+    "process_count": 4,
+    "completed_count": 4,
+    "failed_count": 0,
+    "jobs": [
+      {
+        "job_id": "195246",
+        "process": "VERIFY_DATABASE",
+        "state": "COMPLETED",
+        "exit_code": "0:0",
+        "elapsed_seconds": 4,
+        "allocated_cpus": 1,
+        "requested_memory": "2G",
+        "max_rss_kib": 404136
+      },
+      {
+        "job_id": "195259",
+        "process": "EXPORT_GRAPH",
+        "state": "COMPLETED",
+        "exit_code": "0:0",
+        "elapsed_seconds": 5,
+        "allocated_cpus": 1,
+        "requested_memory": "2G",
+        "max_rss_kib": 428536
+      },
+      {
+        "job_id": "195260",
+        "process": "BUILD_REVIEW_QUEUE",
+        "state": "COMPLETED",
+        "exit_code": "0:0",
+        "elapsed_seconds": 5,
+        "allocated_cpus": 1,
+        "requested_memory": "2G",
+        "max_rss_kib": 153996
+      },
+      {
+        "job_id": "195268",
+        "process": "VERIFY_OUTPUTS",
+        "state": "COMPLETED",
+        "exit_code": "0:0",
+        "elapsed_seconds": 8,
+        "allocated_cpus": 1,
+        "requested_memory": "2G",
+        "max_rss_kib": 179516
+      }
+    ],
+    "trace_sha256": "2cfc78f308609a8e9c2b6afc77c91a6dd3ac6d40780bf17b7c72a9320b81819d",
+    "execution_report_sha256": "377b4202b93ca28de0edd7a2f5dee1008bef9d332f823e33979cef0b0e1486d6",
+    "timeline_sha256": "bcf1358fd533ca4e86815d07d3a6d6b754d836855c6ed9ce274a424ed85c3b49"
+  },
+  "resume_run": {
+    "process_count": 4,
+    "cached_count": 4,
+    "new_slurm_jobs": 0,
+    "trace_sha256": "653bf36ff285badcb7ff37e4dc53b4023752494d340d676e9107a6b2202fb8f8",
+    "execution_report_sha256": "0eb42fdfcb9c3c90199e6091bd0e1c689d63bade8bc072ddbdc3b7622c75fe70",
+    "timeline_sha256": "b03efd4fc4d3a9be2f599cdf9385e2bc1005394c2a674eec8592c463416e0004"
+  },
+  "review_output": {
+    "queue_file_sha256": "d09c8fc760e4353941f5a20b099870dfd0253cb5cfcde80bfd32dc8019566c39",
+    "content_commitment_sha256": "a6b10017fb9f9a1585ebbbdc216b3d89275879084ded239dada1093c9556bde2",
+    "tier_counts": {
+      "auto_accept": 2,
+      "single_review": 78,
+      "dual_independent": 0
+    },
+    "review_completed": false
+  },
+  "graph_output": {
+    "manifest_file_sha256": "ce6fd44249e9b8229bf644a8d93d0cb5b584d3941cd3ad7dde767a8991e31e14",
+    "content_commitment_sha256": "42813f0e75025210d4a893ca13073abdb0b4f4b66aaad723b501025cba7df818",
+    "node_count": 3867,
+    "relationship_count": 18281
+  },
+  "verification": {
+    "database_manifest_file_sha256": "7a4e004977a5307a7860821c9715b3f77776183c4ab8072c91a06d9f8c6387eb",
+    "review_verification_file_sha256": "a4c931fe6d9df666562fcc22d9ab87e4c738415c6aeeb3402e46e9d50f38a3c8",
+    "graph_verification_file_sha256": "ce6fd44249e9b8229bf644a8d93d0cb5b584d3941cd3ad7dde767a8991e31e14",
+    "checksums_file_sha256": "4490757d745651822dafd814b32979aaf99bdcc74bd7efe64f890b6fdad007bd",
+    "workflow_complete_marker": true
+  },
+  "calibration_failures": [
+    {
+      "implementation_git_commit": "17b2b5c44001de7c180fb4296e951b5e4e4fa879",
+      "job_id": "194542",
+      "exit_code": 255,
+      "stage": "VERIFY_DATABASE",
+      "reason": "ARM python-data module inherited by x86_64 small task"
+    },
+    {
+      "implementation_git_commit": "6c91ba0e5f069dff06b4eecc7c995b09ad54b00b",
+      "job_id": "194727",
+      "exit_code": 255,
+      "stage": "VERIFY_DATABASE",
+      "reason": "non-login task retained the ARM module path"
+    }
+  ],
+  "github_validation": {
+    "all_workflow_count": 11,
+    "all_workflows_passed": true,
+    "ci_run_id": 29487257708,
+    "official_sifts_run_id": 29487257725,
+    "security_run_id": 29487257713,
+    "server_readiness_run_id": 29487257754
+  },
+  "claim_boundary": {
+    "technical_workflow_validated": true,
+    "human_review_completed": false,
+    "gold_reference_completed": false,
+    "governed_release_created": false,
+    "production_service_deployed": false
+  }
+}

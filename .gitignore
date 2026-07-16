@@ -8,4 +8,17 @@ htmlcov/
 build/
 dist/
 study/confirmatory_60/generated/
+study/independent_100/private/
+annotations/private/
 .cache/validation/
+results/
+data/
+*.sqlite
+*.sqlite-*
+*.db
+*.log
+.env
+.env.*
+!.env.example
+.DS_Store
+.upstream/

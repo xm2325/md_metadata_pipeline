@@ -36,14 +36,59 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
+
 jobs:
-  prepare-and-screen:
-    runs-on: ubuntu-latest
+  offline-tests:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
           python-version: "3.12"
+          cache: pip
+          cache-dependency-path: pyproject.toml
+      - run: python -m pip install -e '.[dev]'
+      - name: Lint provisional-corpus code
+        run: >-
+          ruff check
+          scripts/prepare_confirmatory_benchmark.py
+          scripts/query_europe_pmc.py
+          scripts/screen_selected_fulltext.py
+          scripts/finalize_screened_plan.py
+          scripts/build_annotation_workpack.py
+          scripts/build_blind_annotation_packet.py
+          scripts/freeze_machine_predictions.py
+          src/mdmeta/benchmark.py
+          src/mdmeta/protocol_events.py
+      - name: Run offline provisional-corpus tests
+        run: >-
+          pytest -q
+          tests/test_query_europe_pmc.py
+          tests/test_fulltext_screen.py
+          tests/test_screened_plan_workpack.py
+          tests/test_blind_annotation_packet.py
+          tests/test_prediction_freeze.py
+
+  prepare-and-screen:
+    if: github.event_name == 'workflow_dispatch'
+    needs: offline-tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: pyproject.toml
       - run: python -m pip install -e .
       - name: Query historical biomolecular Europe PMC metadata
         env:
@@ -121,35 +166,43 @@ jobs:
         run: |
           cd study/confirmatory_60/generated/temporal
           sha256sum historical_candidates.json provisional_screening_pool.json fulltext_machine_screen.json provisional_temporal_plan.json > CORPUS_SHA256SUMS.txt || true
-          find workpack -type f -print0 | sort -z | xargs -0 sha256sum > workpack/SHA256SUMS.txt || true
-          find blind_ai_packet -type f -print0 | sort -z | xargs -0 sha256sum > blind_ai_packet/SHA256SUMS.txt || true
-          find predictions -type f -print0 | sort -z | xargs -0 sha256sum > predictions/SHA256SUMS.txt || true
-      - uses: actions/upload-artifact@v4
+          find workpack -type f ! -name SHA256SUMS.txt -print0 | sort -z | xargs -0 sha256sum > workpack/SHA256SUMS.txt || true
+          find blind_ai_packet -type f ! -name SHA256SUMS.txt -print0 | sort -z | xargs -0 sha256sum > blind_ai_packet/SHA256SUMS.txt || true
+          find predictions -type f ! -name SHA256SUMS.txt -print0 | sort -z | xargs -0 sha256sum > predictions/SHA256SUMS.txt || true
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         if: always()
         with:
-          name: provisional-temporal-corpus
+          name: provisional-temporal-corpus-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
             study/confirmatory_60/generated/temporal/historical_candidates.json
             study/confirmatory_60/generated/temporal/provisional_screening_pool.json
             study/confirmatory_60/generated/temporal/fulltext_machine_screen.json
             study/confirmatory_60/generated/temporal/provisional_temporal_plan.json
             study/confirmatory_60/generated/temporal/CORPUS_SHA256SUMS.txt
-          retention-days: 90
-      - uses: actions/upload-artifact@v4
+          if-no-files-found: error
+          retention-days: 30
+          compression-level: 9
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         if: always()
         with:
-          name: provisional-temporal-human-workpack
+          name: provisional-temporal-human-workpack-${{ github.run_id }}-${{ github.run_attempt }}
           path: study/confirmatory_60/generated/temporal/workpack/
-          retention-days: 90
-      - uses: actions/upload-artifact@v4
+          if-no-files-found: error
+          retention-days: 30
+          compression-level: 9
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         if: always()
         with:
-          name: provisional-temporal-blind-ai-packet
+          name: provisional-temporal-blind-ai-packet-${{ github.run_id }}-${{ github.run_attempt }}
           path: study/confirmatory_60/generated/temporal/blind_ai_packet/
-          retention-days: 90
-      - uses: actions/upload-artifact@v4
+          if-no-files-found: error
+          retention-days: 30
+          compression-level: 9
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         if: always()
         with:
-          name: provisional-temporal-machine-predictions
+          name: provisional-temporal-machine-predictions-${{ github.run_id }}-${{ github.run_attempt }}
           path: study/confirmatory_60/generated/temporal/predictions/
-          retention-days: 90
+          if-no-files-found: error
+          retention-days: 30
+          compression-level: 9

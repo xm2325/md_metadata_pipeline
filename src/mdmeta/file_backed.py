@@ -4,7 +4,7 @@ import hashlib
 import json
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any, Iterable, Literal
 
 import httpx
 from pydantic import BaseModel, ConfigDict, Field
@@ -174,7 +174,7 @@ class ResidueMappingAudit(BaseModel):
 class FileBackedMDReport(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    schema_version: str = "file-backed-md-record-v1"
+    schema_version: Literal["file-backed-md-record-v1"] = "file-backed-md-record-v1"
     case_id: str
     project_accession: str
     project_uri: str

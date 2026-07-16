@@ -12,6 +12,7 @@ from typing import Callable
 
 import httpx
 
+from mdmeta import user_agent
 from mdmeta.benchmark import canonical_sha256
 from mdmeta.protocol_events import Paragraph, extract_protocol_events
 
@@ -210,7 +211,7 @@ def main() -> None:
             lambda pmcid: read_cached_xml(args.xml_cache_dir, pmcid),
         )
     else:
-        headers = {"User-Agent": "md-metadata-pipeline/0.7 prediction-freeze"}
+        headers = {"User-Agent": user_agent("prediction-freeze")}
         with httpx.Client(
             timeout=args.timeout,
             headers=headers,

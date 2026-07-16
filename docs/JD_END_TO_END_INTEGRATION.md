@@ -111,6 +111,12 @@ SHA-256 of every JATS snapshot used in the earlier screening run, together with 
 and artifact commitments. The batch runner downloads current JATS XML and refuses to integrate an
 article if its source hash has changed.
 
+The current path now points to the accepted 2026-07-15 operational rebuild, which replaced two
+drifted positions by the first two currently valid original reserves. It has not yet produced a
+model-backed 1/5/60 result. The dated 2026-07-10 integration result remains bound only to
+`study/integration_60/source_manifest_original.json`; do not use that historical result as evidence
+for the rebuilt corpus.
+
 ```bash
 python scripts/run_integrated_60.py \
   --source-manifest study/integration_60/source_manifest.json \
