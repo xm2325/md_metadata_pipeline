@@ -185,7 +185,7 @@ def test_graph_manifest_rejects_tampered_commitment(tmp_path: Path) -> None:
         _database(tmp_path / "records.sqlite"), tmp_path / "graph"
     )
     payload = manifest.model_dump(mode="json")
-    payload["node_count"] += 1
+    payload["nodes_sha256"] = "0" * 64
 
     with pytest.raises(ValueError, match="graph_commitment_sha256"):
         GraphExportManifest.model_validate(payload)
