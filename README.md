@@ -131,6 +131,11 @@ review. Every routed record states the uncertainty, source/evidence locator, con
 question and second-review escalation conditions. The independent gold/reference path still
 requires double review for every item because confidence-based selection would bias accuracy
 measurement. See [`docs/HUMAN_REVIEW_POLICY.md`](docs/HUMAN_REVIEW_POLICY.md).
+The first real scale80 production-triage run bound the schema-v2/PDBe-KB database and original
+model summary: two records were provisionally auto-accepted, 78 received targeted single-review
+prompts and none met the calibrated critical double-review rules. This is a conservative workload
+assessment, not completed review or accuracy evidence. See the
+[`scale80 human-review run`](study/human_review_scale80/RUN_2026-07-16.md).
 
 See [`docs/PRODUCTION_READINESS.md`](docs/PRODUCTION_READINESS.md),
 [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md), [`docs/OPERATIONS.md`](docs/OPERATIONS.md), and

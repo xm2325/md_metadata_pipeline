@@ -1,9 +1,10 @@
 # Production readiness status
 
-The repository is **not yet fully production ready**. Version 0.12 is a substantially stronger
-production candidate: all repository gates passed for exact commit `602a9bf` on 2026-07-16, and a
-real scale80 database copy completed a backed-up v1-to-v2 migration, PDBe-KB import, semantic
-verification and production read-only API query on CSC. Governed release execution, image
+The repository is **not yet fully production ready**. Version 0.13 adds content-bound, risk-based
+human triage to the version 0.12 production candidate. All ten repository workflows passed for
+exact implementation commit `8636020` on 2026-07-16. A real scale80 database copy completed a
+backed-up v1-to-v2 migration, PDBe-KB import, semantic verification, production read-only API query
+and deterministic review-queue build/verification on CSC. Governed release execution, image
 publication, externally reachable deployment and several ownership decisions remain outside that
 evidence.
 
@@ -13,13 +14,13 @@ Three different kinds of evidence must not be conflated:
 
 | State | What it means |
 |---|---|
-| Repository cloud-validated | For exact commit `602a9bf`, all ten workflows passed on 2026-07-16, including Python 3.11/3.12 CI, security, server-readiness and the deterministic domain paths. This verifies repository code, not human-reference accuracy. |
+| Repository cloud-validated | For exact commit `8636020`, all ten workflows passed on 2026-07-16, including Python 3.11/3.12 CI, security, server-readiness and the deterministic domain paths. This verifies repository code, not human-reference accuracy. |
 | GPU infrastructure validated | CSC Roihu Slurm job `184708` bound to commit `cc87d7a` passed on one GH200 on 2026-07-15, including FP32 correctness, BF16 GEMM, CUDA attention, non-zero utilisation and result checksum gates. This is infrastructure evidence, not a validated model backend. |
-| Scale integration and migration exercised | Scale inference/integration completed 80/80; the schema-v2 drill migrated a content-addressed copy, imported 107 PDBe-KB records and passed database and API checks. This is not human-reference accuracy or a governed release. |
+| Scale integration, migration and triage exercised | Scale inference/integration completed 80/80; the schema-v2 drill migrated a content-addressed copy, imported 107 PDBe-KB records and passed database/API checks. Risk triage produced 2 auto-accept and 78 single-review records, with 0 critical double-review triggers. This is not completed human review, accuracy or a governed release. |
 | Live/release validation pending | No governed dataset bundle, GHCR image/SBOM/provenance or externally reachable target deployment has been published. |
 | External decision or deployment required | Dataset identity and licence, publisher/creators, durable archive, image promotion, DNS/TLS, authentication policy, rate limits, monitoring ownership, SLOs, RPO/RTO and incident ownership cannot be established by repository code alone. |
 
-The dated checks validate repository code at `602a9bf`; they do not create a promotable release.
+The dated checks validate repository code at `8636020`; they do not create a promotable release.
 A candidate is promotable only after the live release workflow succeeds and its exact commit,
 dataset bundle and image digests are recorded and accepted.
 
@@ -51,8 +52,22 @@ dataset bundle and image digests are recorded and accepted.
 - `mdmeta-migrate-database` performs an explicit, locked and backed-up v1-to-v2 migration, records
   migration/source/backup hashes, validates the schema transactionally and imports a content-bound
   PDBe-KB report only when its article/accession lineage matches.
+- `mdmeta-human-review` binds a checkpointed database, optional model summary, software/Git version
+  and versioned policy into a deterministic review queue. It exposes uncertainty-specific prompts,
+  minimal evidence locators, audit sampling and explicit second-review escalation conditions.
 
-## Version 0.12 cloud and CSC evidence
+## Version 0.13 cloud and CSC evidence
+
+For exact implementation commit `86360203ab3c40e1431a7f02b98eb060bdc7268e`,
+[CI](https://github.com/xm2325/md_metadata_pipeline/actions/runs/29484007623),
+[security](https://github.com/xm2325/md_metadata_pipeline/actions/runs/29484007663),
+[server readiness](https://github.com/xm2325/md_metadata_pipeline/actions/runs/29484007631) and all
+seven domain workflows passed. CSC job `192664` built and verified the real scale80 review queue in
+seven seconds. It routed 2/80 to provisional automatic acceptance and 78/80 to one reviewer; no
+record met a calibrated critical double-review rule. See the
+[scale80 review run](../study/human_review_scale80/RUN_2026-07-16.md). Human review remains undone.
+
+### Version 0.12 PDBe-KB baseline
 
 For exact commit `602a9bf09b981a849a3d54c74043cbbc799b6b13`, the
 [CI](https://github.com/xm2325/md_metadata_pipeline/actions/runs/29479523392),
