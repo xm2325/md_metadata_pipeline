@@ -135,11 +135,11 @@ jobs:
           java-version: "17"
       - name: Install project test dependencies
         run: python -m pip install -e '.[dev]'
-      - name: Install integrity-checked Nextflow 26.04.2
+      - name: Install integrity-checked Nextflow 26.04.6
         env:
           NEXTFLOW_URL: >-
-            https://github.com/nextflow-io/nextflow/releases/download/v26.04.2/nextflow-26.04.2-dist
-          NEXTFLOW_SHA256: 52a2ce22be15d747369a70050339443fc325005bea59a49e0ee25d96fae9cc51
+            https://github.com/nextflow-io/nextflow/releases/download/v26.04.6/nextflow-26.04.6-dist
+          NEXTFLOW_SHA256: 182a63c74074e2dc7956ffa3c8cd59de952ed2c44394e21faf5e1736b945444c
         run: |
           curl --proto '=https' --tlsv1.2 --fail --location --silent --show-error \
             "$NEXTFLOW_URL" --output "$RUNNER_TEMP/nextflow"

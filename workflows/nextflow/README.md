@@ -11,11 +11,13 @@ model-audit summary into independently verifiable production deliverables:
 It deliberately starts after network ingestion and GPU inference. Those stages
 have different failure, caching, and security boundaries. The workflow never
 modifies its input database and every process uses deep content hashing, so an
-interrupted run can be restarted with `-resume`.
+interrupted run can be restarted with `-resume`. Inputs are staged as independent
+regular-file copies rather than symlinks, preserving the validators' path-safety
+boundary and preventing a task from writing through to the source snapshot.
 
 ## Pinned runtime
 
-The manifest accepts Nextflow `26.04.x`; CI installs the official `26.04.2`
+The manifest accepts Nextflow `26.04.6` or later; CI installs the official `26.04.6`
 distribution and checks its published SHA-256 before execution. Python package
 and model dependencies must already be installed in the launching environment
 or supplied through a digest-pinned container profile.
