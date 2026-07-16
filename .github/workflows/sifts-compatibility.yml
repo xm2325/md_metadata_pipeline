@@ -1,0 +1,62 @@
+name: Official PDBe-SIFTS compatibility
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
+
+jobs:
+  compatibility:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Check out mdmeta without persisted credentials
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+        with:
+          persist-credentials: false
+      - name: Check out pinned official PDBe-SIFTS source
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+        with:
+          repository: PDBeurope/SIFTS
+          ref: 155a4258536078ff0251644f154e895b7da6c492
+          path: .upstream/pdbe-sifts
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: pyproject.toml
+      - name: Install project test dependencies
+        run: python -m pip install -e '.[dev]'
+      - name: Run focused adapter regressions
+        run: pytest tests/test_sifts_official.py
+      - name: Compare against official readers and fixtures
+        run: |
+          mkdir -p reports
+          python scripts/check_official_sifts_compatibility.py \
+            --official-source .upstream/pdbe-sifts \
+            --output reports/pdbe-sifts-compatibility.json
+      - name: Upload compact compatibility evidence
+        id: evidence
+        if: always()
+        continue-on-error: true
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: pdbe-sifts-compatibility-${{ github.run_id }}-${{ github.run_attempt }}
+          path: reports/
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 9
+      - name: Report evidence persistence
+        if: always()
+        env:
+          ARTIFACT_OUTCOME: ${{ steps.evidence.outcome }}
+        run: echo "PDBe-SIFTS compatibility artifact upload: ${ARTIFACT_OUTCOME}" >> "$GITHUB_STEP_SUMMARY"
