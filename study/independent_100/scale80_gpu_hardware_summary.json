@@ -1,0 +1,11 @@
+{
+  "max_gpu_utilization_percent": 100.0,
+  "max_memory_used_mib": 79981.0,
+  "max_power_draw_watts": 489.51,
+  "max_temperature_celsius": 63.0,
+  "mean_gpu_utilization_percent": 88.26940639269407,
+  "raw_gpu_uuid_retained_only_in_private_log": true,
+  "sample_count": 438,
+  "schema_version": "mdmeta.roihu.gpu-samples.v1",
+  "visible_gpu_count": 1
+}

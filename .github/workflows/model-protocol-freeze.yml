@@ -13,6 +13,8 @@ on:
       - tests/test_llm_batch.py
       - tests/test_model_backed_integration.py
       - tests/test_model_protocol_freeze.py
+      - tests/test_committed_scale80_evidence.py
+      - study/independent_100/*.json
       - docs/INDEPENDENT_GOLD_PROTOCOL.md
   workflow_dispatch:
 
@@ -48,9 +50,11 @@ jobs:
           tests/test_llm_batch.py
           tests/test_model_backed_integration.py
           tests/test_model_protocol_freeze.py
+          tests/test_committed_scale80_evidence.py
       - name: Validate only synthetic scale and gold contracts
         run: >-
           pytest -q
           tests/test_llm_batch.py
           tests/test_model_backed_integration.py
           tests/test_model_protocol_freeze.py
+          tests/test_committed_scale80_evidence.py

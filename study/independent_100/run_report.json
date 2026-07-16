@@ -1,7 +1,7 @@
 {
   "schema_version": "mdmeta.independent100-run-report.v1",
   "study_id": "mdmeta-independent-100-v1",
-  "study_status": "independent_100_machine_screened_unreviewed",
+  "study_status": "scale80_passed_model_protocol_frozen_pre_gold_inference",
   "collected_at_utc": "2026-07-15T23:04:04Z",
   "source_commit": "5cbbc8d8b16d466054f7132cc8a43d508da74f56",
   "github_run_id": 29457386366,
@@ -57,9 +57,69 @@
   "progress": {
     "corpus_construction": "100/100",
     "human_eligibility_review": "0/100",
-    "roihu_scale_inference": "0/80",
+    "roihu_scale_inference": "80/80",
+    "roihu_scale_integration": "80/80",
+    "model_protocol_freeze": "passed",
     "gold_dual_annotation_and_adjudication": "0/20",
     "sealed_gold_prediction_and_evaluation": "0/20",
+    "accuracy_evaluated": false
+  },
+  "scale80_execution": {
+    "source_commit": "3079d14a4fd50cd0c903ba8bbe07d9bbeac86f01",
+    "source_archive_sha256": "735684305768a07c0cf1799393f97fe1d9a7f675939c46c93bedc238fc31bb76",
+    "source_manifest_file_sha256": "1b771bf56ada946dd0cb30e71457ad7f954db402dd9d5e05ce7e7331870056e2",
+    "source_manifest_sha256": "b839f2d19c8c9b75f82f6fbdd52c05afaa2e6a52668f4cce6da6c09d254802a7",
+    "stage_job_id": 189633,
+    "gpu_job_id": 189640,
+    "integration_job_id": 189845,
+    "freeze_job_id": 190247,
+    "articles_requested": 80,
+    "articles_integrated": 80,
+    "integration_failures": 0,
+    "task_count": 1216,
+    "task_count_classified": 1216,
+    "protocol_event_count": 98,
+    "classification_counts": {
+      "accepted": 1097,
+      "accepted_with_evidence_rejections": 58,
+      "evidence_rejected": 59,
+      "generation_rejected": 2
+    },
+    "no_task_article_gate": {
+      "observed": 1,
+      "maximum": 2,
+      "article_ids": [
+        "PMC12683627"
+      ],
+      "treatment": "retained_as_explicit_zero_event_record",
+      "passed": true
+    },
+    "identifier_integration": {
+      "unique_pdb_ids": 99,
+      "validated_pdb_references": 108,
+      "unique_uniprot_accessions": 107,
+      "validated_mappings": 198,
+      "residue_mapping_segments": 352
+    },
+    "cross_job_repeatability": {
+      "task_set_match": "1216/1216",
+      "response_sha256_match": "1190/1216",
+      "classification_match": "1213/1216",
+      "event_count_match": "1212/1216",
+      "bitwise_repeatable": false
+    },
+    "model_result_sha256": "279b9b5f73bd8e684940223df5535f337f90bffda44922042c2a5366f9bc253d",
+    "integration_result_sha256": "9c1adf991e72d0f6942c2ee3adbc6e58e85d0412378a74e2490c63c8e31b208e",
+    "model_protocol_freeze_sha256": "ff8c72c45673fb053cb412cebd5046f4e934fac1a868f603d63bd8cc9d0bddbe",
+    "public_evidence_file_sha256": {
+      "scale80_source_manifest.json": "1b771bf56ada946dd0cb30e71457ad7f954db402dd9d5e05ce7e7331870056e2",
+      "scale80_gpu_summary.json": "a2f669d15c0291b25eb8b7773345fbabde152a17208484368ef707105d676a4b",
+      "scale80_gpu_hardware_summary.json": "e43c71f8b11e0ed132dbba4c16229bd881efd0f7551fe3d2d2043bb9967d49ee",
+      "scale80_integration_summary.json": "44a55e0aec4e897db049ed9ea3aaca428a08f4f050ed9ada1ac054cfafd8de8f",
+      "model_protocol_freeze.json": "7297d8d400a827bed70ddd4a4ca4d34b3d61ddbbc7ed58cd96c02b5944a9f4d1"
+    },
+    "gold_prediction_authorized": false,
+    "human_reference_used": false,
     "accuracy_evaluated": false
   },
   "artifacts": [

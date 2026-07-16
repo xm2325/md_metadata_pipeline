@@ -47,7 +47,9 @@ access-controlled storage outside this public checkout; Actions exercises only s
 ## Current progress
 
 The live GitHub Actions run completed corpus construction **100/100** on 2026-07-15: 80 scale
-articles and a sealed gold20 passed the non-overlap/seal audit. This does not mean that the whole
-scientific study is complete. Human eligibility review is 0/100, Roihu scale inference is 0/80,
-gold dual annotation/adjudication is 0/20, and gold prediction/evaluation is 0/20. See
-[`RUN_2026-07-15.md`](RUN_2026-07-15.md).
+articles and a sealed gold20 passed the non-overlap/seal audit. On 2026-07-16 the label-free Roihu
+path then completed scale inference **80/80**, CPU integration **80/80** and the pre-gold model
+protocol freeze. This does not mean that the whole scientific study is complete. Human eligibility
+review is 0/100, gold dual annotation/adjudication is 0/20, and gold prediction/evaluation is 0/20.
+See [`RUN_2026-07-15.md`](RUN_2026-07-15.md) and
+[`RUN_SCALE80_2026-07-16.md`](RUN_SCALE80_2026-07-16.md).
