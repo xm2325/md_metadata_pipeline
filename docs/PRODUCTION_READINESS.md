@@ -1,9 +1,11 @@
 # Production readiness status
 
-The repository is **not yet fully production ready**. It now contains a substantially stronger
-production candidate whose repository cloud gates passed for commit `c5f3018` on 2026-07-15.
-Live release execution, image publication, target-server deployment and several governance and
-service-management decisions remain outside that evidence.
+The repository is **not yet fully production ready**. Version 0.12 is a substantially stronger
+production candidate: all repository gates passed for exact commit `602a9bf` on 2026-07-16, and a
+real scale80 database copy completed a backed-up v1-to-v2 migration, PDBe-KB import, semantic
+verification and production read-only API query on CSC. Governed release execution, image
+publication, externally reachable deployment and several ownership decisions remain outside that
+evidence.
 
 ## Evidence boundary
 
@@ -11,12 +13,13 @@ Three different kinds of evidence must not be conflated:
 
 | State | What it means |
 |---|---|
-| Repository cloud-validated | For exact commit `c5f3018`, Python 3.11/3.12 CI, security, server-readiness and the three deterministic domain-workflow PR paths passed on 2026-07-15. This verifies repository code, not the later model experiment. |
+| Repository cloud-validated | For exact commit `602a9bf`, all ten workflows passed on 2026-07-16, including Python 3.11/3.12 CI, security, server-readiness and the deterministic domain paths. This verifies repository code, not human-reference accuracy. |
 | GPU infrastructure validated | CSC Roihu Slurm job `184708` bound to commit `cc87d7a` passed on one GH200 on 2026-07-15, including FP32 correctness, BF16 GEMM, CUDA attention, non-zero utilisation and result checksum gates. This is infrastructure evidence, not a validated model backend. |
-| Live/release validation pending | Pull-request live scientific jobs were skipped by design. No version 0.11 dataset bundle, GHCR image/SBOM/provenance or target-server deployment was published or exercised by these runs. |
+| Scale integration and migration exercised | Scale inference/integration completed 80/80; the schema-v2 drill migrated a content-addressed copy, imported 107 PDBe-KB records and passed database and API checks. This is not human-reference accuracy or a governed release. |
+| Live/release validation pending | No governed dataset bundle, GHCR image/SBOM/provenance or externally reachable target deployment has been published. |
 | External decision or deployment required | Dataset identity and licence, publisher/creators, durable archive, image promotion, DNS/TLS, authentication policy, rate limits, monitoring ownership, SLOs, RPO/RTO and incident ownership cannot be established by repository code alone. |
 
-The dated checks validate repository code at `c5f3018`; they do not create a promotable release.
+The dated checks validate repository code at `602a9bf`; they do not create a promotable release.
 A candidate is promotable only after the live release workflow succeeds and its exact commit,
 dataset bundle and image digests are recorded and accepted.
 
@@ -45,6 +48,19 @@ dataset bundle and image digests are recorded and accepted.
   digest-addressed `current` symlink under a deployment lock.
 - Runtime/build/security dependency inputs are separated into constraints files; security and
   container-release workflows are present in the current change set.
+- `mdmeta-migrate-database` performs an explicit, locked and backed-up v1-to-v2 migration, records
+  migration/source/backup hashes, validates the schema transactionally and imports a content-bound
+  PDBe-KB report only when its article/accession lineage matches.
+
+## Version 0.12 cloud and CSC evidence
+
+For exact commit `602a9bf09b981a849a3d54c74043cbbc799b6b13`, the
+[CI](https://github.com/xm2325/md_metadata_pipeline/actions/runs/29479523392),
+[security](https://github.com/xm2325/md_metadata_pipeline/actions/runs/29479523442),
+[server-readiness](https://github.com/xm2325/md_metadata_pipeline/actions/runs/29479523434),
+integrated, file-backed, corpus, gold-gate and model-freeze workflows all passed. The CSC execution
+evidence, including explicit upstream failures and final database hashes, is in the
+[PDBe-KB scale80 report](../study/pdbekb_scale80/RUN_2026-07-16.md).
 
 ## Cloud validation evidence and remaining release gates
 
@@ -84,7 +100,7 @@ The later [Roihu GH200 infrastructure report](../study/roihu_gpu_smoke/RUN_2026-
 successful remote Slurm execution for commit `cc87d7a`. An intervening Actions billing/spending
 block was subsequently cleared; it is historical incident evidence, not the current cloud status.
 
-Before describing version 0.11 as release-ready or deployed, the project still needs:
+Before describing the production candidate as release-ready or deployed, the project still needs:
 
 1. an accepted live release-quality scientific run and sealed dataset bundle;
 2. approved immutable-SHA secret-history and container-CVE scanning;
@@ -132,8 +148,9 @@ and must not route it to the public API.
 - Artifact storage remains constrained. Workflow-owned Python and container evidence uploads for
   run 29217837100 succeeded, but Docker's additional build-record artifact still reported a quota
   warning. Durable evidence and scientific releases still require a separate approved store.
-- SQLite schema version 1 is checked strictly, but there is not yet a versioned v1 → v2 migration
-  framework. A schema change must not be deployed until forward migration and recovery are tested.
+- Schema v2 and the explicit v1-to-v2 migration have been tested on the scale80 snapshot. Durable
+  scheduled backups, maintenance-mode enforcement against unrelated writers and periodic restore
+  ownership remain deployment requirements.
 - Digest-addressed staging verifies content before activation, but staged files are not made
   filesystem-immutable. The release root still requires restrictive ownership/permissions, and an
   external writer can invalidate the assumptions behind SQLite `immutable=1`.
@@ -141,10 +158,10 @@ and must not route it to the public API.
   SQLite writer. Overwrite restore must never target a database used by a running process.
 - The dataset release manifest binds the database and payload files, but it does not yet bind the
   dataset bundle digest to the published container image digest in one deployment manifest.
-- No durable scientific dataset release or immutable version 0.11 GHCR deployment has yet been
+- No durable scientific dataset release or immutable version 0.12 GHCR deployment has yet been
   demonstrated.
-- A real Roihu GH200 infrastructure gate has passed, but no concrete local-model backend, bound
-  model/tokenizer artefact or human-reference extraction evaluation has been executed.
+- A bound Qwen model/backend completed scale80 inference and protocol freeze, but no human-reference
+  extraction evaluation has been executed.
 - The repository does not contain an authorised project/data `LICENSE` or `CITATION.cff`.
 - Metrics and logs exist, but no external collector, dashboard, alert route or approved SLO has been
   deployed.
@@ -166,5 +183,6 @@ A production owner should approve promotion only when all of the following are t
 - ingress and monitoring controls are active; and
 - governance metadata, SLO/RPO/RTO, on-call ownership and incident procedures are approved.
 
-Until then, the accurate description is **production-candidate engineering with repository cloud
-gates passed for `c5f3018`, while release, deployment and operational acceptance remain pending**.
+Until then, the accurate description is **version 0.12 production-candidate engineering with
+repository and CSC data-path gates passed, while governed release, public deployment and
+operational acceptance remain pending**.

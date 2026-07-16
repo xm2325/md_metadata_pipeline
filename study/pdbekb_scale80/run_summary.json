@@ -1,0 +1,102 @@
+{
+  "schema_version": "mdmeta.pdbekb-scale80-run.v1",
+  "status": "operational_enrichment_and_migration_evidence_not_accuracy",
+  "run_date": "2026-07-16",
+  "source": {
+    "code_commit": "25027059b5f3a34a7de70955f5116df358c6205f",
+    "source_archive_sha256": "75bf75f4f13ad2b07ea24e44efbd985a7132a311fa31fbb97767b1d85f277456",
+    "input_article_count": 80,
+    "input_uniprot_accession_count": 107,
+    "input_database_schema_version": 1,
+    "input_database_sha256": "e2f348b2ece9531b2eb82aefeebed93b4588fb81f89488cd712a864c1dd98ee2"
+  },
+  "migration": {
+    "job_id": 191778,
+    "state": "COMPLETED",
+    "exit_code": "0:0",
+    "elapsed": "00:00:07",
+    "from_schema_version": 1,
+    "to_schema_version": 2,
+    "migration_sha256": "a99ff864c6be6520755bfe1cf45096708d2946bf572761a4be982ca050d61451",
+    "v1_backup_sha256": "ad012c35b37fa5454ccc1de095b5648cf6877b9ee62cdb443013536d93f80a22",
+    "v2_pre_enrichment_database_sha256": "395f40206c3a3d6aab77df83f4a0f89f4f946490f8d40cd5733b10e25aebe7a0",
+    "integrity": "ok",
+    "foreign_key_violation_count": 0,
+    "journal_mode": "delete",
+    "fail_closed_ordering_probe": {
+      "job_id": 191775,
+      "state": "FAILED",
+      "exit_code": "1:0",
+      "elapsed": "00:00:06",
+      "reason": "schema-v2 runner rejected the unmodified schema-v1 database before network enrichment",
+      "database_mutated": false
+    }
+  },
+  "pdbekb_enrichment": {
+    "job_id": 191781,
+    "state": "COMPLETED",
+    "exit_code": "0:0",
+    "elapsed": "00:03:10",
+    "requested_accession_count": 107,
+    "state_counts": {
+      "validated": 94,
+      "not_applicable": 3,
+      "unresolved": 10
+    },
+    "annotation_endpoint_state_counts": {
+      "validated": 90,
+      "not_applicable": 8,
+      "unresolved": 9
+    },
+    "partner_endpoint_state_counts": {
+      "validated": 99,
+      "not_applicable": 3,
+      "unresolved": 5
+    },
+    "annotation_endpoint_unresolved_reason_counts": {
+      "invalid_json_response": 4,
+      "network_error:ReadTimeout": 5
+    },
+    "partner_endpoint_unresolved_reason_counts": {
+      "network_error:ReadTimeout": 5
+    },
+    "annotation_group_count": 815,
+    "annotation_residue_range_count": 152861,
+    "partner_count": 390,
+    "linked_pdb_id_count": 2732,
+    "content_commitment_sha256": "329a30c88c16899b644fb8c264ed4442edf0d60960b571fc01de405301ad8297",
+    "report_file_sha256": "b5768b06e3e530983ee3e30a0f999b984c257b76aae5121b86c073012390c333",
+    "report_byte_size": 815600,
+    "raw_sequences_retained": false,
+    "raw_api_payloads_retained_in_report": false,
+    "full_report_committed_to_git": false
+  },
+  "persistence_and_api": {
+    "import_job_id": 191827,
+    "imported_enrichment_count": 107,
+    "verification_job_id": 191828,
+    "api_job_id": 191830,
+    "final_database_schema_version": 2,
+    "final_database_sha256": "c5a71de85981d51cce75c666b60ecbbb297ffc2b2d0716b1f0cabbf875ba28d6",
+    "final_database_byte_size": 2301952,
+    "database_verification_file_sha256": "62fdb9e5d7d5de22c97ae1c53056151a3438a54422bf65735193e68bba5a0929",
+    "article_count": 80,
+    "record_validation_checked": 80,
+    "record_validation_errors": 0,
+    "sqlite_integrity": "ok",
+    "foreign_key_violation_count": 0,
+    "sidecar_file_count": 0,
+    "production_read_only_api_query": {
+      "accession": "A0A0H3JX61",
+      "status_code": 200,
+      "state": "validated"
+    },
+    "missing_accession_status_code": 404
+  },
+  "scientific_claim_boundary": {
+    "human_reference_labels_used": false,
+    "accuracy_estimated": false,
+    "upstream_unresolved_states_preserved": true,
+    "http_404_treated_as_explicit_no_data": true
+  }
+}

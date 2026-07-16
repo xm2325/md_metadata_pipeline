@@ -70,9 +70,22 @@ mdmeta-export-contracts --output-dir schemas
 mdmeta-export-contracts --output-dir schemas --check
 ```
 
-The contracts cover the integrated MD record, the file-backed MD report and the dataset release
-manifest. A schema change requires a versioning/compatibility decision; the current SQLite database
-schema is strictly checked at version 1 but does not yet have a v1 → v2 migration framework.
+The contracts cover the integrated MD record, file-backed MD report, PDBe-KB batch and dataset
+release manifest. Schema v2 is current. A v1 snapshot is deliberately rejected by the v2 runtime
+until the explicit backed-up migration is run during a maintenance window:
+
+```bash
+mdmeta-migrate-database v1-to-v2 \
+  --database /srv/mdmeta/candidate/records.sqlite \
+  --backup /srv/mdmeta/backups/records-v1.sqlite
+
+mdmeta-migrate-database import-pdbekb \
+  --database /srv/mdmeta/candidate/records.sqlite \
+  --report /srv/mdmeta/candidate/pdbekb-enrichment.json
+```
+
+Stop ingestion before migration. Verify the backup independently and run
+`mdmeta-verify-database --checkpoint` before sealing the candidate bundle.
 
 ## Prepare and seal a dataset
 
@@ -318,5 +331,5 @@ bundle, database, image and build digests in the incident.
 The snapshot design supports one offline writer and one or more readers of immutable releases.
 Move to PostgreSQL before adding concurrent writers, continuous ingestion, queue-driven updates or
 replicas that must share mutable state. Add Neo4j only when concrete graph queries justify a second
-persistence model. A versioned SQLite migration framework is also required before changing the
-current database schema.
+persistence model. Future SQLite changes must extend the explicit migration chain and retain the
+same backup, transactional validation and recovery evidence.

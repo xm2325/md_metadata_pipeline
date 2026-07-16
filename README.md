@@ -27,18 +27,21 @@ conservative prior-article exclusion registry, rule-screens an oversampled sourc
 metadata, eligibility and prediction-free gold workpacks. The protocol and leakage boundary are in
 [`study/independent_100/README.md`](study/independent_100/README.md). The audited cloud run has now
 completed corpus construction 100/100 with zero prior-article overlap: 80 scale articles plus a
-sealed gold20. Human eligibility is still 0/100, Roihu scale inference 0/80, gold dual
-annotation/adjudication 0/20 and gold prediction/evaluation 0/20; no new accuracy result exists.
-See [`study/independent_100/RUN_2026-07-15.md`](study/independent_100/RUN_2026-07-15.md).
+sealed gold20. The accepted Roihu run subsequently completed model inference for 80/80 scale
+articles and CPU integration for 80/80 records. It classified 1,216 protocol-paragraph tasks,
+produced 98 evidence-gated events, validated 99 PDB identifiers and 107 UniProt accessions, and
+stored 352 residue-mapping segments. The model/protocol freeze was executed before any gold
+prediction. Human eligibility is still 0/100, gold dual annotation/adjudication 0/20 and gold
+prediction/evaluation 0/20; no new accuracy result exists. See
+[`study/independent_100/RUN_SCALE80_2026-07-16.md`](study/independent_100/RUN_SCALE80_2026-07-16.md).
 The repository now has a strict gold-reference gate for two independent, source-bound 20-article
 submissions, explicit reviewed-zero states, item-level adjudication and a label-free public freeze
 receipt. Actions validates only synthetic labels; this infrastructure does not change the 0/20
 human-annotation progress.
-The next model-batch contract also records a source-independent prompt commitment. After a real
-scale80 GPU/CPU run, an executable freeze will bind the model snapshot, prompt, response schema,
-decoding configuration, normalisation and evaluation code; only that freeze plus the label-free
-human-reference receipt can authorize a private gold20 inference manifest. No scale80 or gold20
-model result has been generated yet.
+The model-batch contract records a source-independent prompt commitment. The executed scale80
+freeze binds the model snapshot, prompt, response schema, decoding configuration, normalisation
+and evaluation code. Only that freeze plus the still-missing label-free human-reference receipt
+can authorize a private gold20 inference manifest; no gold20 model result has been generated.
 
 Version 0.3 added a phase-aware protocol-event schema and PDBe, UniProt, and SIFTS-derived validation states.
 
@@ -98,7 +101,7 @@ Version 0.10 adds the first server-readiness layer:
   GitHub rejected the optional evidence artifacts because the account storage quota remained full,
   and the job summary recorded that failure.
 
-Version 0.11 is the current production-candidate change set. It adds strict JSON Schema and API
+Version 0.11 added the first production-candidate change set. It includes strict JSON Schema and API
 contracts, semantic SQLite verification, WAL-safe backup/restore, digest-addressed release bundles,
 atomic release activation/rollback, production environment guards, request IDs, JSON request logs,
 Prometheus metrics and additional supply-chain/security controls. The repository gates for exact
@@ -108,7 +111,19 @@ commit `c5f3018` passed on 2026-07-15: the
 [Server readiness](https://github.com/xm2325/md_metadata_pipeline/actions/runs/29447212735) and all
 three deterministic domain workflows passed. This is
 cloud validation of the production-candidate code, not a live scientific release, GHCR publication
-or server deployment. Version 0.11 must therefore still not be described as fully production ready.
+or server deployment.
+
+Version 0.12 adds a direct PDBe-KB adapter and compact batch contract, explicit no-data versus
+upstream-failure semantics, bounded public-API concurrency, schema-v2 persistence, an explicit
+backed-up v1-to-v2 migration CLI and `/pdbekb/{accession}`. The real scale80 enrichment processed
+107 accessions, persisted 94 validated, three not-applicable and ten unresolved states, then passed
+a production read-only API and database-integrity drill on CSC. The repository gates for exact
+commit `602a9bf` all passed, including
+[CI](https://github.com/xm2325/md_metadata_pipeline/actions/runs/29479523392),
+[Server readiness](https://github.com/xm2325/md_metadata_pipeline/actions/runs/29479523434) and
+[security](https://github.com/xm2325/md_metadata_pipeline/actions/runs/29479523442). See the
+[PDBe-KB run report](study/pdbekb_scale80/RUN_2026-07-16.md). This still is not a governed public
+release, published GHCR image or externally reachable production service.
 
 See [`docs/PRODUCTION_READINESS.md`](docs/PRODUCTION_READINESS.md),
 [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md), [`docs/OPERATIONS.md`](docs/OPERATIONS.md), and
@@ -145,7 +160,7 @@ not run ingestion inside the API process.
 
 The GHCR command below is a production deployment template. It becomes usable only after the
 manual/tag-triggered `Publish API container` workflow succeeds for the exact candidate commit and
-reports an immutable image digest; no version 0.11 production deployment has been demonstrated.
+reports an immutable image digest; no version 0.12 production deployment has been demonstrated.
 
 ```bash
 export MDMETA_DATA_DIR=/srv/mdmeta/current
