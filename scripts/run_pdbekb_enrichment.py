@@ -4,6 +4,7 @@ import argparse
 import json
 import os
 import tempfile
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 from mdmeta.pdbekb import build_pdbekb_batch_report, fetch_pdbekb_enrichment
@@ -35,13 +36,24 @@ def run(
     output: Path,
     cache_dir: Path,
     require_complete: bool,
+    workers: int,
 ) -> dict[str, object]:
+    if not 1 <= workers <= 16:
+        raise ValueError("workers must be between 1 and 16")
     store = SQLiteRecordStore(database, read_only=True)
     accessions = store.list_uniprot_accessions()
     if not accessions:
         raise ValueError("source database contains no mapped UniProt accessions")
     validator = IdentifierValidator(cache_dir=cache_dir)
-    enrichments = [fetch_pdbekb_enrichment(validator, accession) for accession in accessions]
+    # httpx.Client supports cross-thread use.  Keep concurrency deliberately
+    # bounded so this scientific batch cannot flood the public PDBe-KB API.
+    with ThreadPoolExecutor(max_workers=workers, thread_name_prefix="pdbekb") as executor:
+        enrichments = list(
+            executor.map(
+                lambda accession: fetch_pdbekb_enrichment(validator, accession),
+                accessions,
+            )
+        )
     report = build_pdbekb_batch_report(
         enrichments,
         source_database=database,
@@ -66,12 +78,14 @@ def main() -> None:
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--cache-dir", type=Path, required=True)
     parser.add_argument("--require-complete", action="store_true")
+    parser.add_argument("--workers", type=int, default=4)
     args = parser.parse_args()
     payload = run(
         args.database,
         output=args.output,
         cache_dir=args.cache_dir,
         require_complete=args.require_complete,
+        workers=args.workers,
     )
     print(
         json.dumps(

@@ -15,6 +15,7 @@ from mdmeta.pdbekb import (
     fetch_pdbekb_enrichment,
 )
 from mdmeta.validation import IdentifierValidator
+from scripts.run_pdbekb_enrichment import run
 
 
 ACCESSION = "Q14676"
@@ -187,3 +188,17 @@ def test_pdbekb_batch_report_binds_verified_database_and_rejects_tampering(
 def test_pdbekb_adapter_rejects_unsafe_or_nonprimary_accessions(accession: str) -> None:
     with pytest.raises(ValueError, match="invalid UniProt accession"):
         fetch_pdbekb_enrichment(_validator(), accession)
+
+
+@pytest.mark.parametrize("workers", [0, 17])
+def test_pdbekb_runner_bounds_public_api_concurrency(
+    tmp_path: Path, workers: int
+) -> None:
+    with pytest.raises(ValueError, match="workers must be between 1 and 16"):
+        run(
+            tmp_path / "not-opened.sqlite",
+            output=tmp_path / "report.json",
+            cache_dir=tmp_path / "cache",
+            require_complete=False,
+            workers=workers,
+        )
