@@ -59,4 +59,5 @@ jobs:
         if: always()
         env:
           ARTIFACT_OUTCOME: ${{ steps.evidence.outcome }}
-        run: echo "PDBe-SIFTS compatibility artifact upload: ${ARTIFACT_OUTCOME}" >> "$GITHUB_STEP_SUMMARY"
+        run: |
+          echo "PDBe-SIFTS compatibility artifact upload: ${ARTIFACT_OUTCOME}" >> "$GITHUB_STEP_SUMMARY"

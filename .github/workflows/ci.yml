@@ -112,4 +112,89 @@ jobs:
         if: always()
         env:
           ARTIFACT_OUTCOME: ${{ steps.evidence.outcome }}
-        run: echo "PDBe-SIFTS compatibility artifact upload: ${ARTIFACT_OUTCOME}" >> "$GITHUB_STEP_SUMMARY"
+        run: |
+          echo "PDBe-SIFTS compatibility artifact upload: ${ARTIFACT_OUTCOME}" >> "$GITHUB_STEP_SUMMARY"
+
+  nextflow-smoke:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Check out mdmeta without persisted credentials
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: pyproject.toml
+      - name: Install Java for pinned Nextflow
+        uses: actions/setup-java@0f481fcb613427c0f801b606911222b5b6f3083a # v5
+        with:
+          distribution: temurin
+          java-version: "17"
+      - name: Install project test dependencies
+        run: python -m pip install -e '.[dev]'
+      - name: Install integrity-checked Nextflow 26.04.2
+        env:
+          NEXTFLOW_URL: >-
+            https://github.com/nextflow-io/nextflow/releases/download/v26.04.2/nextflow-26.04.2-dist
+          NEXTFLOW_SHA256: 52a2ce22be15d747369a70050339443fc325005bea59a49e0ee25d96fae9cc51
+        run: |
+          curl --proto '=https' --tlsv1.2 --fail --location --silent --show-error \
+            "$NEXTFLOW_URL" --output "$RUNNER_TEMP/nextflow"
+          echo "$NEXTFLOW_SHA256  $RUNNER_TEMP/nextflow" | sha256sum --check --strict
+          chmod 0755 "$RUNNER_TEMP/nextflow"
+          echo "$RUNNER_TEMP" >> "$GITHUB_PATH"
+      - name: Run and resume the production workflow
+        env:
+          NXF_HOME: ${{ runner.temp }}/nxf-home
+          FIXTURE: ${{ runner.temp }}/mdmeta-nextflow-fixture
+          RESULTS: ${{ runner.temp }}/mdmeta-nextflow-results
+          WORK: ${{ runner.temp }}/mdmeta-nextflow-work
+        run: |
+          mkdir -p "$RESULTS"
+          nextflow -version
+          python workflows/nextflow/tests/build_fixture.py --output-dir "$FIXTURE"
+          nextflow run workflows/nextflow/main.nf \
+            -profile local \
+            --database "$FIXTURE/records.sqlite" \
+            --model_summary "$FIXTURE/model-summary.json" \
+            --expected_articles 1 \
+            --git_commit "$GITHUB_SHA" \
+            --outdir "$RESULTS" \
+            -work-dir "$WORK" \
+            -with-report "$RESULTS/execution-report.html" \
+            -with-trace "$RESULTS/trace-first.tsv"
+          nextflow run workflows/nextflow/main.nf \
+            -profile local \
+            --database "$FIXTURE/records.sqlite" \
+            --model_summary "$FIXTURE/model-summary.json" \
+            --expected_articles 1 \
+            --git_commit "$GITHUB_SHA" \
+            --outdir "$RESULTS" \
+            -work-dir "$WORK" \
+            -resume \
+            -with-report "$RESULTS/execution-report-resume.html" \
+            -with-trace "$RESULTS/trace-resume.tsv"
+          python workflows/nextflow/tests/check_outputs.py \
+            --results "$RESULTS" \
+            --resume-trace "$RESULTS/trace-resume.tsv" \
+            --git-commit "$GITHUB_SHA"
+      - name: Upload bounded Nextflow smoke evidence
+        id: nextflow_evidence
+        if: always()
+        continue-on-error: true
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: nextflow-smoke-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/mdmeta-nextflow-results/
+          if-no-files-found: warn
+          retention-days: 14
+          compression-level: 9
+      - name: Report Nextflow evidence persistence
+        if: always()
+        env:
+          ARTIFACT_OUTCOME: ${{ steps.nextflow_evidence.outcome }}
+        run: |
+          echo "Nextflow smoke artifact upload: ${ARTIFACT_OUTCOME}" >> "$GITHUB_STEP_SUMMARY"
