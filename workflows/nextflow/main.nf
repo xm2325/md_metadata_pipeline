@@ -30,7 +30,7 @@ process VERIFY_DATABASE {
 
     script:
     """
-    mdmeta-verify-database \
+    python -m mdmeta.verify \
       --database records.sqlite \
       --expected-articles ${expected_articles} \
       --output database-manifest.json
@@ -58,7 +58,7 @@ process BUILD_REVIEW_QUEUE {
 
     script:
     """
-    mdmeta-human-review build \
+    python -m mdmeta.human_review build \
       --database records.sqlite \
       --model-summary model-summary.json \
       --output human-review-queue.json \
@@ -86,7 +86,7 @@ process EXPORT_GRAPH {
     script:
     """
     mkdir graph
-    mdmeta-export-graph export \
+    python -m mdmeta.graph export \
       --database records.sqlite \
       --output-dir graph
     """
@@ -112,12 +112,12 @@ process VERIFY_OUTPUTS {
 
     script:
     """
-    mdmeta-human-review verify \
+    python -m mdmeta.human_review verify \
       --queue human-review-queue.json \
       --database records.sqlite \
       --model-summary model-summary.json \
       > review-verification.json
-    mdmeta-export-graph verify \
+    python -m mdmeta.graph verify \
       --output-dir graph \
       --database records.sqlite \
       > graph-verification.json

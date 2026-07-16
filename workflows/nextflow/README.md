@@ -17,10 +17,11 @@ boundary and preventing a task from writing through to the source snapshot.
 
 ## Pinned runtime
 
-The manifest accepts Nextflow `26.04.6` or later; CI installs the official `26.04.6`
-distribution and checks its published SHA-256 before execution. Python package
-and model dependencies must already be installed in the launching environment
-or supplied through a digest-pinned container profile.
+The manifest accepts Nextflow `26.04.4` or later. CI installs the official
+`26.04.6` distribution and checks its published SHA-256 before execution; CSC
+uses its supported `nextflow/26.04.4.12445` module. Python package and model
+dependencies must already be installed in the launching environment or supplied
+through a digest-pinned container profile.
 
 ## Local or GitHub runner
 
